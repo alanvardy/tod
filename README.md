@@ -6,7 +6,27 @@ Will ask for your Todoist API token on first run, and store the token in plainte
 
 ### Install
 
-todo: add install instructions
+Clone the project
+
+```bash
+git clone git@github.com:alanvardy/tod.git
+```
+
+asdf install rust and build the release
+
+```bash
+cd tod
+asdf install
+cargo build --release
+```
+
+You can then find the binary in `/target/release/`
+
+Add an alias! I use ZSH and store my github projects in `~/coding/` and thus added this line to my `~/.zshrc`:
+
+```bash
+alias tod="~/coding/tod/target/release/tod"
+```
 
 ### Run
 

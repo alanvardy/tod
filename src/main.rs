@@ -13,22 +13,19 @@ fn main() {
 
 fn get_args_as_sentence() -> String {
     let mut sentence = String::new();
-    let mut counter = 0;
-    for arg in env::args() {
-        if counter == 0 {
-            counter += 1;
-        } else if counter == 1 {
-            sentence.push_str(&arg);
-            counter += 1;
-        } else {
-            sentence.push_str(" ");
-            sentence.push_str(&arg);
+    for (index, arg) in env::args().enumerate() {
+        match index {
+            1 => sentence.push_str(&arg),
+            num if num > 1 => {
+                sentence.push_str(" ");
+                sentence.push_str(&arg);
+            }
+            _ => (),
         }
     }
     sentence
 }
 
-#[allow(deprecated)]
 fn get_or_create_token_file() -> String {
     let home_directory = dirs::home_dir().expect("could not get home directory");
     let home_directory_str = home_directory

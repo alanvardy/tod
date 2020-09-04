@@ -2,7 +2,6 @@ use reqwest::blocking::Client;
 use serde_json::json;
 use std::env;
 use std::fs::File;
-use uuid::Uuid;
 use std::io;
 use std::io::*;
 
@@ -51,30 +50,28 @@ fn read_file(file: File) -> String {
     file.read_to_string(&mut contents)
         .expect("Could not read to string");
 
-        contents
+    contents
 }
 
 #[allow(clippy::unused_io_amount)]
 fn create_file(path: String) -> String {
     let mut input = String::new();
     println!("Please enter your Todoist API token from https://todoist.com/prefs/integrations ");
-    io::stdin().read_line(&mut input).expect("error: unable to read user input");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("error: unable to read user input");
 
     let mut file = File::create(path).expect("could not create file");
-    file.write(input.as_bytes()).expect("could not write to file");
+    file.write(input.as_bytes())
+        .expect("could not write to file");
 
     input
 }
 
-fn post_request(sentence: String, token: String) {
-    let uuid: String = generate_uuid();
-    let temp_id: String = generate_uuid();
+fn post_request(text: String, token: String) {
+    let body = json!({"token": token, "text": text, "auto_reminder": true});
 
-    let body = json!({
-    "token": token,
-    "commands": [{"type": "item_add", "uuid": uuid, "temp_id": temp_id, "args": {"content": sentence}}]});
-
-    let request_url = "https://api.todoist.com/sync/v8/sync";
+    let request_url = "https://api.todoist.com/sync/v8/quick/add";
     let response = Client::new()
         .post(request_url)
         .json(&body)
@@ -86,8 +83,4 @@ fn post_request(sentence: String, token: String) {
     } else {
         println!("Error: {:#?}", response.text());
     }
-}
-
-fn generate_uuid() -> String {
-    Uuid::new_v4().hyphenated().to_string()
 }

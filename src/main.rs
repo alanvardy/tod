@@ -14,7 +14,7 @@ fn main() {
 fn get_args_as_sentence() -> String {
     let mut sentence = String::new();
     let mut counter = 0;
-    for arg in std::env::args() {
+    for arg in env::args() {
         if counter == 0 {
             counter += 1;
         } else if counter == 1 {

@@ -30,7 +30,7 @@ fn get_args_as_sentence() -> String {
 
 #[allow(deprecated)]
 fn get_or_create_token_file() -> String {
-    let home_directory = env::home_dir().expect("could not get home directory");
+    let home_directory = dirs::home_dir().expect("could not get home directory");
     let home_directory_str = home_directory
         .to_str()
         .expect("could not set home directory to str");

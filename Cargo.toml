@@ -10,3 +10,4 @@ edition = "2018"
 serde_json = "1"
 reqwest = { version = "0.10", features = ["json", "blocking"] }
 uuid = { version = "0.4", features = ["serde", "v4"] }
+dirs = "3.0"

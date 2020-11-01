@@ -13,7 +13,12 @@ struct Params {
 fn main() {
     let params: Params = get_params_from_args();
     let config: config::Config = config::get_or_create_token_file();
-    post_request(params, config);
+
+    match params.project.as_str() {
+      "inbox" | "in" | "i" => post_index_request(params, config),
+      _ => post_project_request(params, config)
+
+    };
 }
 
 fn get_params_from_args() -> Params {
@@ -38,7 +43,24 @@ fn get_params_from_args() -> Params {
     }
 }
 
-fn post_request(params: Params, config: config::Config) {
+fn post_index_request(params: Params, config: config::Config) {
+    let body = json!({"token": config.token, "text": params.text, "auto_reminder": true});
+
+    let request_url = "https://api.todoist.com/sync/v8/quick/add";
+    let response = Client::new()
+        .post(request_url)
+        .json(&body)
+        .send()
+        .expect("Did not get response from server");
+
+    if response.status().is_success() {
+        println!("✓");
+    } else {
+        println!("Error: {:#?}", response.text());
+    }
+}
+
+fn post_project_request(params: Params, config: config::Config) {
     let body = match params.project.as_str() {
       "inbox" | "in" | "i" => json!({"token": config.token, "commands": [{"type": "item_add", "uuid": Uuid::new_v4().to_string(), "temp_id": Uuid::new_v4().to_string(), "args": {"content": params.text}}]}),
       _ => {

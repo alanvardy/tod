@@ -1,6 +1,6 @@
 ## Tod
 
-A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project.
+A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project. Tasks sent to the inbox can take advantage of natural language processing to assign due dates, tags etc.
 
 Will ask for your Todoist API token on first run, and store the token in json format in `~/.tod.cfg`. You can obtain your token from [Todoist Preferences](https://todoist.com/prefs/integrations).
 
@@ -38,8 +38,10 @@ alias tod="~/coding/tod/target/release/tod"
 
 ```bash
 # you can use inbox, in or i to send items to your inbox
-tod inbox Buy milk from the grocery store
+# tasks sent to the inbox can use natural language processing
+tod inbox Buy milk from the grocery store tomorrow
 
 # send it to a project defined in ~/.tod.cfg
+# tasks sent to projects dont use natural language processing, because API.
 tod project_name write more rust
 ```

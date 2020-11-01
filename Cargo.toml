@@ -12,3 +12,4 @@ serde = { version = "1.0", features = ["derive"] }
 reqwest = { version = "0.10", features = ["json", "blocking"] }
 uuid = { version = "0.4", features = ["serde", "v4"] }
 dirs = "3.0"
+matches = "0.1.8"

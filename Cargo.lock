@@ -941,6 +941,7 @@ name = "tod"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "matches",
  "reqwest",
  "serde 1.0.115",
  "serde_json",

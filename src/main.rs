@@ -3,11 +3,15 @@ use serde_json::json;
 use std::env;
 use uuid::Uuid;
 
+#[cfg(test)]
+#[macro_use]
+extern crate matches;
+
 mod config;
 
 struct Params {
     project: String,
-    text: String
+    text: String,
 }
 
 fn main() {
@@ -15,9 +19,8 @@ fn main() {
     let config: config::Config = config::get_or_create_token_file();
 
     match params.project.as_str() {
-      "inbox" | "in" | "i" => post_index_request(params, config),
-      _ => post_project_request(params, config)
-
+        "inbox" | "in" | "i" => post_index_request(params, config),
+        _ => post_project_request(params, config),
     };
 }
 
@@ -32,15 +35,12 @@ fn get_params_from_args() -> Params {
             num if num > 2 => {
                 text.push_str(" ");
                 text.push_str(&arg);
-            },
-            _ => ()
+            }
+            _ => (),
         }
     }
 
-    Params {
-        project,
-        text
-    }
+    Params { project, text }
 }
 
 fn post_index_request(params: Params, config: config::Config) {
@@ -62,12 +62,16 @@ fn post_index_request(params: Params, config: config::Config) {
 
 fn post_project_request(params: Params, config: config::Config) {
     let body = match params.project.as_str() {
-      "inbox" | "in" | "i" => json!({"token": config.token, "commands": [{"type": "item_add", "uuid": Uuid::new_v4().to_string(), "temp_id": Uuid::new_v4().to_string(), "args": {"content": params.text}}]}),
-      _ => {
-          let project_id = config.projects.get(&params.project).expect("Project not found");
-          json!({"token": config.token, "commands": [{"type": "item_add", "uuid": Uuid::new_v4().to_string(), "temp_id": Uuid::new_v4().to_string(), "args": {"content": params.text, "project_id": project_id}}]})
+        "inbox" | "in" | "i" => {
+            json!({"token": config.token, "commands": [{"type": "item_add", "uuid": Uuid::new_v4().to_string(), "temp_id": Uuid::new_v4().to_string(), "args": {"content": params.text}}]})
         }
-
+        _ => {
+            let project_id = config
+                .projects
+                .get(&params.project)
+                .expect("Project not found");
+            json!({"token": config.token, "commands": [{"type": "item_add", "uuid": Uuid::new_v4().to_string(), "temp_id": Uuid::new_v4().to_string(), "args": {"content": params.text, "project_id": project_id}}]})
+        }
     };
 
     let request_url = "https://api.todoist.com/sync/v8/sync";

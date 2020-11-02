@@ -15,10 +15,11 @@ fn main() {
 
     match params.command.as_str() {
         "list" => projects::list(config),
+        "add" => projects::add(params, config),
         _ => {
             let (url, body) = request::build_request(params, config);
 
             request::do_request(&url, body);
-        },
+        }
     }
 }

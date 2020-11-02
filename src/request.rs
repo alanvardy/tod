@@ -65,7 +65,6 @@ fn gen_uuid() -> String {
     if cfg!(test) {
         String::from("42963283-2bab-4b1f-bad2-278ef2b6ba2c")
     } else {
-
         Uuid::new_v4().to_string()
     }
 }

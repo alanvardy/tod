@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
+use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::*;
@@ -20,7 +21,7 @@ pub struct Config {
 pub fn get_or_create_token_file() -> Config {
     let path: String = generate_path(".tod.cfg");
 
-    let contents: Config = match File::open(&path) {
+    let config: Config = match File::open(&path) {
         Ok(_) => read_config(&path),
         Err(_) => {
             let token = input_token();
@@ -29,10 +30,10 @@ pub fn get_or_create_token_file() -> Config {
         }
     };
 
-    contents
+    config
 }
 
-fn generate_path(filename: &str) -> String {
+pub fn generate_path(filename: &str) -> String {
     let home_directory = dirs::home_dir().expect("could not get home directory");
     let home_directory_str = home_directory
         .to_str()
@@ -54,6 +55,11 @@ fn read_config(path: &str) -> Config {
         projects: json_output.projects,
         json: contents,
     }
+}
+
+pub fn update_config(config: Config, path: &str) {
+    fs::remove_file(path).expect("could not remove old config");
+    create_file(String::from(path), config);
 }
 
 fn input_token() -> String {
@@ -90,7 +96,6 @@ fn create_file(path: String, config: Config) -> Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn should_generate_config() {

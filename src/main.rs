@@ -5,9 +5,8 @@ use std::env;
 extern crate matches;
 
 mod config;
-mod request;
 mod params;
-
+mod request;
 
 fn main() {
     let params: params::Params = params::get_params_from_args(env::args());

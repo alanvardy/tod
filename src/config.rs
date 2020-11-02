@@ -14,7 +14,7 @@ struct JsonOutput {
 pub struct Config {
     pub token: String,
     pub projects: HashMap<String, u32>,
-    json: String,
+    pub json: String,
 }
 
 pub fn get_or_create_token_file() -> Config {

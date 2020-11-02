@@ -18,10 +18,10 @@ pub struct Config {
 }
 
 pub fn get_or_create_token_file() -> Config {
-    let path: String = generate_path();
+    let path: String = generate_path(".tod.cfg");
 
     let contents: Config = match File::open(&path) {
-        Ok(_) => read_config(),
+        Ok(_) => read_config(&path),
         Err(_) => {
             let token = input_token();
             let config: Config = generate_config(&token);
@@ -32,17 +32,16 @@ pub fn get_or_create_token_file() -> Config {
     contents
 }
 
-fn generate_path() -> String {
+fn generate_path(filename: &str) -> String {
     let home_directory = dirs::home_dir().expect("could not get home directory");
     let home_directory_str = home_directory
         .to_str()
         .expect("could not set home directory to str");
-    format!("{}/.tod.cfg", home_directory_str)
+    format!("{}/{}", home_directory_str, filename)
 }
 
-fn read_config() -> Config {
-    let path: String = generate_path();
-    let mut file = File::open(&path).expect("Could not find file");
+fn read_config(path: &str) -> Config {
+    let mut file = File::open(path).expect("Could not find file");
     let mut contents = String::new();
 
     file.read_to_string(&mut contents)
@@ -104,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn should_create_file() {
+    fn should_create_file_and_read_config() {
         let config = generate_config("something");
         let home_directory = dirs::home_dir().expect("could not get home directory");
         let home_directory_str = home_directory
@@ -113,9 +112,13 @@ mod tests {
         let path = format!("{}/test", home_directory_str);
 
         let config2 = create_file(path.clone(), config.clone());
+        let config3 = read_config(&path);
         assert_eq!(config.token, config2.token);
         assert_eq!(config.json, config2.json);
         assert_eq!(config.projects, config2.projects);
+        assert_eq!(config2.token, config3.token);
+        assert_eq!(config2.json, config3.json);
+        assert_eq!(config2.projects, config3.projects);
         assert_matches!(File::open(&path), Ok(_));
         assert_matches!(fs::remove_file(&path), Ok(_));
     }

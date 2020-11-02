@@ -9,7 +9,7 @@ pub fn build_request(
     params: params::Params,
     config: config::Config,
 ) -> (String, serde_json::Value) {
-    match params.project.as_str() {
+    match params.command.as_str() {
         "inbox" | "in" | "i" => build_index_request(params, config),
         _ => build_project_request(params, config),
     }
@@ -31,14 +31,14 @@ fn build_project_request(
 ) -> (String, serde_json::Value) {
     let url = String::from("https://api.todoist.com/sync/v8/sync");
 
-    let body = match params.project.as_str() {
+    let body = match params.command.as_str() {
         "inbox" | "in" | "i" => {
             json!({"token": config.token, "commands": [{"type": "item_add", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"content": params.text}}]})
         }
         _ => {
             let project_id = config
                 .projects
-                .get(&params.project)
+                .get(&params.command)
                 .expect("Project not found");
             json!({"token": config.token, "commands": [{"type": "item_add", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"content": params.text, "project_id": project_id}}]})
         }
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn should_build_index_request() {
         let params = params::Params {
-            project: String::from("a_project"),
+            command: String::from("a_project"),
             text: String::from("this is text"),
         };
 
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn should_build_project_request() {
         let params = params::Params {
-            project: String::from("project_name"),
+            command: String::from("project_name"),
             text: String::from("this is text"),
         };
 

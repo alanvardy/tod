@@ -9,7 +9,7 @@ pub fn get_params_from_args(args: std::env::Args) -> Params {
     for (index, arg) in args.enumerate() {
         match index {
             0 => (),
-            1 => command.push_str(&arg),
+                1 => command.push_str(&arg),
             2 => text.push_str(&arg),
             num if num > 2 => {
                 text.push_str(" ");

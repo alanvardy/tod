@@ -16,6 +16,7 @@ fn main() {
     match params.command.as_str() {
         "list" => projects::list(config),
         "add" => projects::add(params, config),
+        "remove" => projects::remove(params, config),
         _ => {
             let (url, body) = request::build_request(params, config);
 

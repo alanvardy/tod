@@ -13,19 +13,41 @@ struct JsonOutput {
 }
 #[derive(Clone)]
 pub struct Config {
+    /// The Todoist Api token
     pub token: String,
+    /// List of Todoist projects and their project numbers
     pub projects: HashMap<String, u32>,
+    /// Json string that is stored in config file
     pub json: String,
+    /// Path to config file
+    pub path: String,
 }
 
-pub fn get_or_create_token_file() -> Config {
+impl Config {
+    fn new(token: &str) -> Config {
+        let projects: HashMap<String, u32> = HashMap::new();
+        Config {
+            path: generate_path(".tod.cfg"),
+            token: String::from(token),
+            json: json!({ "token": token, "projects": projects}).to_string(),
+            projects,
+        }
+    }
+
+    pub fn save(self) {
+        fs::remove_file(&self.path).expect("could not remove old config");
+        create_file(String::from(&self.path), self);
+    }
+}
+
+pub fn get_or_create_config_file() -> Config {
     let path: String = generate_path(".tod.cfg");
 
     let config: Config = match File::open(&path) {
         Ok(_) => read_config(&path),
         Err(_) => {
             let token = input_token();
-            let config: Config = generate_config(&token);
+            let config = Config::new(&token);
             create_file(path, config)
         }
     };
@@ -54,12 +76,8 @@ fn read_config(path: &str) -> Config {
         token: json_output.token,
         projects: json_output.projects,
         json: contents,
+        path: String::from(path),
     }
-}
-
-pub fn update_config(config: Config, path: &str) {
-    fs::remove_file(path).expect("could not remove old config");
-    create_file(String::from(path), config);
 }
 
 fn input_token() -> String {
@@ -70,17 +88,6 @@ fn input_token() -> String {
         .expect("error: unable to read user input");
 
     String::from(input.trim())
-}
-
-fn generate_config(token: &str) -> Config {
-    let mut projects = HashMap::new();
-    projects.insert(String::from("project_name"), 1234);
-
-    Config {
-        token: String::from(token),
-        json: json!({ "token": token, "projects": {"project_name": 1234}}).to_string(),
-        projects,
-    }
 }
 
 #[allow(clippy::unused_io_amount)]
@@ -99,17 +106,17 @@ mod tests {
 
     #[test]
     fn should_generate_config() {
-        let config = generate_config("something");
+        let config = Config::new("something");
         assert_eq!(config.token, String::from("something"));
         assert_eq!(
             config.json,
-            String::from("{\"projects\":{\"project_name\":1234},\"token\":\"something\"}")
+            String::from("{\"projects\":{},\"token\":\"something\"}")
         );
     }
 
     #[test]
     fn should_create_file_and_read_config() {
-        let config = generate_config("something");
+        let config = Config::new("something");
         let home_directory = dirs::home_dir().expect("could not get home directory");
         let home_directory_str = home_directory
             .to_str()

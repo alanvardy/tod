@@ -10,8 +10,8 @@ mod projects;
 mod request;
 
 fn main() {
-    let params: params::Params = params::get_params_from_args(env::args());
-    let config: config::Config = config::get_or_create_token_file();
+    let params: params::Params = params::Params::new(env::args());
+    let config: config::Config = config::get_or_create_config_file();
 
     match params.command.as_str() {
         "list" => projects::list(config),

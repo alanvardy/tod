@@ -3,6 +3,9 @@ use crate::params;
 use regex::Regex;
 use serde_json::json;
 
+const NAME_REGEX: &str = r"^(?P<name>\w*)$";
+const NAME_NUMBER_REGEX: &str = r"^(?P<name>\w*) (?P<num>\d*)$";
+
 pub fn list(config: config::Config) {
     println!("== Projects ==");
     for (k, _) in config.projects.iter() {
@@ -11,7 +14,7 @@ pub fn list(config: config::Config) {
 }
 
 pub fn add(params: params::Params, config: config::Config) {
-    let re = Regex::new(r"^(?P<name>\w*) (?P<num>\d*)$").unwrap();
+    let re = Regex::new(NAME_NUMBER_REGEX).unwrap();
     let captures = re.captures(&params.text).unwrap();
     let name = captures.name("name").unwrap().as_str();
     let num = captures
@@ -29,13 +32,12 @@ pub fn add(params: params::Params, config: config::Config) {
         json: json!({ "token": config.token, "projects": projects}).to_string(),
         ..config
     };
-    let path = config::generate_path(".tod.cfg");
 
-    config::update_config(new_config, &path);
+    new_config.save();
 }
 
 pub fn remove(params: params::Params, config: config::Config) {
-    let re = Regex::new(r"^(?P<name>\w*)$").unwrap();
+    let re = Regex::new(NAME_REGEX).unwrap();
     let captures = re.captures(&params.text).unwrap();
     let name = captures.name("name").unwrap().as_str();
 
@@ -47,7 +49,6 @@ pub fn remove(params: params::Params, config: config::Config) {
         json: json!({ "token": config.token, "projects": projects}).to_string(),
         ..config
     };
-    let path = config::generate_path(".tod.cfg");
 
-    config::update_config(new_config, &path);
+    new_config.save();
 }

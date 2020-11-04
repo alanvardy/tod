@@ -88,7 +88,7 @@ mod tests {
             token: String::from("1234567"),
             projects,
             json: String::from("thisistotallyajsonstring"),
-            path: config::generate_path("test"),
+            path: config::generate_path(),
         };
 
         let (url, body) = build_index_request(params, config);
@@ -110,7 +110,7 @@ mod tests {
             token: String::from("1234567"),
             projects,
             json: String::from("thisistotallyajsonstring"),
-            path: config::generate_path("test"),
+            path: config::generate_path(),
         };
 
         let (url, body) = build_project_request(params, config);

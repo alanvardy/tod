@@ -27,57 +27,65 @@ impl Config {
     fn new(token: &str) -> Config {
         let projects: HashMap<String, u32> = HashMap::new();
         Config {
-            path: generate_path(".tod.cfg"),
+            path: generate_path(),
             token: String::from(token),
             json: json!({ "token": token, "projects": projects}).to_string(),
             projects,
         }
     }
 
+    fn create_file(self) -> Config {
+        let mut file = File::create(&self.path).expect("could not create file");
+        let bytes = file.write(self.json.as_bytes())
+            .expect("could not write to file");
+        println!("{} bytes written to {}", bytes, &self.path);
+        self
+    }
+
     pub fn save(self) {
         fs::remove_file(&self.path).expect("could not remove old config");
-        create_file(String::from(&self.path), self);
+        self.create_file();
+    }
+
+    fn load() -> Config {
+        let path: String = generate_path();
+        let mut file = File::open(&path).expect("Could not find file");
+        let mut json = String::new();
+
+        file.read_to_string(&mut json)
+            .expect("Could not read to string");
+
+        let json_output: JsonOutput = serde_json::from_str(&json).unwrap();
+
+        Config {
+            token: json_output.token,
+            projects: json_output.projects,
+            json,
+            path,
+        }
     }
 }
 
 pub fn get_or_create_config_file() -> Config {
-    let path: String = generate_path(".tod.cfg");
+    let path: String = generate_path();
 
-    let config: Config = match File::open(&path) {
-        Ok(_) => read_config(&path),
+    match File::open(&path) {
+        Ok(_) => Config::load(),
         Err(_) => {
             let token = input_token();
-            let config = Config::new(&token);
-            create_file(path, config)
+            Config::new(&token).create_file()
         }
-    };
-
-    config
+    }
 }
 
-pub fn generate_path(filename: &str) -> String {
+pub fn generate_path() -> String {
+    let filename = if cfg!(test) { "test" } else { ".tod.cfg" };
+
     let home_directory = dirs::home_dir().expect("could not get home directory");
     let home_directory_str = home_directory
         .to_str()
         .expect("could not set home directory to str");
     format!("{}/{}", home_directory_str, filename)
-}
-
-fn read_config(path: &str) -> Config {
-    let mut file = File::open(path).expect("Could not find file");
-    let mut contents = String::new();
-
-    file.read_to_string(&mut contents)
-        .expect("Could not read to string");
-
-    let json_output: JsonOutput = serde_json::from_str(&contents).unwrap();
-
-    Config {
-        token: json_output.token,
-        projects: json_output.projects,
-        json: contents,
-        path: String::from(path),
-    }
 }
 
 fn input_token() -> String {
@@ -88,16 +96,6 @@ fn input_token() -> String {
         .expect("error: unable to read user input");
 
     String::from(input.trim())
-}
-
-#[allow(clippy::unused_io_amount)]
-fn create_file(path: String, config: Config) -> Config {
-    let directory = &String::from(&path);
-    let mut file = File::create(path).expect("could not create file");
-    file.write(config.json.as_bytes())
-        .expect("could not write to file");
-    println!("Config written to {}", directory);
-    config
 }
 
 #[cfg(test)]
@@ -123,8 +121,8 @@ mod tests {
             .expect("could not set home directory to str");
         let path = format!("{}/test", home_directory_str);
 
-        let config2 = create_file(path.clone(), config.clone());
-        let config3 = read_config(&path);
+        let config2 = config.clone().create_file();
+        let config3 = Config::load();
         assert_eq!(config.token, config2.token);
         assert_eq!(config.json, config2.json);
         assert_eq!(config.projects, config2.projects);

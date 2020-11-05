@@ -33,7 +33,7 @@ jobs:
           path: target
           key: ${{ runner.os }}-target-${{ hashFiles('**/cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-
+            ${{ runner.os }}-target-${{ hashFiles('**/cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -53,7 +53,7 @@ jobs:
           path: target
           key: ${{ runner.os }}-target-${{ hashFiles('**/cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-
+            ${{ runner.os }}-target-${{ hashFiles('**/cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -75,7 +75,7 @@ jobs:
           path: target
           key: ${{ runner.os }}-target-${{ hashFiles('**/cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-
+            ${{ runner.os }}-target-${{ hashFiles('**/cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal

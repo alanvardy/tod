@@ -19,5 +19,4 @@ fn main() {
         "remove" => projects::remove(config, params),
         _ => request::Request::new(params, config).perform(),
     }
-    println!(" ");
 }

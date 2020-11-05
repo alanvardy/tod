@@ -90,7 +90,6 @@ mod tests {
         let config = config::Config {
             token: String::from("1234567"),
             projects,
-            json: String::from("thisistotallyajsonstring"),
             path: config::generate_path(),
         };
 
@@ -112,7 +111,6 @@ mod tests {
         let config = config::Config {
             token: String::from("1234567"),
             projects,
-            json: String::from("thisistotallyajsonstring"),
             path: config::generate_path(),
         };
 

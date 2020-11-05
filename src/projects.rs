@@ -1,7 +1,6 @@
 use crate::config;
 use crate::params;
 use regex::Regex;
-use serde_json::json;
 
 const NAME_REGEX: &str = r"^(?P<name>\w*)$";
 const NAME_NUMBER_REGEX: &str = r"^(?P<name>\w*) (?P<num>\d*)$";
@@ -33,7 +32,6 @@ pub fn add(params: params::Params, config: config::Config) {
 
     let new_config = config::Config {
         projects: projects.clone(),
-        json: json!({ "token": config.token, "projects": projects}).to_string(),
         ..config
     };
 
@@ -54,7 +52,6 @@ pub fn remove(params: params::Params, config: config::Config) {
     projects.remove(name);
 
     let new_config = config::Config {
-        json: json!({ "token": config.token, "projects": &projects}).to_string(),
         projects,
         ..config
     };

@@ -17,8 +17,6 @@ pub struct Config {
     pub token: String,
     /// List of Todoist projects and their project numbers
     pub projects: HashMap<String, u32>,
-    /// Json string that is stored in config file
-    pub json: String,
     /// Path to config file
     pub path: String,
 }
@@ -29,14 +27,15 @@ impl Config {
         Config {
             path: generate_path(),
             token: String::from(token),
-            json: json!({ "token": token, "projects": projects}).to_string(),
             projects,
         }
     }
 
     fn create_file(self) -> Config {
         let mut file = File::create(&self.path).expect("could not create file");
-        let bytes = file.write(self.json.as_bytes())
+        let json = json!({ "token": self.token, "projects": self.projects}).to_string();
+        let bytes = file
+            .write(json.as_bytes())
             .expect("could not write to file");
         println!("{} bytes written to {}", bytes, &self.path);
         self
@@ -60,7 +59,6 @@ impl Config {
         Config {
             token: json_output.token,
             projects: json_output.projects,
-            json,
             path,
         }
     }
@@ -106,10 +104,6 @@ mod tests {
     fn should_generate_config() {
         let config = Config::new("something");
         assert_eq!(config.token, String::from("something"));
-        assert_eq!(
-            config.json,
-            String::from("{\"projects\":{},\"token\":\"something\"}")
-        );
     }
 
     #[test]
@@ -124,10 +118,8 @@ mod tests {
         let config2 = config.clone().create_file();
         let config3 = Config::load();
         assert_eq!(config.token, config2.token);
-        assert_eq!(config.json, config2.json);
         assert_eq!(config.projects, config2.projects);
         assert_eq!(config2.token, config3.token);
-        assert_eq!(config2.json, config3.json);
         assert_eq!(config2.projects, config3.projects);
         assert_matches!(File::open(&path), Ok(_));
         assert_matches!(fs::remove_file(&path), Ok(_));

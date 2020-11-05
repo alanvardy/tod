@@ -16,26 +16,20 @@ pub fn list(config: config::Config) {
 /// Add a project to the projects HashMap in Config
 pub fn add(params: params::Params, config: config::Config) {
     let captures = Regex::new(NAME_NUMBER_REGEX)
-    .unwrap()
-    .captures(&params.text)
-    .unwrap();
+        .unwrap()
+        .captures(&params.text)
+        .unwrap();
+
     let name = captures.name("name").unwrap().as_str();
+
     let num = captures
-    .name("num")
-    .unwrap()
-    .as_str()
-    .parse::<u32>()
-    .unwrap();
+        .name("num")
+        .unwrap()
+        .as_str()
+        .parse::<u32>()
+        .unwrap();
 
-    let mut projects = config.projects;
-    projects.insert(String::from(name), num);
-
-    let new_config = config::Config {
-        projects: projects.clone(),
-        ..config
-    };
-
-    new_config.save();
+    config.add_project(name, num).save();
 }
 
 /// Remove a project from the projects HashMap in Config
@@ -48,13 +42,5 @@ pub fn remove(params: params::Params, config: config::Config) {
         .unwrap()
         .as_str();
 
-    let mut projects = config.projects;
-    projects.remove(name);
-
-    let new_config = config::Config {
-        projects,
-        ..config
-    };
-
-    new_config.save();
+    config.remove_project(name).save();
 }

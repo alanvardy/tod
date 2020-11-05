@@ -32,9 +32,9 @@ impl Config {
     }
 
     fn create_file(self) -> Config {
-        let mut file = File::create(&self.path).expect("could not create file");
         let json = json!({ "token": self.token, "projects": self.projects}).to_string();
-        let bytes = file
+        let bytes = File::create(&self.path)
+            .expect("could not create file")
             .write(json.as_bytes())
             .expect("could not write to file");
         println!("{} bytes written to {}", bytes, &self.path);
@@ -48,10 +48,11 @@ impl Config {
 
     fn load() -> Config {
         let path: String = generate_path();
-        let mut file = File::open(&path).expect("Could not find file");
         let mut json = String::new();
 
-        file.read_to_string(&mut json)
+        File::open(&path)
+            .expect("Could not find file")
+            .read_to_string(&mut json)
             .expect("Could not read to string");
 
         let json_output: JsonOutput = serde_json::from_str(&json).unwrap();
@@ -61,6 +62,20 @@ impl Config {
             projects: json_output.projects,
             path,
         }
+    }
+
+    pub fn add_project(self, name: &str, number: u32) -> Config {
+        let mut projects = self.projects;
+        projects.insert(String::from(name), number);
+
+        Config { projects, ..self }
+    }
+
+    pub fn remove_project(self, name: &str) -> Config {
+        let mut projects = self.projects;
+        projects.remove(name);
+
+        Config { projects, ..self }
     }
 }
 

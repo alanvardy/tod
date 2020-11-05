@@ -5,6 +5,9 @@ use uuid::Uuid;
 use crate::config;
 use crate::params;
 
+const QUICK_ADD_URL: &str = "https://api.todoist.com/sync/v8/quick/add";
+const SYNC_URL: &str = "https://api.todoist.com/sync/v8/sync";
+
 pub fn build_request(
     params: params::Params,
     config: config::Config,
@@ -19,7 +22,7 @@ fn build_index_request(
     params: params::Params,
     config: config::Config,
 ) -> (String, serde_json::Value) {
-    let url = String::from("https://api.todoist.com/sync/v8/quick/add");
+    let url = String::from(QUICK_ADD_URL);
     let body = json!({"token": config.token, "text": params.text, "auto_reminder": true});
 
     (url, body)
@@ -29,7 +32,7 @@ fn build_project_request(
     params: params::Params,
     config: config::Config,
 ) -> (String, serde_json::Value) {
-    let url = String::from("https://api.todoist.com/sync/v8/sync");
+    let url = String::from(SYNC_URL);
 
     let body = match params.command.as_str() {
         "inbox" | "in" | "i" => {

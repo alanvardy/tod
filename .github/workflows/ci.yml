@@ -8,12 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v1
+      - name: cache cargo index
+        uses: actions/cache@v1
         with:
-          path: ../target
-          key: ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+          path: ~/.cargo/git
+          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+            cargo-index-
+      - name: cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-registry-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -28,12 +36,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v1
+      - name: cache cargo index
+        uses: actions/cache@v1
         with:
-          path: ../target
-          key: ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+          path: ~/.cargo/git
+          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+            cargo-index-
+      - name: cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-registry-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -48,14 +64,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: pwd
-      - run: ls -a
-      - uses: actions/cache@v1
+      - name: cache cargo index
+        uses: actions/cache@v1
         with:
-          path: ../target
-          key: ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+          path: ~/.cargo/git
+          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+            cargo-index-
+      - name: cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-registry-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -72,12 +94,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v1
+      - name: cache cargo index
+        uses: actions/cache@v1
         with:
-          path: ../target
-          key: ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+          path: ~/.cargo/git
+          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-${{ hashFiles('cargo.lock') }}
+            cargo-index-
+      - name: cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-registry-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal

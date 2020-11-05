@@ -17,11 +17,7 @@ fn main() {
         "list" => projects::list(config),
         "add" => projects::add(config, params),
         "remove" => projects::remove(config, params),
-        _ => {
-            let (url, body) = request::build_request(params, config);
-
-            request::do_request(&url, body);
-        }
+        _ => request::Request::new(params, config).perform(),
     }
     println!(" ");
 }

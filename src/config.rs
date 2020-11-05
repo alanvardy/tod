@@ -22,7 +22,7 @@ pub struct Config {
 }
 
 impl Config {
-    fn new(token: &str) -> Config {
+    pub fn new(token: &str) -> Config {
         let projects: HashMap<String, u32> = HashMap::new();
         Config {
             path: generate_path(),
@@ -31,7 +31,7 @@ impl Config {
         }
     }
 
-    fn create_file(self) -> Config {
+    pub fn create_file(self) -> Config {
         let json = json!({ "token": self.token, "projects": self.projects}).to_string();
         let bytes = File::create(&self.path)
             .expect("could not create file")
@@ -41,12 +41,12 @@ impl Config {
         self
     }
 
-    pub fn save(self) {
+    pub fn save(self) -> Config {
         fs::remove_file(&self.path).expect("could not remove old config");
-        self.create_file();
+        self.create_file()
     }
 
-    fn load() -> Config {
+    pub fn load() -> Config {
         let path: String = generate_path();
         let mut json = String::new();
 
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn should_create_file_and_read_config() {
-        let config = Config::new("something");
+        let config = Config::new("faketoken");
         let home_directory = dirs::home_dir().expect("could not get home directory");
         let home_directory_str = home_directory
             .to_str()

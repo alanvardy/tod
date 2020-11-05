@@ -2,36 +2,27 @@ use reqwest::blocking::Client;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::config;
-use crate::params;
+use crate::config::Config;
+use crate::params::Params;
 
 const QUICK_ADD_URL: &str = "https://api.todoist.com/sync/v8/quick/add";
 const SYNC_URL: &str = "https://api.todoist.com/sync/v8/sync";
 
-pub fn build_request(
-    params: params::Params,
-    config: config::Config,
-) -> (String, serde_json::Value) {
+pub fn build_request(params: Params, config: Config) -> (String, serde_json::Value) {
     match params.command.as_str() {
         "inbox" | "in" | "i" => build_index_request(params, config),
         _ => build_project_request(params, config),
     }
 }
 
-fn build_index_request(
-    params: params::Params,
-    config: config::Config,
-) -> (String, serde_json::Value) {
+fn build_index_request(params: Params, config: Config) -> (String, serde_json::Value) {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"token": config.token, "text": params.text, "auto_reminder": true});
 
     (url, body)
 }
 
-fn build_project_request(
-    params: params::Params,
-    config: config::Config,
-) -> (String, serde_json::Value) {
+fn build_project_request(params: Params, config: Config) -> (String, serde_json::Value) {
     let url = String::from(SYNC_URL);
 
     let body = match params.command.as_str() {
@@ -76,10 +67,11 @@ fn gen_uuid() -> String {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use crate::config;
 
     #[test]
     fn should_build_index_request() {
-        let params = params::Params {
+        let params = Params {
             command: String::from("a_project"),
             text: String::from("this is text"),
         };
@@ -87,7 +79,7 @@ mod tests {
         let mut projects = HashMap::new();
         projects.insert(String::from("project_name"), 1234);
 
-        let config = config::Config {
+        let config = Config {
             token: String::from("1234567"),
             projects,
             path: config::generate_path(),
@@ -100,7 +92,7 @@ mod tests {
     }
     #[test]
     fn should_build_project_request() {
-        let params = params::Params {
+        let params = Params {
             command: String::from("project_name"),
             text: String::from("this is text"),
         };
@@ -108,7 +100,7 @@ mod tests {
         let mut projects = HashMap::new();
         projects.insert(String::from("project_name"), 1234);
 
-        let config = config::Config {
+        let config = Config {
             token: String::from("1234567"),
             projects,
             path: config::generate_path(),

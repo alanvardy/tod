@@ -1,5 +1,6 @@
 ## Tod
 
+[![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod)
 [![Build Status](https://github.com/alanvardy/tod/workflows/check/badge.svg)](https://github.com/alanvardy/tod)
 [![Build Status](https://github.com/alanvardy/tod/workflows/test/badge.svg)](https://github.com/alanvardy/tod)
 [![Build Status](https://github.com/alanvardy/tod/workflows/rustfmt/badge.svg)](https://github.com/alanvardy/tod)

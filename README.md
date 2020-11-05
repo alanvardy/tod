@@ -1,10 +1,6 @@
 ## Tod
 
 [![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod)
-[![Build Status](https://github.com/alanvardy/tod/workflows/check/badge.svg)](https://github.com/alanvardy/tod)
-[![Build Status](https://github.com/alanvardy/tod/workflows/test/badge.svg)](https://github.com/alanvardy/tod)
-[![Build Status](https://github.com/alanvardy/tod/workflows/rustfmt/badge.svg)](https://github.com/alanvardy/tod)
-[![Build Status](https://github.com/alanvardy/tod/workflows/clippy/badge.svg)](https://github.com/alanvardy/tod)
 
 A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project. Tasks sent to the inbox can take advantage of natural language processing to assign due dates, tags etc.
 

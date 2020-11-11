@@ -55,7 +55,7 @@ impl Config {
             .read_to_string(&mut json)
             .expect("Could not read to string");
 
-        let json_output: JsonOutput = serde_json::from_str(&json).unwrap();
+        let json_output: JsonOutput = serde_json::from_str(&json).expect("Could not parse JSON");
 
         Config {
             token: json_output.token,

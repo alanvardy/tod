@@ -7,6 +7,7 @@ use crate::params::Params;
 
 const QUICK_ADD_URL: &str = "https://api.todoist.com/sync/v8/quick/add";
 const SYNC_URL: &str = "https://api.todoist.com/sync/v8/sync";
+const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
 
 pub struct Request {
     url: String,
@@ -64,7 +65,7 @@ fn build_project_request(params: Params, config: Config) -> Request {
 
 fn gen_uuid() -> String {
     if cfg!(test) {
-        String::from("42963283-2bab-4b1f-bad2-278ef2b6ba2c")
+        String::from(FAKE_UUID)
     } else {
         Uuid::new_v4().to_string()
     }
@@ -96,7 +97,7 @@ mod tests {
 
         assert_eq!(
             request.url.as_str(),
-            "https://api.todoist.com/sync/v8/quick/add"
+            QUICK_ADD_URL
         );
         assert_eq!(format!("{:?}", request.body), "Object({\"auto_reminder\": Bool(true), \"text\": String(\"this is text\"), \"token\": String(\"1234567\")})");
     }
@@ -118,7 +119,7 @@ mod tests {
 
         let request = build_project_request(params, config);
 
-        assert_eq!(request.url.as_str(), "https://api.todoist.com/sync/v8/sync");
+        assert_eq!(request.url.as_str(), SYNC_URL);
         assert_eq!(format!("{:?}", request.body), "Object({\"commands\": Array([Object({\"args\": Object({\"content\": String(\"this is text\"), \"project_id\": Number(1234)}), \"temp_id\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\"), \"type\": String(\"item_add\"), \"uuid\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\")})]), \"token\": String(\"1234567\")})");
     }
 }

@@ -4,6 +4,8 @@ use regex::Regex;
 
 const NAME_REGEX: &str = r"^(?P<name>\w*)$";
 const NAME_NUMBER_REGEX: &str = r"^(?P<name>\w*) (?P<num>\d*)$";
+const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
+const REMOVE_ERROR: &str = "Must provide project name, i.e. tod --remove projectname";
 
 /// List the projects in config
 pub fn list(config: Config) {
@@ -16,18 +18,18 @@ pub fn list(config: Config) {
 /// Add a project to the projects HashMap in Config
 pub fn add(config: Config, params: Params) {
     let captures = Regex::new(NAME_NUMBER_REGEX)
-        .unwrap()
+        .expect(ADD_ERROR)
         .captures(&params.text)
-        .unwrap();
+        .expect(ADD_ERROR);
 
     let name = captures.name("name").unwrap().as_str();
 
     let num = captures
         .name("num")
-        .unwrap()
+        .expect(ADD_ERROR)
         .as_str()
         .parse::<u32>()
-        .unwrap();
+        .expect(ADD_ERROR);
 
     config.add_project(name, num).save();
 }
@@ -35,11 +37,11 @@ pub fn add(config: Config, params: Params) {
 /// Remove a project from the projects HashMap in Config
 pub fn remove(config: Config, params: Params) {
     let name = Regex::new(NAME_REGEX)
-        .unwrap()
+        .expect(REMOVE_ERROR)
         .captures(&params.text)
-        .unwrap()
+        .expect(REMOVE_ERROR)
         .name("name")
-        .unwrap()
+        .expect(REMOVE_ERROR)
         .as_str();
 
     config.remove_project(name).save();

@@ -36,7 +36,30 @@ Add an alias! I use ZSH and store my github projects in `~/coding/` and thus add
 alias tod="~/coding/tod/target/release/tod"
 ```
 
-### Run
+### Usage
+
+Add a project
+
+```bash
+tod --add myproject 12345678
+tod -a myproject 12345678
+```
+
+Remove a project
+
+```bash
+tod --remove myproject
+tod -r myproject
+```
+
+Remove a project
+
+```bash
+tod --list
+tod -l
+```
+
+Create a new task
 
 ```bash
 # you can use inbox, in or i to send items to your inbox
@@ -45,5 +68,5 @@ tod inbox Buy milk from the grocery store tomorrow
 
 # send it to a project defined in ~/.tod.cfg
 # tasks sent to projects dont use natural language processing, because API.
-tod project_name write more rust
+tod myproject write more rust
 ```

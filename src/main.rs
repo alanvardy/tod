@@ -14,9 +14,9 @@ fn main() {
     let config: config::Config = config::get_or_create_config_file();
 
     match params.command.as_str() {
-        "list" => projects::list(config),
-        "add" => projects::add(config, params),
-        "remove" => projects::remove(config, params),
+        "--list" | "-l" => projects::list(config),
+        "--add" | "-a" => projects::add(config, params),
+        "--remove" | "-r" => projects::remove(config, params),
         _ => request::Request::new(params, config).perform(),
     }
 }

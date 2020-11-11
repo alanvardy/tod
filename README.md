@@ -4,13 +4,8 @@
 
 A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project. Tasks sent to the inbox can take advantage of natural language processing to assign due dates, tags etc.
 
-Will ask for your Todoist API token on first run, and store the token in json format in `~/.tod.cfg`. You can obtain your token from [Todoist Preferences](https://todoist.com/prefs/integrations).
+Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `~/.tod.cfg`. 
 
-Also stored with your token is a mapping of project names to project ids, i.e.
-
-```json
-{"projects":{"project_name":12345678},"token":"a09999999999dd999fe8a48c07fd3c99999999ac07"}
-```
 
 ### Install from Crates.io
 
@@ -39,28 +34,28 @@ You can then find the binary in `/target/release/`
 
 ### Usage
 
-Add a project
+#### Add a project
 
 ```bash
 tod --add myproject 12345678
 tod -a myproject 12345678
 ```
 
-Remove a project
+#### Remove a project
 
 ```bash
 tod --remove myproject
 tod -r myproject
 ```
 
-List projects
+#### List projects
 
 ```bash
 tod --list
 tod -l
 ```
 
-Create a new task
+#### Create a new task
 
 ```bash
 # you can use inbox, in or i to send items to your inbox

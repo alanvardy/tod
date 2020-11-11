@@ -4,6 +4,7 @@ use regex::Regex;
 
 const NAME_REGEX: &str = r"^(?P<name>\w*)$";
 const NAME_NUMBER_REGEX: &str = r"^(?P<name>\w*) (?P<num>\d*)$";
+
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
 const REMOVE_ERROR: &str = "Must provide project name, i.e. tod --remove projectname";
 
@@ -22,7 +23,7 @@ pub fn add(config: Config, params: Params) {
         .captures(&params.text)
         .expect(ADD_ERROR);
 
-    let name = captures.name("name").unwrap().as_str();
+    let name = captures.name("name").expect(ADD_ERROR).as_str();
 
     let num = captures
         .name("num")

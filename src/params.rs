@@ -13,7 +13,7 @@ impl Params {
                 1 => command.push_str(&arg),
                 2 => text.push_str(&arg),
                 num if num > 2 => {
-                    text.push_str(" ");
+                    text.push(' ');
                     text.push_str(&arg);
                 }
                 _ => (),

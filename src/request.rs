@@ -95,10 +95,7 @@ mod tests {
 
         let request = build_index_request(params, config);
 
-        assert_eq!(
-            request.url.as_str(),
-            QUICK_ADD_URL
-        );
+        assert_eq!(request.url.as_str(), QUICK_ADD_URL);
         assert_eq!(format!("{:?}", request.body), "Object({\"auto_reminder\": Bool(true), \"text\": String(\"this is text\"), \"token\": String(\"1234567\")})");
     }
     #[test]

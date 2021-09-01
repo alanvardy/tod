@@ -63,6 +63,14 @@ tod -l
 tod inbox Buy milk from the grocery store tomorrow
 
 # send it to a project defined in ~/.tod.cfg
-# tasks sent to projects dont use natural language processing, because API.
+# tasks sent to projects don't use natural language processing, because API.
 tod myproject write more rust
+```
+
+#### Get the next task
+
+```bash
+# Returns the next most important item (determined by date and priority)
+tod --next myproject
+tod -n myproject
 ```

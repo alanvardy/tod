@@ -2,7 +2,6 @@ use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
-use std::fs::File;
 use std::io;
 use std::io::*;
 
@@ -31,26 +30,36 @@ impl Config {
         }
     }
 
-    pub fn create_file(self) -> Config {
+    pub fn create(self) -> Config {
         let json = json!({ "token": self.token, "projects": self.projects}).to_string();
-        let bytes = File::create(&self.path)
+        let bytes = fs::File::create(&self.path)
             .expect("could not create file")
+            .write(json.as_bytes())
+            .expect("could not write to file");
+
+        println!("{}", json);
+        println!("{} bytes written to {}", bytes, &self.path);
+        self
+    }
+
+    pub fn save(self) -> Config {
+        let json = json!({ "token": self.token, "projects": self.projects}).to_string();
+        let bytes = fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .open(&self.path)
+            .expect("Could not find config")
             .write(json.as_bytes())
             .expect("could not write to file");
         println!("{} bytes written to {}", bytes, &self.path);
         self
     }
 
-    pub fn save(self) -> Config {
-        fs::remove_file(&self.path).expect("could not remove old config");
-        self.create_file()
-    }
-
     pub fn load() -> Config {
         let path: String = generate_path();
         let mut json = String::new();
 
-        File::open(&path)
+        fs::File::open(&path)
             .expect("Could not find file")
             .read_to_string(&mut json)
             .expect("Could not read to string");
@@ -82,11 +91,11 @@ impl Config {
 pub fn get_or_create_config_file() -> Config {
     let path: String = generate_path();
 
-    match File::open(&path) {
+    match fs::File::open(&path) {
         Ok(_) => Config::load(),
         Err(_) => {
             let token = input_token();
-            Config::new(&token).create_file()
+            Config::new(&token).create()
         }
     }
 }
@@ -129,14 +138,21 @@ mod tests {
             .to_str()
             .expect("could not set home directory to str");
         let path = format!("{}/test", home_directory_str);
+        let _ = fs::remove_file(&path);
 
-        let config2 = config.clone().create_file();
+        let config2 = config.clone().create();
         let config3 = Config::load();
         assert_eq!(config.token, config2.token);
         assert_eq!(config.projects, config2.projects);
         assert_eq!(config2.token, config3.token);
         assert_eq!(config2.projects, config3.projects);
-        assert_matches!(File::open(&path), Ok(_));
+
+        let new_config = Config::new("differenttoken");
+        new_config.save();
+        let config3 = Config::load();
+        assert_eq!(config3.token, "differenttoken");
+
+        assert_matches!(fs::File::open(&path), Ok(_));
         assert_matches!(fs::remove_file(&path), Ok(_));
     }
 }

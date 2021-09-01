@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Params {
     pub command: String,
     pub text: String,

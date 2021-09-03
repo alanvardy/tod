@@ -1,6 +1,6 @@
 ## Tod
 
-[![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod)
+[![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod) [![codecov][codecov_master_svg]][https://app.codecov.io/gh/alanvardy/tod]
 
 A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project. Tasks sent to the inbox can take advantage of natural language processing to assign due dates, tags etc.
 
@@ -26,7 +26,7 @@ Clone the project
 ```bash
 git clone git@github.com:alanvardy/tod.git
 cd tod
-cargo test
+./test.sh # run the tests
 cargo build --release
 ```
 

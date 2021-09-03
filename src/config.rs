@@ -9,7 +9,7 @@ use std::io::*;
 struct JsonOutput {
     token: String,
     projects: HashMap<String, u32>,
-    next_id: String
+    next_id: String,
 }
 #[derive(Clone)]
 pub struct Config {
@@ -36,7 +36,9 @@ impl Config {
 
     pub fn create(self) -> Config {
         // TODO make not dynamic
-        let json = json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id}).to_string();
+        let json =
+            json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id})
+                .to_string();
         let bytes = fs::File::create(&self.path)
             .expect("could not create file")
             .write(json.as_bytes())
@@ -49,7 +51,9 @@ impl Config {
 
     pub fn save(self) -> Config {
         // TODO make not dynamic
-        let json = json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id}).to_string();
+        let json =
+            json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id})
+                .to_string();
         let bytes = fs::OpenOptions::new()
             .write(true)
             .read(true)

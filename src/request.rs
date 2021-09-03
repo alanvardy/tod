@@ -137,6 +137,7 @@ mod tests {
             token: String::from("1234567"),
             projects,
             path: config::generate_path(),
+            next_id: String::from(""),
         };
 
         let request = build_index_request(params, config);
@@ -158,6 +159,7 @@ mod tests {
             token: String::from("1234567"),
             projects,
             path: config::generate_path(),
+            next_id: String::from(""),
         };
 
         let request = build_project_request(params, config);

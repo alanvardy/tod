@@ -9,6 +9,7 @@ use std::io::*;
 struct JsonOutput {
     token: String,
     projects: HashMap<String, u32>,
+    next_id: String
 }
 #[derive(Clone)]
 pub struct Config {
@@ -18,6 +19,8 @@ pub struct Config {
     pub projects: HashMap<String, u32>,
     /// Path to config file
     pub path: String,
+    /// The ID of the next task
+    pub next_id: String,
 }
 
 impl Config {
@@ -26,12 +29,14 @@ impl Config {
         Config {
             path: generate_path(),
             token: String::from(token),
+            next_id: String::from(""),
             projects,
         }
     }
 
     pub fn create(self) -> Config {
-        let json = json!({ "token": self.token, "projects": self.projects}).to_string();
+        // TODO make not dynamic
+        let json = json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id}).to_string();
         let bytes = fs::File::create(&self.path)
             .expect("could not create file")
             .write(json.as_bytes())
@@ -43,7 +48,8 @@ impl Config {
     }
 
     pub fn save(self) -> Config {
-        let json = json!({ "token": self.token, "projects": self.projects}).to_string();
+        // TODO make not dynamic
+        let json = json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id}).to_string();
         let bytes = fs::OpenOptions::new()
             .write(true)
             .read(true)
@@ -69,6 +75,7 @@ impl Config {
         Config {
             token: json_output.token,
             projects: json_output.projects,
+            next_id: json_output.next_id,
             path,
         }
     }

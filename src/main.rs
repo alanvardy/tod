@@ -10,8 +10,9 @@ mod projects;
 mod request;
 
 fn main() {
-    let params: params::Params = params::Params::new(env::args());
-    let config: config::Config = config::get_or_create_config_file();
+    let args = env::args().skip(1).collect::<Vec<String>>();
+    let params: params::Params = params::Params::new(args);
+    let config: config::Config = config::get_or_create();
 
     match params.command.as_str() {
         "--list" | "-l" => projects::list(config),

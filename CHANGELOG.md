@@ -7,6 +7,7 @@
 - Saves the config file rather than deleting and recreating
 - Add tarpaulin for test coverage
 - Add shell script `test.sh` for testing
+- Increase test coverage
 
 ## 2020-11-11 0.1.0
 - First commit!

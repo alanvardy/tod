@@ -61,7 +61,6 @@ jobs:
 
   coverage:
     name: coverage
-    environment: CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

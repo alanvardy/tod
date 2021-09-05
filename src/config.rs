@@ -1,17 +1,12 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::io::*;
 
-#[derive(Deserialize)]
-struct JsonOutput {
-    token: String,
-    projects: HashMap<String, u32>,
-    next_id: String,
-}
-#[derive(Clone)]
+/// App configuration, serialized as json in ~/.tod.cfg
+#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Config {
     /// The Todoist Api token
     pub token: String,
@@ -35,10 +30,7 @@ impl Config {
     }
 
     pub fn create(self) -> Config {
-        // TODO make not dynamic
-        let json =
-            json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id})
-                .to_string();
+        let json = json!(self).to_string();
         let bytes = fs::File::create(&self.path)
             .expect("could not create file")
             .write(json.as_bytes())
@@ -50,10 +42,7 @@ impl Config {
     }
 
     pub fn save(self) -> Config {
-        // TODO make not dynamic
-        let json =
-            json!({ "token": self.token, "projects": self.projects, "next_id": self.next_id})
-                .to_string();
+        let json = json!(self).to_string();
         let bytes = fs::OpenOptions::new()
             .write(true)
             .read(true)
@@ -65,8 +54,7 @@ impl Config {
         self
     }
 
-    pub fn load() -> Config {
-        let path: String = generate_path();
+    pub fn load(path: String) -> Config {
         let mut json = String::new();
 
         fs::File::open(&path)
@@ -74,7 +62,7 @@ impl Config {
             .read_to_string(&mut json)
             .expect("Could not read to string");
 
-        let json_output: JsonOutput = serde_json::from_str(&json).expect("Could not parse JSON");
+        let json_output: Config = serde_json::from_str(&json).expect("Could not parse JSON");
 
         Config {
             token: json_output.token,
@@ -99,11 +87,11 @@ impl Config {
     }
 }
 
-pub fn get_or_create_config_file() -> Config {
+pub fn get_or_create() -> Config {
     let path: String = generate_path();
 
     match fs::File::open(&path) {
-        Ok(_) => Config::load(),
+        Ok(_) => Config::load(path),
         Err(_) => {
             let token = input_token();
             Config::new(&token).create()
@@ -136,14 +124,75 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_generate_config() {
+    fn new_should_generate_config() {
         let config = Config::new("something");
         assert_eq!(config.token, String::from("something"));
     }
 
     #[test]
-    fn should_create_file_and_read_config() {
-        let config = Config::new("faketoken");
+    fn add_project_should_work() {
+        let config = Config::new("something");
+        let mut projects: HashMap<String, u32> = HashMap::new();
+        assert_eq!(
+            config,
+            Config {
+                token: String::from("something"),
+                path: generate_path(),
+                next_id: String::from(""),
+                projects: projects.clone(),
+            }
+        );
+        let config = config.add_project("test", 1234);
+        projects.insert(String::from("test"), 1234);
+        assert_eq!(
+            config,
+            Config {
+                token: String::from("something"),
+                path: generate_path(),
+                next_id: String::from(""),
+                projects,
+            }
+        );
+    }
+
+    #[test]
+    fn remove_project_should_work() {
+        let mut projects: HashMap<String, u32> = HashMap::new();
+        projects.insert(String::from("test"), 1234);
+        projects.insert(String::from("test2"), 4567);
+        let config_with_two_projects = Config {
+            token: String::from("something"),
+            path: generate_path(),
+            next_id: String::from(""),
+            projects: projects.clone(),
+        };
+
+        assert_eq!(
+            config_with_two_projects,
+            Config {
+                token: String::from("something"),
+                path: generate_path(),
+                next_id: String::from(""),
+                projects: projects.clone(),
+            }
+        );
+        let config_with_one_project = config_with_two_projects.remove_project("test");
+        let mut projects: HashMap<String, u32> = HashMap::new();
+        projects.insert(String::from("test2"), 4567);
+        assert_eq!(
+            config_with_one_project,
+            Config {
+                token: String::from("something"),
+                path: generate_path(),
+                next_id: String::from(""),
+                projects,
+            }
+        );
+    }
+
+    #[test]
+    fn new_save_and_load_should_work() {
+        let new_config = Config::new("faketoken");
         let home_directory = dirs::home_dir().expect("could not get home directory");
         let home_directory_str = home_directory
             .to_str()
@@ -151,17 +200,15 @@ mod tests {
         let path = format!("{}/test", home_directory_str);
         let _ = fs::remove_file(&path);
 
-        let config2 = config.clone().create();
-        let config3 = Config::load();
-        assert_eq!(config.token, config2.token);
-        assert_eq!(config.projects, config2.projects);
-        assert_eq!(config2.token, config3.token);
-        assert_eq!(config2.projects, config3.projects);
+        let created_config = new_config.clone().create();
+        assert_eq!(new_config, created_config);
+        let loaded_config = Config::load(path.clone());
+        assert_eq!(created_config, loaded_config);
 
-        let new_config = Config::new("differenttoken");
-        new_config.save();
-        let config3 = Config::load();
-        assert_eq!(config3.token, "differenttoken");
+        let different_new_config = Config::new("differenttoken");
+        different_new_config.clone().save();
+        let loaded_config = Config::load(path.clone());
+        assert_eq!(loaded_config, different_new_config);
 
         assert_matches!(fs::File::open(&path), Ok(_));
         assert_matches!(fs::remove_file(&path), Ok(_));

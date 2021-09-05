@@ -69,8 +69,6 @@ fn build_index_request(params: Params, config: Config) -> Request {
 fn build_next_request(params: Params, config: Config) -> Request {
     let url = String::from(PROJECT_DATA_URL);
 
-    eprintln!("debug: {:?}", params);
-
     let project_id = config
         .projects
         .get(&params.text)
@@ -135,9 +133,9 @@ mod tests {
 
         let config = Config {
             token: String::from("1234567"),
-            projects,
             path: config::generate_path(),
             next_id: String::from(""),
+            projects,
         };
 
         let request = build_index_request(params, config);
@@ -145,6 +143,33 @@ mod tests {
         assert_eq!(request.url.as_str(), QUICK_ADD_URL);
         assert_eq!(format!("{:?}", request.body), "Object({\"auto_reminder\": Bool(true), \"text\": String(\"this is text\"), \"token\": String(\"1234567\")})");
     }
+
+    #[test]
+    fn should_build_next_request() {
+        let params = Params {
+            command: String::from("--next"),
+            text: String::from("project_name"),
+        };
+
+        let mut projects = HashMap::new();
+        projects.insert(String::from("project_name"), 1234);
+
+        let config = Config {
+            token: String::from("1234567"),
+            projects,
+            path: config::generate_path(),
+            next_id: String::from(""),
+        };
+
+        let request = build_next_request(params, config);
+
+        assert_eq!(request.url.as_str(), PROJECT_DATA_URL);
+        assert_eq!(
+            format!("{:?}", request.body),
+            "Object({\"project_id\": String(\"1234\"), \"token\": String(\"1234567\")})"
+        );
+    }
+
     #[test]
     fn should_build_project_request() {
         let params = Params {

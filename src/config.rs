@@ -15,7 +15,7 @@ pub struct Config {
     /// Path to config file
     pub path: String,
     /// The ID of the next task
-    pub next_id: String,
+    pub next_id: Option<u64>,
 }
 
 impl Config {
@@ -24,7 +24,7 @@ impl Config {
         Config {
             path: generate_path(),
             token: String::from(token),
-            next_id: String::from(""),
+            next_id: None,
             projects,
         }
     }
@@ -43,14 +43,13 @@ impl Config {
 
     pub fn save(self) -> Config {
         let json = json!(self).to_string();
-        let bytes = fs::OpenOptions::new()
+        let _bytes = fs::OpenOptions::new()
             .write(true)
             .read(true)
             .open(&self.path)
             .expect("Could not find config")
             .write(json.as_bytes())
             .expect("could not write to file");
-        println!("{} bytes written to {}", bytes, &self.path);
         self
     }
 
@@ -85,6 +84,18 @@ impl Config {
 
         Config { projects, ..self }
     }
+
+    pub fn set_next_id(self, next_id: u64) -> Config {
+        let next_id: Option<u64> = Some(next_id);
+
+        Config { next_id, ..self }
+    }
+
+    // pub fn clear_next_id(self) -> Config {
+    //     let next_id: Option<u64> = None;
+
+    //     Config { next_id, ..self }
+    // }
 }
 
 pub fn get_or_create() -> Config {
@@ -138,7 +149,7 @@ mod tests {
             Config {
                 token: String::from("something"),
                 path: generate_path(),
-                next_id: String::from(""),
+                next_id: None,
                 projects: projects.clone(),
             }
         );
@@ -149,7 +160,7 @@ mod tests {
             Config {
                 token: String::from("something"),
                 path: generate_path(),
-                next_id: String::from(""),
+                next_id: None,
                 projects,
             }
         );
@@ -163,7 +174,7 @@ mod tests {
         let config_with_two_projects = Config {
             token: String::from("something"),
             path: generate_path(),
-            next_id: String::from(""),
+            next_id: None,
             projects: projects.clone(),
         };
 
@@ -172,7 +183,7 @@ mod tests {
             Config {
                 token: String::from("something"),
                 path: generate_path(),
-                next_id: String::from(""),
+                next_id: None,
                 projects: projects.clone(),
             }
         );
@@ -184,7 +195,7 @@ mod tests {
             Config {
                 token: String::from("something"),
                 path: generate_path(),
-                next_id: String::from(""),
+                next_id: None,
                 projects,
             }
         );

@@ -23,6 +23,7 @@ pub struct Request {
     url: String,
     body: serde_json::Value,
     request_type: RequestType,
+    config: Config,
 }
 
 impl Request {
@@ -46,7 +47,14 @@ impl Request {
                 RequestType::AddItem => println!("✓"),
                 RequestType::NextItem => {
                     let text = response.text().expect("could not read response");
-                    next_item::print(text);
+                    match next_item::determine_next_item(text) {
+                        Some(item) => {
+                            let config = self.config.set_next_id(item.id);
+                            config.save();
+                            println!("{}: {}", item.id, item.content)
+                        }
+                        None => print!("No items on list"),
+                    }
                 }
             }
         } else {
@@ -56,37 +64,30 @@ impl Request {
 }
 
 fn build_index_request(params: Params, config: Config) -> Request {
-    let url = String::from(QUICK_ADD_URL);
-    let body = json!({"token": config.token, "text": params.text, "auto_reminder": true});
-
     Request {
-        url,
-        body,
+        url: String::from(QUICK_ADD_URL),
+        body: json!({"token": config.token, "text": params.text, "auto_reminder": true}),
         request_type: RequestType::AddItem,
+        config,
     }
 }
 
 fn build_next_request(params: Params, config: Config) -> Request {
-    let url = String::from(PROJECT_DATA_URL);
-
     let project_id = config
         .projects
         .get(&params.text)
         .expect("Project not found")
         .to_string();
 
-    let body = json!({"token": config.token, "project_id": project_id});
-
     Request {
-        url,
-        body,
+        url: String::from(PROJECT_DATA_URL),
+        body: json!({"token": config.token, "project_id": project_id}),
         request_type: RequestType::NextItem,
+        config,
     }
 }
 
 fn build_project_request(params: Params, config: Config) -> Request {
-    let url = String::from(SYNC_URL);
-
     let body = match params.command.as_str() {
         "inbox" | "in" | "i" => {
             json!({"token": config.token, "commands": [{"type": "item_add", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"content": params.text}}]})
@@ -101,9 +102,10 @@ fn build_project_request(params: Params, config: Config) -> Request {
     };
 
     Request {
-        url,
+        url: String::from(SYNC_URL),
         body,
         request_type: RequestType::AddItem,
+        config,
     }
 }
 
@@ -134,7 +136,7 @@ mod tests {
         let config = Config {
             token: String::from("1234567"),
             path: config::generate_path(),
-            next_id: String::from(""),
+            next_id: None,
             projects,
         };
 
@@ -158,7 +160,7 @@ mod tests {
             token: String::from("1234567"),
             projects,
             path: config::generate_path(),
-            next_id: String::from(""),
+            next_id: None,
         };
 
         let request = build_next_request(params, config);
@@ -184,8 +186,10 @@ mod tests {
             token: String::from("1234567"),
             projects,
             path: config::generate_path(),
-            next_id: String::from(""),
+            next_id: None,
         };
+
+        println!("{:?}", config);
 
         let request = build_project_request(params, config);
 

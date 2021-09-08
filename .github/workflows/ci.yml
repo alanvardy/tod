@@ -47,9 +47,9 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-registry-test-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            cargo-registry-
+            cargo-registry-test-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal

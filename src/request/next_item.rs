@@ -264,6 +264,7 @@ mod tests {
         let output =
             "\n\u{1b}[1;33mGet gifts for the twins\u{1b}[0m\u{1b}[97m\nDue: 2021-11-13\u{1b}[0m";
 
+        // CI has color turned off by default
         control::set_override(true);
         assert_eq!(format!("{}", item), output);
         control::unset_override();

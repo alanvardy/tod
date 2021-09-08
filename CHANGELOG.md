@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-## 0.1.1
+## 2021-09-07 0.1.2
+- Color the item content based on the priority assigned
+- Print the item description below the content if exists
+- Print the date below the description if exists
+
+## 2021-09-06 0.1.1
 - Breaking changes to `.tod.cfg` (added new keys)
 - Fetches the next item from your todo list based on
   - Date

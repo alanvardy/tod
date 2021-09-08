@@ -1,3 +1,4 @@
+use colored::*;
 use reqwest::blocking::Client;
 use serde_json::json;
 use uuid::Uuid;
@@ -44,14 +45,14 @@ impl Request {
 
         if response.status().is_success() {
             match &self.request_type {
-                RequestType::AddItem => println!("✓"),
+                RequestType::AddItem => println!("{}", "✓".green()),
                 RequestType::NextItem => {
                     let text = response.text().expect("could not read response");
                     match next_item::determine_next_item(text) {
                         Some(item) => {
                             let config = self.config.set_next_id(item.id);
                             config.save();
-                            println!("{}: {}", item.id, item.content)
+                            println!("{}", item);
                         }
                         None => print!("No items on list"),
                     }

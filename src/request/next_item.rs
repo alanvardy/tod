@@ -2,8 +2,10 @@ use chrono::offset::Utc;
 use chrono::{DateTime, TimeZone};
 use chrono_tz::Tz;
 use chrono_tz::US::Pacific;
+use colored::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
+use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Item {
@@ -25,6 +27,32 @@ struct DateInfo {
 #[derive(Serialize, Deserialize, Debug)]
 struct Body {
     items: Vec<Item>,
+}
+
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let content = match self.priority {
+            2 => self.content.blue().bold(),
+            3 => self.content.yellow().bold(),
+            4 => self.content.red().bold(),
+            _ => self.content.white(),
+        };
+
+        let description = match &*self.description {
+            "" => String::from(""),
+            _ => format!("\n{}", self.description),
+        };
+
+        let due = match &self.due {
+            Some(DateInfo {
+                date,
+                is_recurring: _,
+            }) => format!("\nDue: {}", date).bright_white(),
+            None => String::from("").bright_white(),
+        };
+
+        write!(f, "\n{}{}{}", content, description, due)
+    }
 }
 
 /// Given a json response, return the next item
@@ -216,5 +244,28 @@ mod tests {
         };
 
         assert_eq!(determine_date_value(&item), 50)
+    }
+
+    #[test]
+    fn can_format_item() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: String::from("2021-11-13"),
+                is_recurring: false,
+            }),
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        let output =
+            "\n\u{1b}[1;33mGet gifts for the twins\u{1b}[0m\u{1b}[97m\nDue: 2021-11-13\u{1b}[0m";
+
+        control::set_override(true);
+        assert_eq!(format!("{}", item), output);
+        control::unset_override();
     }
 }

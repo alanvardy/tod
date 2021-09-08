@@ -38,7 +38,7 @@ impl Config {
         self
     }
 
-    pub fn save(self) -> Config {
+    pub fn save(self) {
         let json = json!(self).to_string();
         let _bytes = fs::OpenOptions::new()
             .write(true)
@@ -47,7 +47,6 @@ impl Config {
             .expect("Could not find config")
             .write(json.as_bytes())
             .expect("could not write to file");
-        self
     }
 
     pub fn load(path: String) -> Config {

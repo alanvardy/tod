@@ -16,8 +16,8 @@ fn main() {
 
     match params.command.as_str() {
         "--list" | "-l" => projects::list(config),
-        "--add" | "-a" => projects::add(config, params),
-        "--remove" | "-r" => projects::remove(config, params),
+        "--add" | "-a" => projects::add(config, params).save(),
+        "--remove" | "-r" => projects::remove(config, params).save(),
         _ => request::Request::new(params, config).perform(),
-    }
+    };
 }

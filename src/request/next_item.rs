@@ -29,7 +29,6 @@ struct Body {
 
 /// Given a json response, return the next item
 pub fn determine_next_item(text: String) -> Option<Item> {
-    println!("{}", text);
     let body: Body = serde_json::from_str(&text).unwrap();
     let mut items = body.items;
     items.sort_by_key(|b| Reverse(item_value(b)));
@@ -41,9 +40,6 @@ pub fn determine_next_item(text: String) -> Option<Item> {
 fn item_value(item: &Item) -> u32 {
     let date_value: u8 = determine_date_value(item);
     let priority_value: u8 = determine_priority_value(item);
-
-    let value = date_value as u32 + priority_value as u32;
-    println!("{}", value);
 
     date_value as u32 + priority_value as u32
 }

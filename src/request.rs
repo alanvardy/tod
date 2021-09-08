@@ -189,8 +189,6 @@ mod tests {
             next_id: None,
         };
 
-        println!("{:?}", config);
-
         let request = build_project_request(params, config);
 
         assert_eq!(request.url.as_str(), SYNC_URL);

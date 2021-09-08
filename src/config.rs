@@ -31,13 +31,10 @@ impl Config {
 
     pub fn create(self) -> Config {
         let json = json!(self).to_string();
-        let bytes = fs::File::create(&self.path)
+        let _bytes = fs::File::create(&self.path)
             .expect("could not create file")
             .write(json.as_bytes())
             .expect("could not write to file");
-
-        println!("{}", json);
-        println!("{} bytes written to {}", bytes, &self.path);
         self
     }
 

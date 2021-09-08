@@ -6,6 +6,7 @@
 - Color the item content based on the priority assigned
 - Print the item description below the content if exists
 - Print the date below the description if exists
+- Update dependencies
 
 ## 2021-09-06 0.1.1
 - Breaking changes to `.tod.cfg` (added new keys)

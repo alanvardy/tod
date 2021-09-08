@@ -1,6 +1,6 @@
 [package]
 name = "tod"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Alan Vardy <alanvardy@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -8,7 +8,7 @@ description = "A tiny unofficial Todoist client"
 readme = "README.md"
 homepage = "https://github.com/alanvardy/tod"
 repository = "https://github.com/alanvardy/tod"
-keywords = ["cli", "todoist", "client", "tasks"]
+keywords = ["cli", "todoist", "client", "tasks", "todo"]
 categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

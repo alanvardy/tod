@@ -40,9 +40,11 @@ impl Config {
 
     pub fn save(self) {
         let json = json!(self).to_string();
+
         let _bytes = fs::OpenOptions::new()
             .write(true)
             .read(true)
+            .truncate(true)
             .open(&self.path)
             .expect("Could not find config")
             .write(json.as_bytes())
@@ -87,11 +89,11 @@ impl Config {
         Config { next_id, ..self }
     }
 
-    // pub fn clear_next_id(self) -> Config {
-    //     let next_id: Option<u64> = None;
+    pub fn clear_next_id(self) -> Config {
+        let next_id: Option<u64> = None;
 
-    //     Config { next_id, ..self }
-    // }
+        Config { next_id, ..self }
+    }
 }
 
 pub fn get_or_create() -> Config {
@@ -134,6 +136,16 @@ mod tests {
     fn new_should_generate_config() {
         let config = Config::new("something");
         assert_eq!(config.token, String::from("something"));
+    }
+
+    #[test]
+    fn set_and_clear_next_id_should_work() {
+        let config = Config::new("something");
+        assert_eq!(config.next_id, None);
+        let config = config.set_next_id(123123);
+        assert_eq!(config.next_id, Some(123123));
+        let config = config.clear_next_id();
+        assert_eq!(config.next_id, None);
     }
 
     #[test]

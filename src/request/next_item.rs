@@ -105,7 +105,7 @@ fn determine_date_value(item: &Item) -> u8 {
                 _ => recurring_value,
             }
         }
-        None => 40,
+        None => 80,
     }
 }
 
@@ -225,7 +225,22 @@ mod tests {
             is_deleted: 0,
         };
 
-        assert_eq!(determine_date_value(&item), 50)
+        // On another day
+        assert_eq!(determine_date_value(&item), 50);
+
+        // Recurring
+        let item = Item {
+            due: Some(DateInfo {
+                date: String::from("2021-11-13"),
+                is_recurring: true,
+            }),
+            ..item
+        };
+        assert_eq!(determine_date_value(&item), 0);
+
+        // No date
+        let item = Item { due: None, ..item };
+        assert_eq!(determine_date_value(&item), 80);
     }
 
     #[test]
@@ -243,7 +258,7 @@ mod tests {
             is_deleted: 0,
         };
 
-        assert_eq!(determine_date_value(&item), 50)
+        assert_eq!(determine_date_value(&item), 50);
     }
 
     #[test]

@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Set priority of no date to 80
+- Add `--complete` feature
 
 ## 2021-09-07 0.1.2
 - Color the item content based on the priority assigned

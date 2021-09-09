@@ -18,6 +18,6 @@ fn main() {
         "--list" | "-l" => projects::list(config),
         "--add" | "-a" => projects::add(config, params).save(),
         "--remove" | "-r" => projects::remove(config, params).save(),
-        _ => request::Request::new(params, config).perform(),
+        _ => request::Request::new(params, config.clone()).perform(config),
     };
 }

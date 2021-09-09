@@ -18,6 +18,8 @@ pub enum RequestType {
     AddItem,
     // Obtaining the next item from Todoist
     NextItem,
+    // Complete the last item fetched
+    Complete,
 }
 
 pub struct Request {
@@ -32,11 +34,12 @@ impl Request {
         match params.command.as_str() {
             "inbox" | "in" | "i" => build_index_request(params, config),
             "--next" | "-n" => build_next_request(params, config),
+            "--complete" | "-c" => build_complete_request(config),
             _ => build_project_request(params, config),
         }
     }
 
-    pub fn perform(self) {
+    pub fn perform(self, config: Config) {
         let response = Client::new()
             .post(&self.url)
             .json(&self.body)
@@ -46,6 +49,10 @@ impl Request {
         if response.status().is_success() {
             match &self.request_type {
                 RequestType::AddItem => println!("{}", "✓".green()),
+                RequestType::Complete => {
+                    config.clear_next_id().save();
+                    println!("{}", "✓".green())
+                }
                 RequestType::NextItem => {
                     let text = response.text().expect("could not read response");
                     match next_item::determine_next_item(text) {
@@ -84,6 +91,20 @@ fn build_next_request(params: Params, config: Config) -> Request {
         url: String::from(PROJECT_DATA_URL),
         body: json!({"token": config.token, "project_id": project_id}),
         request_type: RequestType::NextItem,
+        config,
+    }
+}
+
+// $ curl https://api.todoist.com/sync/v8/sync \
+//     -H "Authorization: Bearer 0123456789abcdef0123456789abcdef01234567" \
+//     -d commands='[{"type": "item_close", "uuid": "c5888360-96b1-46be-aaac-b49b1135feab", "args": {"id": 33548400}}]
+
+fn build_complete_request(config: Config) -> Request {
+    let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"id": config.next_id}}]});
+    Request {
+        url: String::from(SYNC_URL),
+        request_type: RequestType::Complete,
+        body,
         config,
     }
 }
@@ -194,5 +215,23 @@ mod tests {
 
         assert_eq!(request.url.as_str(), SYNC_URL);
         assert_eq!(format!("{:?}", request.body), "Object({\"commands\": Array([Object({\"args\": Object({\"content\": String(\"this is text\"), \"project_id\": Number(1234)}), \"temp_id\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\"), \"type\": String(\"item_add\"), \"uuid\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\")})]), \"token\": String(\"1234567\")})");
+    }
+
+    #[test]
+    fn should_build_complete_request() {
+        let mut projects = HashMap::new();
+        projects.insert(String::from("project_name"), 1234);
+
+        let config = Config {
+            token: String::from("1234567"),
+            projects,
+            path: config::generate_path(),
+            next_id: Some(123123),
+        };
+
+        let request = build_complete_request(config);
+
+        assert_eq!(request.url.as_str(), SYNC_URL);
+        assert_eq!(format!("{:?}", request.body), "Object({\"commands\": Array([Object({\"args\": Object({\"id\": Number(123123)}), \"temp_id\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\"), \"type\": String(\"item_close\"), \"uuid\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\")})]), \"token\": String(\"1234567\")})");
     }
 }

@@ -74,3 +74,21 @@ tod myproject write more rust
 tod --next myproject
 tod -n myproject
 ```
+
+Items are ranked by points and the first is returned:
+- Date is today with no time: 100
+- Date is today with time in next or last 15 min: 200
+- No date: 80
+- Not recurring: 50
+- Item has no priority: 2
+- Priority 1: 1
+- Priority 2: 3
+- Priority 3: 4
+
+#### Complete the last task returned
+
+```bash
+# Completes the last task returned by "next task"
+tod --complete
+tod -c
+```

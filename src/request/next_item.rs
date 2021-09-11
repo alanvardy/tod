@@ -32,9 +32,9 @@ struct Body {
 impl fmt::Display for Item {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let content = match self.priority {
-            2 => self.content.blue().bold(),
-            3 => self.content.yellow().bold(),
-            4 => self.content.red().bold(),
+            2 => self.content.blue(),
+            3 => self.content.yellow(),
+            4 => self.content.red(),
             _ => self.content.white(),
         };
 
@@ -277,7 +277,7 @@ mod tests {
         };
 
         let output =
-            "\n\u{1b}[1;33mGet gifts for the twins\u{1b}[0m\u{1b}[97m\nDue: 2021-11-13\u{1b}[0m";
+            "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\u{1b}[97m\nDue: 2021-11-13\u{1b}[0m";
 
         // CI has color turned off by default
         control::set_override(true);

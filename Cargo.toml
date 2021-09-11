@@ -1,7 +1,7 @@
 [package]
 name = "tod"
 version = "0.1.2"
-authors = ["Alan Vardy <alanvardy@gmail.com>"]
+authors = ["Alan Vardy <alan@alanvardy.com>"]
 edition = "2018"
 license = "MIT"
 description = "A tiny unofficial Todoist client"
@@ -24,3 +24,4 @@ regex = "1"
 chrono = "0.4.19"
 chrono-tz = "0.5.3"
 colored = "2.0.0"
+clap = "2.33.3"

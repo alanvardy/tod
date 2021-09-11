@@ -6,6 +6,7 @@ extern crate clap;
 use clap::{App, Arg};
 
 mod config;
+mod items;
 mod projects;
 mod request;
 
@@ -148,7 +149,7 @@ fn main() {
             new_task: None,
             project: None,
             next_task: false,
-            complete_task: true,
+            complete_task: false,
             list_projects: true,
             add_project: None,
             remove_project: None,
@@ -157,8 +158,8 @@ fn main() {
             new_task: None,
             project: None,
             next_task: false,
-            complete_task: true,
-            list_projects: true,
+            complete_task: false,
+            list_projects: false,
             add_project: Some(params),
             remove_project: None,
         } => projects::add(config, params).save(),
@@ -166,8 +167,8 @@ fn main() {
             new_task: None,
             project: None,
             next_task: false,
-            complete_task: true,
-            list_projects: true,
+            complete_task: false,
+            list_projects: false,
             add_project: None,
             remove_project: Some(project_name),
         } => projects::remove(config, project_name).save(),

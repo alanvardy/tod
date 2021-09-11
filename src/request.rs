@@ -4,8 +4,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::config::Config;
-
-mod next_item;
+use crate::items;
 
 const QUICK_ADD_URL: &str = "https://api.todoist.com/sync/v8/quick/add";
 const PROJECT_DATA_URL: &str = "https://api.todoist.com/sync/v8/projects/get_data";
@@ -45,7 +44,7 @@ impl Request {
                 }
                 RequestType::NextItem => {
                     let text = response.text().expect("could not read response");
-                    match next_item::determine_next_item(text) {
+                    match items::determine_next_item(text) {
                         Some(item) => {
                             let config = self.config.set_next_id(item.id);
                             config.save();

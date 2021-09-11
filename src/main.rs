@@ -23,6 +23,7 @@ struct Arguments<'a> {
     list_projects: bool,
     add_project: Option<Vec<&'a str>>,
     remove_project: Option<&'a str>,
+    sort_inbox: bool,
 }
 
 fn main() {
@@ -87,6 +88,13 @@ fn main() {
                 .value_name("PROJECT NAME")
                 .help("Remove a project from config by name"),
         )
+        .arg(
+            Arg::with_name("sort inbox")
+                .short("s")
+                .long("sort")
+                .required(false)
+                .help("Sort inbox by moving tasks into projects"),
+        )
         .get_matches();
 
     let new_task = matches
@@ -104,6 +112,7 @@ fn main() {
         list_projects: matches.is_present("list projects"),
         add_project,
         remove_project: matches.value_of("remove project"),
+        sort_inbox: matches.is_present("sort inbox"),
     };
 
     let config: config::Config = config::get_or_create();
@@ -117,6 +126,7 @@ fn main() {
             list_projects: false,
             add_project: None,
             remove_project: None,
+            sort_inbox: false,
         } => request::build_project_request(config, &task, project).perform(),
         Arguments {
             new_task: Some(task),
@@ -126,6 +136,7 @@ fn main() {
             list_projects: false,
             add_project: None,
             remove_project: None,
+            sort_inbox: false,
         } => request::build_index_request(config, &task).perform(),
         Arguments {
             new_task: None,
@@ -135,6 +146,7 @@ fn main() {
             list_projects: false,
             add_project: None,
             remove_project: None,
+            sort_inbox: false,
         } => request::build_next_request(config, project).perform(),
         Arguments {
             new_task: None,
@@ -144,6 +156,7 @@ fn main() {
             list_projects: false,
             add_project: None,
             remove_project: None,
+            sort_inbox: false,
         } => request::build_complete_request(config).perform(),
         Arguments {
             new_task: None,
@@ -153,6 +166,7 @@ fn main() {
             list_projects: true,
             add_project: None,
             remove_project: None,
+            sort_inbox: false,
         } => projects::list(config),
         Arguments {
             new_task: None,
@@ -162,6 +176,7 @@ fn main() {
             list_projects: false,
             add_project: Some(params),
             remove_project: None,
+            sort_inbox: false,
         } => projects::add(config, params).save(),
         Arguments {
             new_task: None,
@@ -171,6 +186,7 @@ fn main() {
             list_projects: false,
             add_project: None,
             remove_project: Some(project_name),
+            sort_inbox: false,
         } => projects::remove(config, project_name).save(),
         _ => println!("Unrecognized input. For more information try --help"),
     };

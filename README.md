@@ -34,61 +34,55 @@ You can then find the binary in `/target/release/`
 
 ### Usage
 
-#### Add a project
+Start with the help flag to get the latest commands
 
-```bash
-tod --add myproject 12345678
-tod -a myproject 12345678
+```
+> tod -h
+
+Tod 0.1.2
+Alan Vardy <alan@alanvardy.com>
+A tiny unofficial Todoist client
+
+USAGE:
+    tod [FLAGS] [OPTIONS]
+
+FLAGS:
+    -c, --complete    Complete the last task fetched with next
+    -h, --help        Prints help information
+    -l, --list        List all the projects in local config
+    -n, --next        Get the next task by priority. Requires project option.
+    -V, --version     Prints version information
+
+OPTIONS:
+    -a, --add <PROJECT NAME> <PROJECT ID>    Add a project to config with id
+    -t, --task <new task>...                 Create a new task with text. Can specify project option, defaults to inbox.
+    -p, --project <PROJECT NAME>             The project namespace
+    -r, --remove <PROJECT NAME>              Remove a project from config by name
 ```
 
-#### Remove a project
+- You will be asked for an API key on first login, which is stored in `~/.tod.cfg`
+- Add your most commonly used projects, the project ID is the last serials of numbers in the URL, the project name cannot include spaces.
+- You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
+- Items are ranked by points and the first is returned:
+  - Date is today with no time: 100
+  - Date is today with time in next or last 15 min: 200
+  - No date: 80
+  - Not recurring: 50
+  - Item has no priority: 2
+  - Priority 1: 1
+  - Priority 2: 3
+  - Priority 3: 4
+
+#### Examples
 
 ```bash
-tod --remove myproject
-tod -r myproject
-```
+# Create a new task in inbox using natural language processing
+tod -t Buy milk from the grocery store tomorrow p1
 
-#### List projects
-
-```bash
-tod --list
-tod -l
-```
-
-#### Create a new task
-
-```bash
-# you can use inbox, in or i to send items to your inbox
-# tasks sent to the inbox can use natural language processing
-tod inbox Buy milk from the grocery store tomorrow
-
-# send it to a project defined in ~/.tod.cfg
+# Create a task in a project
 # tasks sent to projects don't use natural language processing, because API.
-tod myproject write more rust
-```
+tod -p myproject -t write more rust
 
-#### Get the next task
-
-```bash
-# Returns the next most important item (determined by date and priority)
-tod --next myproject
-tod -n myproject
-```
-
-Items are ranked by points and the first is returned:
-- Date is today with no time: 100
-- Date is today with time in next or last 15 min: 200
-- No date: 80
-- Not recurring: 50
-- Item has no priority: 2
-- Priority 1: 1
-- Priority 2: 3
-- Priority 3: 4
-
-#### Complete the last task returned
-
-```bash
-# Completes the last task returned by "next task"
-tod --complete
-tod -c
+# Get the next task for a project
+tod -np myproject
 ```

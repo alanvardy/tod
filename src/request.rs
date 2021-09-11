@@ -4,7 +4,6 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::config::Config;
-use crate::params::Params;
 
 mod next_item;
 
@@ -30,16 +29,7 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(params: Params, config: Config) -> Request {
-        match params.command.as_str() {
-            "inbox" | "in" | "i" => build_index_request(params, config),
-            "--next" | "-n" => build_next_request(params, config),
-            "--complete" | "-c" => build_complete_request(config),
-            _ => build_project_request(params, config),
-        }
-    }
-
-    pub fn perform(self, config: Config) {
+    pub fn perform(self) {
         let response = Client::new()
             .post(&self.url)
             .json(&self.body)
@@ -50,7 +40,7 @@ impl Request {
             match &self.request_type {
                 RequestType::AddItem => println!("{}", "✓".green()),
                 RequestType::Complete => {
-                    config.clear_next_id().save();
+                    self.config.clear_next_id().save();
                     println!("{}", "✓".green())
                 }
                 RequestType::NextItem => {
@@ -71,19 +61,19 @@ impl Request {
     }
 }
 
-fn build_index_request(params: Params, config: Config) -> Request {
+pub fn build_index_request(config: Config, task: &str) -> Request {
     Request {
         url: String::from(QUICK_ADD_URL),
-        body: json!({"token": config.token, "text": params.text, "auto_reminder": true}),
+        body: json!({"token": config.token, "text": task, "auto_reminder": true}),
         request_type: RequestType::AddItem,
         config,
     }
 }
 
-fn build_next_request(params: Params, config: Config) -> Request {
+pub fn build_next_request(config: Config, project: &str) -> Request {
     let project_id = config
         .projects
-        .get(&params.text)
+        .get(project)
         .expect("Project not found")
         .to_string();
 
@@ -95,11 +85,7 @@ fn build_next_request(params: Params, config: Config) -> Request {
     }
 }
 
-// $ curl https://api.todoist.com/sync/v8/sync \
-//     -H "Authorization: Bearer 0123456789abcdef0123456789abcdef01234567" \
-//     -d commands='[{"type": "item_close", "uuid": "c5888360-96b1-46be-aaac-b49b1135feab", "args": {"id": 33548400}}]
-
-fn build_complete_request(config: Config) -> Request {
+pub fn build_complete_request(config: Config) -> Request {
     let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"id": config.next_id}}]});
     Request {
         url: String::from(SYNC_URL),
@@ -109,19 +95,9 @@ fn build_complete_request(config: Config) -> Request {
     }
 }
 
-fn build_project_request(params: Params, config: Config) -> Request {
-    let body = match params.command.as_str() {
-        "inbox" | "in" | "i" => {
-            json!({"token": config.token, "commands": [{"type": "item_add", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"content": params.text}}]})
-        }
-        _ => {
-            let project_id = config
-                .projects
-                .get(&params.command)
-                .expect("Project not found");
-            json!({"token": config.token, "commands": [{"type": "item_add", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"content": params.text, "project_id": project_id}}]})
-        }
-    };
+pub fn build_project_request(config: Config, task: &str, project: &str) -> Request {
+    let project_id = config.projects.get(project).expect("Project not found");
+    let body = json!({"token": config.token, "commands": [{"type": "item_add", "uuid": gen_uuid(), "temp_id": gen_uuid(), "args": {"content": task, "project_id": project_id}}]});
 
     Request {
         url: String::from(SYNC_URL),
@@ -147,10 +123,7 @@ mod tests {
 
     #[test]
     fn should_build_index_request() {
-        let params = Params {
-            command: String::from("a_project"),
-            text: String::from("this is text"),
-        };
+        let text = "this is text";
 
         let mut projects = HashMap::new();
         projects.insert(String::from("project_name"), 1234);
@@ -162,7 +135,7 @@ mod tests {
             projects,
         };
 
-        let request = build_index_request(params, config);
+        let request = build_index_request(config, text);
 
         assert_eq!(request.url.as_str(), QUICK_ADD_URL);
         assert_eq!(format!("{:?}", request.body), "Object({\"auto_reminder\": Bool(true), \"text\": String(\"this is text\"), \"token\": String(\"1234567\")})");
@@ -170,10 +143,7 @@ mod tests {
 
     #[test]
     fn should_build_next_request() {
-        let params = Params {
-            command: String::from("--next"),
-            text: String::from("project_name"),
-        };
+        let project_name = "project_name";
 
         let mut projects = HashMap::new();
         projects.insert(String::from("project_name"), 1234);
@@ -185,7 +155,7 @@ mod tests {
             next_id: None,
         };
 
-        let request = build_next_request(params, config);
+        let request = build_next_request(config, project_name);
 
         assert_eq!(request.url.as_str(), PROJECT_DATA_URL);
         assert_eq!(
@@ -196,11 +166,6 @@ mod tests {
 
     #[test]
     fn should_build_project_request() {
-        let params = Params {
-            command: String::from("project_name"),
-            text: String::from("this is text"),
-        };
-
         let mut projects = HashMap::new();
         projects.insert(String::from("project_name"), 1234);
 
@@ -211,7 +176,7 @@ mod tests {
             next_id: None,
         };
 
-        let request = build_project_request(params, config);
+        let request = build_project_request(config, "this is text", "project_name");
 
         assert_eq!(request.url.as_str(), SYNC_URL);
         assert_eq!(format!("{:?}", request.body), "Object({\"commands\": Array([Object({\"args\": Object({\"content\": String(\"this is text\"), \"project_id\": Number(1234)}), \"temp_id\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\"), \"type\": String(\"item_add\"), \"uuid\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\")})]), \"token\": String(\"1234567\")})");

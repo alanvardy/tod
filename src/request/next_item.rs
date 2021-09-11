@@ -35,7 +35,7 @@ impl fmt::Display for Item {
             2 => self.content.blue(),
             3 => self.content.yellow(),
             4 => self.content.red(),
-            _ => self.content.white(),
+            _ => self.content.normal(),
         };
 
         let description = match &*self.description {
@@ -47,8 +47,11 @@ impl fmt::Display for Item {
             Some(DateInfo {
                 date,
                 is_recurring: _,
-            }) => format!("\nDue: {}", date).bright_white(),
-            None => String::from("").bright_white(),
+            }) => {
+                let date = if *date == today() { "Today" } else { date };
+                format!("\nDue: {}", date)
+            }
+            None => String::from(""),
         };
 
         write!(f, "\n{}{}{}", content, description, due)
@@ -77,12 +80,7 @@ fn determine_date_value(item: &Item) -> u8 {
     match &item.due {
         // Date "2021-09-06"
         Some(DateInfo { date, is_recurring }) if date.len() == 10 => {
-            let today = Utc::now()
-                .with_timezone(&Pacific)
-                .format("%Y-%m-%d")
-                .to_string();
-
-            let today_value = if *date == today { 100 } else { 0 };
+            let today_value = if *date == today() { 100 } else { 0 };
             let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
             today_value + recurring_value
         }
@@ -116,6 +114,13 @@ fn determine_priority_value(item: &Item) -> u8 {
         4 => 4,
         _ => 2,
     }
+}
+
+fn today() -> String {
+    Utc::now()
+        .with_timezone(&Pacific)
+        .format("%Y-%m-%d")
+        .to_string()
 }
 
 #[cfg(test)]
@@ -262,22 +267,44 @@ mod tests {
     }
 
     #[test]
-    fn can_format_item() {
+    fn can_format_item_with_a_date() {
         let item = Item {
             id: 222,
             content: String::from("Get gifts for the twins"),
             checked: 0,
             description: String::from(""),
             due: Some(DateInfo {
-                date: String::from("2021-11-13"),
+                date: String::from("2021-08-13"),
                 is_recurring: false,
             }),
             priority: 3,
             is_deleted: 0,
         };
 
-        let output =
-            "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\u{1b}[97m\nDue: 2021-11-13\u{1b}[0m";
+        let output = "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: 2021-08-13";
+
+        // CI has color turned off by default
+        control::set_override(true);
+        assert_eq!(format!("{}", item), output);
+        control::unset_override();
+    }
+
+    #[test]
+    fn can_format_item_with_today() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: today(),
+                is_recurring: false,
+            }),
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        let output = "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: Today";
 
         // CI has color turned off by default
         control::set_override(true);

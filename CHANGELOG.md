@@ -2,8 +2,9 @@
 
 ## Unreleased
 - Breaking changes to commandline arguments. Switched over to Clap crate for parsing arguments which will help handle additional features.
-- Set priority of no date to 80
 - Add `--complete` feature
+- Set priority of no date to 80
+- Set date as Today when it is... today.
 - Update dependencies
 
 ## 2021-09-07 0.1.2

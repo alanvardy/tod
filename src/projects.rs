@@ -29,6 +29,17 @@ pub fn remove(config: Config, project_name: &str) {
     config.remove_project(project_name).save()
 }
 
+pub fn project_id(config: &Config, project_name: &str) -> String {
+    let project_id = *config.projects.get(project_name).unwrap_or_else(|| {
+        panic!(
+            "Project {} not found, please add it to config",
+            project_name
+        )
+    });
+
+    project_id.to_string()
+}
+
 // #[cfg(test)]
 // mod tests {
 //     use super::*;

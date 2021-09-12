@@ -198,7 +198,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: true,
-        } => request::build_inbox_items_request(config),
+        } => request::sort_inbox(config),
         _ => println!("Unrecognized input. For more information try --help"),
     };
 }

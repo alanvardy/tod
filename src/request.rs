@@ -4,7 +4,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::config::Config;
-use crate::items;
+use crate::{config, items, projects};
 
 const QUICK_ADD_URL: &str = "https://api.todoist.com/sync/v8/quick/add";
 const PROJECT_DATA_URL: &str = "https://api.todoist.com/sync/v8/projects/get_data";
@@ -24,18 +24,10 @@ pub fn add_item_to_inbox(config: Config, task: &str) {
 
 /// Get the next item by priority
 pub fn next_item(config: Config, project: &str) {
-    let project_id = config
-        .projects
-        .get(project)
-        .expect("Project not found")
-        .to_string();
+    let project_id = projects::project_id(&config, project);
 
-    let url = String::from(PROJECT_DATA_URL);
-    let body = json!({"token": config.token, "project_id": project_id});
-
-    match get_response(url, body) {
-        Ok(text) => {
-            let items = items::from_json(text);
+    match items_for_project(config.clone(), &project_id) {
+        Ok(items) => {
             let maybe_item = items::sort_by_priority(items)
                 .first()
                 .map(|item| item.to_owned());
@@ -53,24 +45,50 @@ pub fn next_item(config: Config, project: &str) {
 }
 
 /// Get all items from inbox
-pub fn build_inbox_items_request(config: Config) {
-    let inbox_id = config
-        .projects
-        .get("inbox")
-        .expect("\"inbox\" not found it projects. Please add it to use this command.")
-        .to_string();
+pub fn sort_inbox(config: Config) {
+    let inbox_id = projects::project_id(&config, "inbox");
 
-    let url = String::from(PROJECT_DATA_URL);
-    let body = json!({"token": config.token, "project_id": inbox_id});
-
-    match get_response(url, body) {
-        Ok(text) => {
-            let items = items::from_json(text);
+    match items_for_project(config.clone(), &inbox_id) {
+        Ok(items) if !items.is_empty() => {
+            projects::list(config.clone());
             for item in items.iter() {
-                println!("{:?}", item);
+                move_item_to_project(config.clone(), item.to_owned());
             }
         }
+        Ok(_) => println!("No tasks to sort in inbox"),
         Err(e) => println!("{}", e),
+    }
+}
+
+pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<items::Item>, String> {
+    let url = String::from(PROJECT_DATA_URL);
+    let body = json!({"token": config.token, "project_id": project_id});
+    match get_response(url, body) {
+        Ok(text) => Ok(items::from_json(text)),
+        Err(err) => Err(err),
+    }
+}
+
+fn move_item_to_project(config: Config, item: items::Item) {
+    println!("{}", item);
+
+    let project = config::get_input("Enter destination project name or (c)omplete:");
+
+    match project.as_str() {
+        "complete" | "c" => {
+            let config = config.set_next_id(item.id);
+            complete_item(config);
+        }
+        _ => {
+            let project_id = projects::project_id(&config, &project);
+            let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
+            let url = String::from(SYNC_URL);
+
+            match get_response(url, body) {
+                Ok(_) => print_green_checkmark(),
+                Err(e) => println!("{}", e),
+            }
+        }
     }
 }
 

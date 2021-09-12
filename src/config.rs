@@ -98,11 +98,12 @@ impl Config {
 
 pub fn get_or_create() -> Config {
     let path: String = generate_path();
+    let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
     match fs::File::open(&path) {
         Ok(_) => Config::load(path),
         Err(_) => {
-            let token = input_token();
+            let token = get_input(desc);
             Config::new(&token).create()
         }
     }
@@ -118,9 +119,9 @@ pub fn generate_path() -> String {
     format!("{}/{}", home_directory_str, filename)
 }
 
-fn input_token() -> String {
+pub fn get_input(desc: &str) -> String {
     let mut input = String::new();
-    println!("Please enter your Todoist API token from https://todoist.com/prefs/integrations ");
+    println!("{}", desc);
     io::stdin()
         .read_line(&mut input)
         .expect("error: unable to read user input");

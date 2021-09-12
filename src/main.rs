@@ -25,6 +25,7 @@ struct Arguments<'a> {
     add_project: Option<Vec<&'a str>>,
     remove_project: Option<&'a str>,
     sort_inbox: bool,
+    prioritize_tasks: bool,
 }
 
 fn main() {
@@ -36,7 +37,7 @@ fn main() {
                 .long("task")
                 .required(false)
                 .multiple(true)
-                .min_values(2)
+                .min_values(1)
                 .help(
                     "Create a new task with text. Can specify project option, defaults to inbox.",
                 ),
@@ -96,6 +97,13 @@ fn main() {
                 .required(false)
                 .help("Sort inbox by moving tasks into projects"),
         )
+        .arg(
+            Arg::with_name("prioritize tasks")
+                .short("z")
+                .long("prioritize")
+                .required(false)
+                .help("Assign priorities to tasks. Can specify project option, defaults to inbox."),
+        )
         .get_matches();
 
     let new_task = matches
@@ -114,6 +122,7 @@ fn main() {
         add_project,
         remove_project: matches.value_of("remove project"),
         sort_inbox: matches.is_present("sort inbox"),
+        prioritize_tasks: matches.is_present("prioritize tasks"),
     };
 
     let config: config::Config = config::get_or_create();
@@ -128,6 +137,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
+            prioritize_tasks: false,
         } => request::add_item_to_project(config, &task, project),
         Arguments {
             new_task: Some(task),
@@ -138,6 +148,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
+            prioritize_tasks: false,
         } => request::add_item_to_inbox(config, &task),
         Arguments {
             new_task: None,
@@ -148,7 +159,8 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
-        } => request::next_item(config, project),
+            prioritize_tasks: false,
+        } => projects::next_item(config, project),
         Arguments {
             new_task: None,
             project: None,
@@ -158,6 +170,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
+            prioritize_tasks: false,
         } => request::complete_item(config),
         Arguments {
             new_task: None,
@@ -168,6 +181,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
+            prioritize_tasks: false,
         } => projects::list(config),
         Arguments {
             new_task: None,
@@ -178,6 +192,7 @@ fn main() {
             add_project: Some(params),
             remove_project: None,
             sort_inbox: false,
+            prioritize_tasks: false,
         } => projects::add(config, params),
         Arguments {
             new_task: None,
@@ -188,6 +203,7 @@ fn main() {
             add_project: None,
             remove_project: Some(project_name),
             sort_inbox: false,
+            prioritize_tasks: false,
         } => projects::remove(config, project_name),
         Arguments {
             new_task: None,
@@ -198,7 +214,30 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: true,
-        } => request::sort_inbox(config),
+            prioritize_tasks: false,
+        } => projects::sort_inbox(config),
+        Arguments {
+            new_task: None,
+            project: None,
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: true,
+        } => projects::prioritize_items(config, "inbox"),
+        Arguments {
+            new_task: None,
+            project: Some(project_name),
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: true,
+        } => projects::prioritize_items(config, project_name),
         _ => println!("Unrecognized input. For more information try --help"),
     };
 }

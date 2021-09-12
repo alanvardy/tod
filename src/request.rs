@@ -22,44 +22,6 @@ pub fn add_item_to_inbox(config: Config, task: &str) {
     }
 }
 
-/// Get the next item by priority
-pub fn next_item(config: Config, project: &str) {
-    let project_id = projects::project_id(&config, project);
-
-    match items_for_project(config.clone(), &project_id) {
-        Ok(items) => {
-            let maybe_item = items::sort_by_priority(items)
-                .first()
-                .map(|item| item.to_owned());
-
-            match maybe_item {
-                Some(item) => {
-                    config.set_next_id(item.id).save();
-                    println!("{}", item);
-                }
-                None => print!("No items on list"),
-            }
-        }
-        Err(e) => println!("{}", e),
-    }
-}
-
-/// Get all items from inbox
-pub fn sort_inbox(config: Config) {
-    let inbox_id = projects::project_id(&config, "inbox");
-
-    match items_for_project(config.clone(), &inbox_id) {
-        Ok(items) if !items.is_empty() => {
-            projects::list(config.clone());
-            for item in items.iter() {
-                move_item_to_project(config.clone(), item.to_owned());
-            }
-        }
-        Ok(_) => println!("No tasks to sort in inbox"),
-        Err(e) => println!("{}", e),
-    }
-}
-
 pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<items::Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({"token": config.token, "project_id": project_id});
@@ -69,7 +31,7 @@ pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<items::
     }
 }
 
-fn move_item_to_project(config: Config, item: items::Item) {
+pub fn move_item_to_project(config: Config, item: items::Item) {
     println!("{}", item);
 
     let project = config::get_input("Enter destination project name or (c)omplete:");
@@ -89,6 +51,17 @@ fn move_item_to_project(config: Config, item: items::Item) {
                 Err(e) => println!("{}", e),
             }
         }
+    }
+}
+
+/// Complete the last item returned by "next item"
+pub fn update_item_priority(config: Config, item: items::Item, priority: u8) {
+    let body = json!({"token": config.token, "commands": [{"type": "item_update", "uuid": new_uuid(), "args": {"id": item.id, "priority": priority}}]});
+    let url = String::from(SYNC_URL);
+
+    match get_response(url, body) {
+        Ok(_) => print_green_checkmark(),
+        Err(e) => println!("{}", e),
     }
 }
 

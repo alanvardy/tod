@@ -1,4 +1,6 @@
 use crate::config::Config;
+use crate::items::Item;
+use crate::{items, projects, request};
 
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
 
@@ -38,6 +40,69 @@ pub fn project_id(config: &Config, project_name: &str) -> String {
     });
 
     project_id.to_string()
+}
+
+/// Get the next item by priority
+pub fn next_item(config: Config, project_name: &str) {
+    let project_id = projects::project_id(&config, project_name);
+
+    match request::items_for_project(config.clone(), &project_id) {
+        Ok(items) => {
+            let maybe_item = items::sort_by_priority(items)
+                .first()
+                .map(|item| item.to_owned());
+
+            match maybe_item {
+                Some(item) => {
+                    config.set_next_id(item.id).save();
+                    println!("{}", item);
+                }
+                None => print!("No items on list"),
+            }
+        }
+        Err(e) => println!("{}", e),
+    }
+}
+
+/// Sort all the items in inbox
+pub fn sort_inbox(config: Config) {
+    let inbox_id = projects::project_id(&config, "inbox");
+
+    match request::items_for_project(config.clone(), &inbox_id) {
+        Ok(items) if !items.is_empty() => {
+            projects::list(config.clone());
+            for item in items.iter() {
+                request::move_item_to_project(config.clone(), item.to_owned());
+            }
+        }
+        Ok(_) => println!("No tasks to sort in inbox"),
+        Err(e) => println!("{}", e),
+    }
+}
+
+/// Prioritize all items in a project
+pub fn prioritize_items(config: Config, project_name: &str) {
+    let inbox_id = projects::project_id(&config, project_name);
+
+    match request::items_for_project(config.clone(), &inbox_id) {
+        Ok(items) => {
+            let unprioritized_items: Vec<Item> = items
+                .into_iter()
+                .filter(|item| item.priority == 1)
+                .collect::<Vec<Item>>();
+
+            if unprioritized_items.is_empty() {
+                println!("No tasks to prioritize in {}", project_name)
+            } else {
+                projects::list(config.clone());
+                for item in unprioritized_items.iter() {
+                    items::set_priority(config.clone(), item.to_owned());
+                }
+            }
+        }
+
+        Err(e) => println!("{}", e),
+    }
 }
 
 // #[cfg(test)]

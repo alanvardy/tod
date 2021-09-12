@@ -5,6 +5,8 @@
 - Add `--complete` feature
 - Set priority of no date to 80
 - Set date as Today when it is... today.
+- Add `--sort` feature
+- Add `--prioritize` feature
 - Update dependencies
 
 ## 2021-09-07 0.1.2

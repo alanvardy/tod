@@ -47,11 +47,13 @@ USAGE:
     tod [FLAGS] [OPTIONS]
 
 FLAGS:
-    -c, --complete    Complete the last task fetched with next
-    -h, --help        Prints help information
-    -l, --list        List all the projects in local config
-    -n, --next        Get the next task by priority. Requires project option.
-    -V, --version     Prints version information
+    -c, --complete      Complete the last task fetched with next
+    -h, --help          Prints help information
+    -l, --list          List all the projects in local config
+    -n, --next          Get the next task by priority. Requires project option.
+    -z, --prioritize    Assign priorities to tasks. Can specify project option, defaults to inbox.
+    -s, --sort          Sort inbox by moving tasks into projects
+    -V, --version       Prints version information
 
 OPTIONS:
     -a, --add <PROJECT NAME> <PROJECT ID>    Add a project to config with id

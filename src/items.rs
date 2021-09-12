@@ -1,18 +1,19 @@
-use crate::time;
-
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt;
 
+use crate::config::Config;
+use crate::{config, items, request, time};
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Item {
     pub id: u64,
     pub content: String,
+    pub priority: u8,
     checked: u8,
     description: String,
     due: Option<DateInfo>,
-    priority: u8,
     is_deleted: u8,
 }
 
@@ -105,6 +106,28 @@ pub fn from_json(json: String) -> Vec<Item> {
 pub fn sort_by_priority(mut items: Vec<Item>) -> Vec<Item> {
     items.sort_by_key(|b| Reverse(b.value()));
     items
+}
+
+pub fn set_priority(config: Config, item: items::Item) {
+    println!("{}", item);
+
+    let priority = config::get_input("Choose a priority from 1 (lowest) to 3 (highest):");
+
+    match priority.as_str() {
+        "1" => {
+            let config = config.set_next_id(item.id);
+            request::update_item_priority(config, item, 2);
+        }
+        "2" => {
+            let config = config.set_next_id(item.id);
+            request::update_item_priority(config, item, 3);
+        }
+        "3" => {
+            let config = config.set_next_id(item.id);
+            request::update_item_priority(config, item, 4);
+        }
+        _ => println!("Not a valid input, please enter 1, 2, or 3"),
+    }
 }
 
 #[cfg(test)]

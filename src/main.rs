@@ -9,6 +9,7 @@ mod config;
 mod items;
 mod projects;
 mod request;
+mod time;
 
 const APP: &str = "Tod";
 const VERSION: &str = "0.1.2";
@@ -127,7 +128,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
-        } => request::build_project_request(config, &task, project).perform(),
+        } => request::add_item_to_project(config, &task, project),
         Arguments {
             new_task: Some(task),
             project: None,
@@ -137,7 +138,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
-        } => request::build_index_request(config, &task).perform(),
+        } => request::add_item_to_inbox(config, &task),
         Arguments {
             new_task: None,
             project: Some(project),
@@ -147,7 +148,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
-        } => request::build_next_request(config, project).perform(),
+        } => request::next_item(config, project),
         Arguments {
             new_task: None,
             project: None,
@@ -157,7 +158,7 @@ fn main() {
             add_project: None,
             remove_project: None,
             sort_inbox: false,
-        } => request::build_complete_request(config).perform(),
+        } => request::complete_item(config),
         Arguments {
             new_task: None,
             project: None,
@@ -177,7 +178,7 @@ fn main() {
             add_project: Some(params),
             remove_project: None,
             sort_inbox: false,
-        } => projects::add(config, params).save(),
+        } => projects::add(config, params),
         Arguments {
             new_task: None,
             project: None,
@@ -187,7 +188,17 @@ fn main() {
             add_project: None,
             remove_project: Some(project_name),
             sort_inbox: false,
-        } => projects::remove(config, project_name).save(),
+        } => projects::remove(config, project_name),
+        Arguments {
+            new_task: None,
+            project: None,
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: true,
+        } => request::build_inbox_items_request(config),
         _ => println!("Unrecognized input. For more information try --help"),
     };
 }

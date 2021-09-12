@@ -1,7 +1,5 @@
-use chrono::offset::Utc;
-use chrono::{DateTime, TimeZone};
-use chrono_tz::Tz;
-use chrono_tz::US::Pacific;
+use crate::time;
+
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -30,7 +28,7 @@ struct Body {
 }
 
 impl fmt::Display for Item {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         let content = match self.priority {
             2 => self.content.blue(),
             3 => self.content.yellow(),
@@ -47,176 +45,162 @@ impl fmt::Display for Item {
             Some(DateInfo {
                 date,
                 is_recurring: _,
-            }) => {
-                let date = if *date == today() { "Today" } else { date };
-                format!("\nDue: {}", date)
-            }
+            }) => format!("\nDue: {}", time::maybe_today(date)),
+
             None => String::from(""),
         };
 
-        write!(f, "\n{}{}{}", content, description, due)
+        write!(formatter, "\n{}{}{}", content, description, due)
     }
 }
 
-/// Given a json response, return the next item
-pub fn determine_next_item(text: String) -> Option<Item> {
-    let body: Body = serde_json::from_str(&text).unwrap();
-    let mut items = body.items;
-    items.sort_by_key(|b| Reverse(item_value(b)));
+impl Item {
+    /// Determines the numeric value of an item for sorting
+    fn value(&self) -> u32 {
+        let date_value: u8 = self.date_value();
+        let priority_value: u8 = self.priority_value();
 
-    items.first().map(|item| item.to_owned())
-}
+        date_value as u32 + priority_value as u32
+    }
 
-/// Determines the numeric value of an item for sorting
-fn item_value(item: &Item) -> u32 {
-    let date_value: u8 = determine_date_value(item);
-    let priority_value: u8 = determine_priority_value(item);
-
-    date_value as u32 + priority_value as u32
-}
-
-/// Return the value of the due field
-fn determine_date_value(item: &Item) -> u8 {
-    match &item.due {
-        // Date "2021-09-06"
-        Some(DateInfo { date, is_recurring }) if date.len() == 10 => {
-            let today_value = if *date == today() { 100 } else { 0 };
-            let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
-            today_value + recurring_value
-        }
-        // DateTime "2021-09-06T16:00:00(Z)"
-        Some(DateInfo { date, is_recurring }) => {
-            let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
-            let parse_string = match date.len() {
-                19 => "%Y-%m-%dT%H:%M:%S",
-                _ => "%Y-%m-%dT%H:%M:%SZ",
-            };
-            let dt: DateTime<Tz> = Pacific
-                .datetime_from_str(date, parse_string)
-                .expect("could not parse DateTime");
-
-            let now = &Utc::now().with_timezone(&Pacific);
-
-            let duration = dt - now.to_owned();
-            match duration.num_minutes() {
-                num if (-15..=15).contains(&num) => 200 + recurring_value,
-                _ => recurring_value,
+    /// Return the value of the due field
+    fn date_value(&self) -> u8 {
+        match &self.due {
+            // Date "2021-09-06"
+            Some(DateInfo { date, is_recurring }) if date.len() == 10 => {
+                let today_value = if *date == time::today() { 100 } else { 0 };
+                let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
+                today_value + recurring_value
             }
+            // DateTime "2021-09-06T16:00:00(Z)"
+            Some(DateInfo { date, is_recurring }) => {
+                let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
+                let dt = time::datetime_from_str(date);
+
+                let duration = dt - time::now();
+                match duration.num_minutes() {
+                    -15..=15 => 200 + recurring_value,
+                    _ => recurring_value,
+                }
+            }
+            None => 80,
         }
-        None => 80,
+    }
+
+    fn priority_value(&self) -> u8 {
+        match self.priority {
+            2 => 1,
+            3 => 3,
+            4 => 4,
+            _ => 2,
+        }
     }
 }
 
-fn determine_priority_value(item: &Item) -> u8 {
-    match &item.priority {
-        2 => 1,
-        3 => 3,
-        4 => 4,
-        _ => 2,
-    }
+pub fn from_json(json: String) -> Vec<Item> {
+    let body: Body = serde_json::from_str(&json).expect("Could not parse items from JSON response");
+    body.items
 }
 
-fn today() -> String {
-    Utc::now()
-        .with_timezone(&Pacific)
-        .format("%Y-%m-%d")
-        .to_string()
+pub fn sort_by_priority(mut items: Vec<Item>) -> Vec<Item> {
+    items.sort_by_key(|b| Reverse(b.value()));
+    items
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn determine_next_item_should_return_an_item() {
-        let json = String::from(
-            "\
-        {\"items\":\
-            [\
-                {\
-                    \"added_by_uid\":635166,\
-                    \"assigned_by_uid\":null,\
-                    \"checked\":0,\
-                    \"child_order\":0,\
-                    \"collapsed\":0,\
-                    \"content\":\"Find the continuum transfunctioner\",\
-                    \"date_added\":\"2021-02-27T19:41:56Z\",\
-                    \"date_completed\":null,\
-                    \"description\":\"\",\
-                    \"due\":\
-                    {\
-                        \"date\":\"2021-11-13\",\
-                        \"is_recurring\":false,\
-                        \"lang\":\"en\",\
-                        \"string\":\"every 12 weeks\",\
-                        \"timezone\":null\
-                    },\
-                    \"id\":222,\
-                    \"in_history\":0,\
-                    \"is_deleted\":0,\
-                    \"labels\":[],\
-                    \"note_count\":0,\
-                    \"parent_id\":null,\
-                    \"priority\":1,\
-                    \"project_id\":11111111,\
-                    \"responsible_uid\":null,\
-                    \"section_id\":22222222,\
-                    \"sync_id\":null,\
-                    \"user_id\":3333333\
-                },\
-                {\
-                    \"added_by_uid\":635166,\
-                    \"assigned_by_uid\":null,\
-                    \"checked\":0,\
-                    \"child_order\":0,\
-                    \"collapsed\":0,\
-                    \"content\":\"Get gifts for the twins\",\
-                    \"date_added\":\"2021-02-27T19:41:56Z\",\
-                    \"date_completed\":null,\
-                    \"description\":\"\",\
-                    \"due\":\
-                    {\
-                        \"date\":\"2021-11-13\",\
-                        \"is_recurring\":false,\
-                        \"lang\":\"en\",\
-                        \"string\":\"every 12 weeks\",\
-                        \"timezone\":null\
-                    },\
-                    \"id\":222,\
-                    \"in_history\":0,\
-                    \"is_deleted\":0,\
-                    \"labels\":[],\
-                    \"note_count\":0,\
-                    \"parent_id\":null,\
-                    \"priority\":3,\
-                    \"project_id\":11111111,\
-                    \"responsible_uid\":null,\
-                    \"section_id\":22222222,\
-                    \"sync_id\":null,\
-                    \"user_id\":3333333\
-                }\
-            ]\
-        }",
-        );
-        assert_eq!(
-            determine_next_item(json).unwrap(),
-            Item {
-                id: 222,
-                content: String::from("Get gifts for the twins"),
-                checked: 0,
-                description: String::from(""),
-                due: Some(DateInfo {
-                    date: String::from("2021-11-13"),
-                    is_recurring: false
-                }),
-                priority: 3,
-                is_deleted: 0,
-            }
-        );
-    }
+    // #[test]
+    // fn determine_next_item_should_return_an_item() {
+    //     let json = String::from(
+    //         "\
+    //     {\"items\":\
+    //         [\
+    //             {\
+    //                 \"added_by_uid\":635166,\
+    //                 \"assigned_by_uid\":null,\
+    //                 \"checked\":0,\
+    //                 \"child_order\":0,\
+    //                 \"collapsed\":0,\
+    //                 \"content\":\"Find the continuum transfunctioner\",\
+    //                 \"date_added\":\"2021-02-27T19:41:56Z\",\
+    //                 \"date_completed\":null,\
+    //                 \"description\":\"\",\
+    //                 \"due\":\
+    //                 {\
+    //                     \"date\":\"2021-11-13\",\
+    //                     \"is_recurring\":false,\
+    //                     \"lang\":\"en\",\
+    //                     \"string\":\"every 12 weeks\",\
+    //                     \"timezone\":null\
+    //                 },\
+    //                 \"id\":222,\
+    //                 \"in_history\":0,\
+    //                 \"is_deleted\":0,\
+    //                 \"labels\":[],\
+    //                 \"note_count\":0,\
+    //                 \"parent_id\":null,\
+    //                 \"priority\":1,\
+    //                 \"project_id\":11111111,\
+    //                 \"responsible_uid\":null,\
+    //                 \"section_id\":22222222,\
+    //                 \"sync_id\":null,\
+    //                 \"user_id\":3333333\
+    //             },\
+    //             {\
+    //                 \"added_by_uid\":635166,\
+    //                 \"assigned_by_uid\":null,\
+    //                 \"checked\":0,\
+    //                 \"child_order\":0,\
+    //                 \"collapsed\":0,\
+    //                 \"content\":\"Get gifts for the twins\",\
+    //                 \"date_added\":\"2021-02-27T19:41:56Z\",\
+    //                 \"date_completed\":null,\
+    //                 \"description\":\"\",\
+    //                 \"due\":\
+    //                 {\
+    //                     \"date\":\"2021-11-13\",\
+    //                     \"is_recurring\":false,\
+    //                     \"lang\":\"en\",\
+    //                     \"string\":\"every 12 weeks\",\
+    //                     \"timezone\":null\
+    //                 },\
+    //                 \"id\":222,\
+    //                 \"in_history\":0,\
+    //                 \"is_deleted\":0,\
+    //                 \"labels\":[],\
+    //                 \"note_count\":0,\
+    //                 \"parent_id\":null,\
+    //                 \"priority\":3,\
+    //                 \"project_id\":11111111,\
+    //                 \"responsible_uid\":null,\
+    //                 \"section_id\":22222222,\
+    //                 \"sync_id\":null,\
+    //                 \"user_id\":3333333\
+    //             }\
+    //         ]\
+    //     }",
+    //     );
+    //     assert_eq!(
+    //         determine_next_item(json).unwrap(),
+    //         Item {
+    //             id: 222,
+    //             content: String::from("Get gifts for the twins"),
+    //             checked: 0,
+    //             description: String::from(""),
+    //             due: Some(DateInfo {
+    //                 date: String::from("2021-11-13"),
+    //                 is_recurring: false
+    //             }),
+    //             priority: 3,
+    //             is_deleted: 0,
+    //         }
+    //     );
+    // }
 
     #[test]
-    fn determine_date_value_can_handle_date() {
+    fn date_value_can_handle_date() {
         let item = Item {
             id: 222,
             content: String::from("Get gifts for the twins"),
@@ -231,7 +215,7 @@ mod tests {
         };
 
         // On another day
-        assert_eq!(determine_date_value(&item), 50);
+        assert_eq!(item.date_value(), 50);
 
         // Recurring
         let item = Item {
@@ -241,15 +225,15 @@ mod tests {
             }),
             ..item
         };
-        assert_eq!(determine_date_value(&item), 0);
+        assert_eq!(item.date_value(), 0);
 
         // No date
         let item = Item { due: None, ..item };
-        assert_eq!(determine_date_value(&item), 80);
+        assert_eq!(item.date_value(), 80);
     }
 
     #[test]
-    fn determine_date_value_can_handle_datetime() {
+    fn date_value_can_handle_datetime() {
         let item = Item {
             id: 222,
             content: String::from("Find car"),
@@ -263,7 +247,7 @@ mod tests {
             is_deleted: 0,
         };
 
-        assert_eq!(determine_date_value(&item), 50);
+        assert_eq!(item.date_value(), 50);
     }
 
     #[test]
@@ -297,7 +281,7 @@ mod tests {
             checked: 0,
             description: String::from(""),
             due: Some(DateInfo {
-                date: today(),
+                date: time::today(),
                 is_recurring: false,
             }),
             priority: 3,

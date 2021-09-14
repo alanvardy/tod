@@ -38,17 +38,21 @@ impl Config {
         self
     }
 
-    pub fn save(self) {
+    pub fn save(self) -> std::result::Result<String, String> {
         let json = json!(self).to_string();
 
-        let _bytes = fs::OpenOptions::new()
+        let bytes = fs::OpenOptions::new()
             .write(true)
             .read(true)
             .truncate(true)
             .open(&self.path)
             .expect("Could not find config")
-            .write(json.as_bytes())
-            .expect("could not write to file");
+            .write(json.as_bytes());
+
+        match bytes {
+            Ok(_) => Ok(String::from("✓")),
+            Err(_) => Err(String::from("Could not write to file")),
+        }
     }
 
     pub fn load(path: String) -> Config {
@@ -226,7 +230,7 @@ mod tests {
         assert_eq!(created_config, loaded_config);
 
         let different_new_config = Config::new("differenttoken");
-        different_new_config.clone().save();
+        different_new_config.clone().save().unwrap();
         let loaded_config = Config::load(path.clone());
         assert_eq!(loaded_config, different_new_config);
 

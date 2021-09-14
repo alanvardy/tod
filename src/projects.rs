@@ -5,15 +5,16 @@ use crate::{items, projects, request};
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
 
 /// List the projects in config
-pub fn list(config: Config) {
+pub fn list(config: Config) -> Result<String, String> {
     println!("== Projects ==");
     for (k, _) in config.projects.iter() {
         println!("{}", k);
     }
+    Ok(String::from(""))
 }
 
 /// Add a project to the projects HashMap in Config
-pub fn add(config: Config, params: Vec<&str>) {
+pub fn add(config: Config, params: Vec<&str>) -> Result<String, String> {
     let mut params = params.clone();
     let num = params
         .pop()
@@ -27,7 +28,7 @@ pub fn add(config: Config, params: Vec<&str>) {
 }
 
 /// Remove a project from the projects HashMap in Config
-pub fn remove(config: Config, project_name: &str) {
+pub fn remove(config: Config, project_name: &str) -> Result<String, String> {
     config.remove_project(project_name).save()
 }
 
@@ -43,7 +44,7 @@ pub fn project_id(config: &Config, project_name: &str) -> String {
 }
 
 /// Get the next item by priority
-pub fn next_item(config: Config, project_name: &str) {
+pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name);
 
     match request::items_for_project(config.clone(), &project_id) {
@@ -54,34 +55,41 @@ pub fn next_item(config: Config, project_name: &str) {
 
             match maybe_item {
                 Some(item) => {
-                    config.set_next_id(item.id).save();
+                    config
+                        .set_next_id(item.id)
+                        .save()
+                        .expect("could not set next_id");
                     println!("{}", item);
+                    Ok(String::from(""))
                 }
-                None => print!("No items on list"),
+                None => Ok(String::from("No items on list")),
             }
         }
-        Err(e) => println!("{}", e),
+        Err(e) => Err(e),
     }
 }
 
 /// Sort all the items in inbox
-pub fn sort_inbox(config: Config) {
+pub fn sort_inbox(config: Config) -> Result<String, String> {
     let inbox_id = projects::project_id(&config, "inbox");
 
     match request::items_for_project(config.clone(), &inbox_id) {
         Ok(items) if !items.is_empty() => {
-            projects::list(config.clone());
+            projects::list(config.clone()).unwrap();
             for item in items.iter() {
-                request::move_item_to_project(config.clone(), item.to_owned());
+                request::move_item_to_project(config.clone(), item.to_owned())
+                    .expect("Could not move item");
             }
+            Ok(String::from("Successfully sorted inbox"))
         }
-        Ok(_) => println!("No tasks to sort in inbox"),
-        Err(e) => println!("{}", e),
+        Ok(_item) => Ok(String::from("No tasks to sort in inbox")),
+
+        Err(e) => Err(e),
     }
 }
 
 /// Prioritize all items in a project
-pub fn prioritize_items(config: Config, project_name: &str) {
+pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, String> {
     let inbox_id = projects::project_id(&config, project_name);
 
     match request::items_for_project(config.clone(), &inbox_id) {
@@ -92,16 +100,16 @@ pub fn prioritize_items(config: Config, project_name: &str) {
                 .collect::<Vec<Item>>();
 
             if unprioritized_items.is_empty() {
-                println!("No tasks to prioritize in {}", project_name)
+                Ok(format!("No tasks to prioritize in {}", project_name))
             } else {
-                projects::list(config.clone());
                 for item in unprioritized_items.iter() {
                     items::set_priority(config.clone(), item.to_owned());
                 }
+                Ok(format!("Successfully prioritized {}", project_name))
             }
         }
 
-        Err(e) => println!("{}", e),
+        Err(e) => Err(e),
     }
 }
 

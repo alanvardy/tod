@@ -4,6 +4,7 @@ extern crate matches;
 
 extern crate clap;
 use clap::{App, Arg};
+use colored::*;
 
 mod config;
 mod items;
@@ -125,6 +126,13 @@ fn main() {
         prioritize_tasks: matches.is_present("prioritize tasks"),
     };
 
+    match dispatch(arguments) {
+        Ok(text) => println!("{}", text.green()),
+        Err(e) => println!("{}", e.red()),
+    }
+}
+
+fn dispatch(arguments: Arguments) -> Result<String, String> {
     let config: config::Config = config::get_or_create();
 
     match arguments {
@@ -238,6 +246,8 @@ fn main() {
             sort_inbox: false,
             prioritize_tasks: true,
         } => projects::prioritize_items(config, project_name),
-        _ => println!("Unrecognized input. For more information try --help"),
-    };
+        _ => Err(String::from(
+            "Unrecognized input. For more information try --help",
+        )),
+    }
 }

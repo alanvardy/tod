@@ -11,16 +11,16 @@ pub struct Item {
     pub id: u64,
     pub content: String,
     pub priority: u8,
-    checked: u8,
-    description: String,
-    due: Option<DateInfo>,
-    is_deleted: u8,
+    pub checked: u8,
+    pub description: String,
+    pub due: Option<DateInfo>,
+    pub is_deleted: u8,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct DateInfo {
-    date: String,
-    is_recurring: bool,
+pub struct DateInfo {
+    pub date: String,
+    pub is_recurring: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -116,15 +116,15 @@ pub fn set_priority(config: Config, item: items::Item) {
     match priority.as_str() {
         "1" => {
             let config = config.set_next_id(item.id);
-            request::update_item_priority(config, item, 2);
+            request::update_item_priority(config, item, 2).expect("could not set priority");
         }
         "2" => {
             let config = config.set_next_id(item.id);
-            request::update_item_priority(config, item, 3);
+            request::update_item_priority(config, item, 3).expect("could not set priority");
         }
         "3" => {
             let config = config.set_next_id(item.id);
-            request::update_item_priority(config, item, 4);
+            request::update_item_priority(config, item, 4).expect("could not set priority");
         }
         _ => println!("Not a valid input, please enter 1, 2, or 3"),
     }

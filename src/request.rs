@@ -1,37 +1,37 @@
-use colored::*;
 use reqwest::blocking::Client;
 use serde_json::json;
 use uuid::Uuid;
 
 use crate::config::Config;
+use crate::items::Item;
 use crate::{config, items, projects};
 
-const QUICK_ADD_URL: &str = "https://api.todoist.com/sync/v8/quick/add";
-const PROJECT_DATA_URL: &str = "https://api.todoist.com/sync/v8/projects/get_data";
-const SYNC_URL: &str = "https://api.todoist.com/sync/v8/sync";
+#[cfg(test)]
+use mockito;
+
+const QUICK_ADD_URL: &str = "/sync/v8/quick/add";
+const PROJECT_DATA_URL: &str = "/sync/v8/projects/get_data";
+const SYNC_URL: &str = "/sync/v8/sync";
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
 
 /// Add a new item to the inbox with natural language support
-pub fn add_item_to_inbox(config: Config, task: &str) {
+pub fn add_item_to_inbox(config: Config, task: &str) -> Result<String, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"token": config.token, "text": task, "auto_reminder": true});
 
-    match get_response(url, body) {
-        Ok(_) => print_green_checkmark(),
-        Err(e) => println!("{}", e),
-    }
+    post(url, body)
 }
 
-pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<items::Item>, String> {
+pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({"token": config.token, "project_id": project_id});
-    match get_response(url, body) {
+    match post(url, body) {
         Ok(text) => Ok(items::from_json(text)),
         Err(err) => Err(err),
     }
 }
 
-pub fn move_item_to_project(config: Config, item: items::Item) {
+pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
     println!("{}", item);
 
     let project = config::get_input("Enter destination project name or (c)omplete:");
@@ -39,68 +39,70 @@ pub fn move_item_to_project(config: Config, item: items::Item) {
     match project.as_str() {
         "complete" | "c" => {
             let config = config.set_next_id(item.id);
-            complete_item(config);
+            complete_item(config)
         }
         _ => {
             let project_id = projects::project_id(&config, &project);
             let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
             let url = String::from(SYNC_URL);
 
-            match get_response(url, body) {
-                Ok(_) => print_green_checkmark(),
-                Err(e) => println!("{}", e),
-            }
+            post(url, body)
         }
     }
 }
 
 /// Complete the last item returned by "next item"
-pub fn update_item_priority(config: Config, item: items::Item, priority: u8) {
+pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<String, String> {
     let body = json!({"token": config.token, "commands": [{"type": "item_update", "uuid": new_uuid(), "args": {"id": item.id, "priority": priority}}]});
     let url = String::from(SYNC_URL);
 
-    match get_response(url, body) {
-        Ok(_) => print_green_checkmark(),
-        Err(e) => println!("{}", e),
+    match post(url, body) {
+        Ok(_) => Ok(String::from("✓")),
+        Err(e) => Err(e),
     }
 }
 
 /// Complete the last item returned by "next item"
-pub fn complete_item(config: Config) {
+pub fn complete_item(config: Config) -> Result<String, String> {
     let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    match get_response(url, body) {
-        Ok(_) => {
-            config.clear_next_id().save();
-            print_green_checkmark();
-        }
-        Err(e) => println!("{}", e),
+    match post(url, body) {
+        Ok(_) => config.clear_next_id().save(),
+        Err(e) => Err(e),
     }
 }
 
 /// Add item to project without natural language processing
-pub fn add_item_to_project(config: Config, task: &str, project: &str) {
+pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<String, String> {
     let project_id = config.projects.get(project).expect("Project not found");
     let body = json!({"token": config.token, "commands": [{"type": "item_add", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"content": task, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
-    match get_response(url, body) {
-        Ok(_) => print_green_checkmark(),
-        Err(e) => println!("{}", e),
+    match post(url, body) {
+        Ok(_) => Ok(String::from("✓")),
+        Err(e) => Err(e),
     }
 }
 
 /// Process an HTTP response
-fn get_response(url: String, body: serde_json::Value) -> Result<String, String> {
+fn post(url: String, body: serde_json::Value) -> Result<String, String> {
+    #[cfg(not(test))]
+    let todoist_url: &str = "https://api.todoist.com";
+
+    #[cfg(test)]
+    let todoist_url: &str = &mockito::server_url();
+
+    let request_url = format!("{}{}", todoist_url, url);
+
     let response = Client::new()
-        .post(&url)
+        .post(&request_url)
         .json(&body)
         .send()
         .expect("Did not get response from server");
 
     if response.status().is_success() {
-        Ok(response.text().expect("could not read response"))
+        Ok(dbg!(response.text().expect("could not read response")))
     } else {
         Err(format!("Error: {:#?}", response.text()))
     }
@@ -115,93 +117,110 @@ fn new_uuid() -> String {
     }
 }
 
-/// Print a green checkmark to the terminal
-fn print_green_checkmark() {
-    println!("{}", "✓".green())
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::items::{DateInfo, Item};
+    use crate::time;
+
+    #[test]
+    fn should_add_item_to_inbox() {
+        let body = "\
+        {\"added_by_uid\":635166,\
+        \"assigned_by_uid\":null,\
+        \"checked\":0,\
+        \"child_order\":2,\
+        \"collapsed\":0,\
+        \"content\":\"testy test\",\
+        \"date_added\":\"2021-09-12T19:11:07Z\",\
+        \"date_completed\":null,\
+        \"description\":\"\",\
+        \"due\":null,\"id\":5149481867,\
+        \"in_history\":0,\"is_deleted\":0,\
+        \"labels\":[],\
+        \"legacy_project_id\":333333333,\
+        \"parent_id\":null,\"priority\":1,\
+        \"project_id\":5555555,\
+        \"reminder\":null,\
+        \"responsible_uid\":null,\
+        \"section_id\":null,\
+        \"sync_id\":null,\
+        \"user_id\":111111\
+    }";
+        let _m = mockito::mock("POST", "/sync/v8/quick/add")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create();
+
+        let config = Config::new("12341234");
+
+        assert_eq!(
+            add_item_to_inbox(config, "testy test"),
+            Ok(String::from(body))
+        );
+    }
+
+    #[test]
+    fn should_get_items_for_project() {
+        let body = &format!(
+            "{{\
+        \"items\":\
+            [
+                {{\
+                \"added_by_uid\":44444444,\
+                \"assigned_by_uid\":null,\
+                \"checked\":0,\
+                \"child_order\":-5,\
+                \"collapsed\":0,\
+                \"content\":\"Put out recycling\",\
+                \"date_added\":\"2021-06-15T13:01:28Z\",\
+                \"date_completed\":null,\
+                \"description\":\"\",\
+                \"due\":{{\
+                \"date\":\"{}\",\
+                \"is_recurring\":true,\
+                \"lang\":\"en\",\
+                \"string\":\"every other mon at 16:30\",\
+                \"timezone\":null}},\
+                \"id\":999999,\
+                \"in_history\":0,\"is_deleted\":0,\
+                \"labels\":[],\
+                \"note_count\":0,\
+                \"parent_id\":null,\
+                \"priority\":3,\
+                \"project_id\":22222222,\
+                \"responsible_uid\":null,\
+                \"section_id\":333333333,\
+                \"sync_id\":null,\
+                \"user_id\":111111111\
+                }}
+            ]
+        }}",
+            time::today()
+        );
+        let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create();
+
+        let config = Config::new("12341234");
+
+        assert_eq!(
+            items_for_project(config, "123123"),
+            Ok(vec![Item {
+                id: 999999,
+                content: String::from("Put out recycling"),
+                checked: 0,
+                description: String::from(""),
+                due: Some(DateInfo {
+                    date: time::today(),
+                    is_recurring: true,
+                }),
+                priority: 3,
+                is_deleted: 0,
+            }])
+        );
+    }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::config;
-//     use std::collections::HashMap;
-
-//     #[test]
-//     fn should_build_index_request() {
-//         let text = "this is text";
-
-//         let mut projects = HashMap::new();
-//         projects.insert(String::from("project_name"), 1234);
-
-//         let config = Config {
-//             token: String::from("1234567"),
-//             path: config::generate_path(),
-//             next_id: None,
-//             projects,
-//         };
-
-//         let request = build_add_item_to_index_request(config, text);
-
-//         assert_eq!(request.url.as_str(), QUICK_ADD_URL);
-//         assert_eq!(format!("{:?}", request.body), "Object({\"auto_reminder\": Bool(true), \"text\": String(\"this is text\"), \"token\": String(\"1234567\")})");
-//     }
-
-//     #[test]
-//     fn should_build_next_request() {
-//         let project_name = "project_name";
-
-//         let mut projects = HashMap::new();
-//         projects.insert(String::from("project_name"), 1234);
-
-//         let config = Config {
-//             token: String::from("1234567"),
-//             projects,
-//             path: config::generate_path(),
-//             next_id: None,
-//         };
-
-//         let request = build_next_item_request(config, project_name);
-
-//         assert_eq!(request.url.as_str(), PROJECT_DATA_URL);
-//         assert_eq!(
-//             format!("{:?}", request.body),
-//             "Object({\"project_id\": String(\"1234\"), \"token\": String(\"1234567\")})"
-//         );
-//     }
-
-//     #[test]
-//     fn should_build_send_task_to_project_request() {
-//         let mut projects = HashMap::new();
-//         projects.insert(String::from("project_name"), 1234);
-
-//         let config = Config {
-//             token: String::from("1234567"),
-//             projects,
-//             path: config::generate_path(),
-//             next_id: None,
-//         };
-
-//         let request = build_add_item_to_project_request(config, "this is text", "project_name");
-
-//         assert_eq!(request.url.as_str(), SYNC_URL);
-//         assert_eq!(format!("{:?}", request.body), "Object({\"commands\": Array([Object({\"args\": Object({\"content\": String(\"this is text\"), \"project_id\": Number(1234)}), \"temp_id\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\"), \"type\": String(\"item_add\"), \"uuid\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\")})]), \"token\": String(\"1234567\")})");
-//     }
-
-//     #[test]
-//     fn should_build_complete_request() {
-//         let mut projects = HashMap::new();
-//         projects.insert(String::from("project_name"), 1234);
-
-//         let config = Config {
-//             token: String::from("1234567"),
-//             projects,
-//             path: config::generate_path(),
-//             next_id: Some(123123),
-//         };
-
-//         let request = build_complete_request(config);
-
-//         assert_eq!(request.url.as_str(), SYNC_URL);
-//         assert_eq!(format!("{:?}", request.body), "Object({\"commands\": Array([Object({\"args\": Object({\"id\": Number(123123)}), \"temp_id\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\"), \"type\": String(\"item_close\"), \"uuid\": String(\"42963283-2bab-4b1f-bad2-278ef2b6ba2c\")})]), \"token\": String(\"1234567\")})");
-//     }
-// }

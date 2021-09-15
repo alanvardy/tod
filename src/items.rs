@@ -96,6 +96,24 @@ impl Item {
             _ => 2,
         }
     }
+
+    // Returns true if the datetime is today or there is no datetime
+    fn today_or_no_date(self) -> bool {
+        match self.due {
+            // Date "2021-09-06"
+            Some(dateinfo) if dateinfo.date.len() == 10 => *dateinfo.date == time::today(),
+            // DateTime "2021-09-06T16:00:00(Z)"
+            Some(dateinfo) => {
+                time::datetime_from_str(&dateinfo.date)
+                    .date()
+                    .format("%Y-%m-%d")
+                    .to_string()
+                    == time::today()
+            }
+
+            None => true,
+        }
+    }
 }
 
 pub fn from_json(json: String) -> Vec<Item> {
@@ -106,6 +124,13 @@ pub fn from_json(json: String) -> Vec<Item> {
 pub fn sort_by_priority(mut items: Vec<Item>) -> Vec<Item> {
     items.sort_by_key(|b| Reverse(b.value()));
     items
+}
+
+pub fn filter_by_time(items: Vec<Item>) -> Vec<Item> {
+    items
+        .into_iter()
+        .filter(|item| item.clone().today_or_no_date())
+        .collect()
 }
 
 pub fn set_priority(config: Config, item: items::Item) {
@@ -133,94 +158,6 @@ pub fn set_priority(config: Config, item: items::Item) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // #[test]
-    // fn determine_next_item_should_return_an_item() {
-    //     let json = String::from(
-    //         "\
-    //     {\"items\":\
-    //         [\
-    //             {\
-    //                 \"added_by_uid\":635166,\
-    //                 \"assigned_by_uid\":null,\
-    //                 \"checked\":0,\
-    //                 \"child_order\":0,\
-    //                 \"collapsed\":0,\
-    //                 \"content\":\"Find the continuum transfunctioner\",\
-    //                 \"date_added\":\"2021-02-27T19:41:56Z\",\
-    //                 \"date_completed\":null,\
-    //                 \"description\":\"\",\
-    //                 \"due\":\
-    //                 {\
-    //                     \"date\":\"2021-11-13\",\
-    //                     \"is_recurring\":false,\
-    //                     \"lang\":\"en\",\
-    //                     \"string\":\"every 12 weeks\",\
-    //                     \"timezone\":null\
-    //                 },\
-    //                 \"id\":222,\
-    //                 \"in_history\":0,\
-    //                 \"is_deleted\":0,\
-    //                 \"labels\":[],\
-    //                 \"note_count\":0,\
-    //                 \"parent_id\":null,\
-    //                 \"priority\":1,\
-    //                 \"project_id\":11111111,\
-    //                 \"responsible_uid\":null,\
-    //                 \"section_id\":22222222,\
-    //                 \"sync_id\":null,\
-    //                 \"user_id\":3333333\
-    //             },\
-    //             {\
-    //                 \"added_by_uid\":635166,\
-    //                 \"assigned_by_uid\":null,\
-    //                 \"checked\":0,\
-    //                 \"child_order\":0,\
-    //                 \"collapsed\":0,\
-    //                 \"content\":\"Get gifts for the twins\",\
-    //                 \"date_added\":\"2021-02-27T19:41:56Z\",\
-    //                 \"date_completed\":null,\
-    //                 \"description\":\"\",\
-    //                 \"due\":\
-    //                 {\
-    //                     \"date\":\"2021-11-13\",\
-    //                     \"is_recurring\":false,\
-    //                     \"lang\":\"en\",\
-    //                     \"string\":\"every 12 weeks\",\
-    //                     \"timezone\":null\
-    //                 },\
-    //                 \"id\":222,\
-    //                 \"in_history\":0,\
-    //                 \"is_deleted\":0,\
-    //                 \"labels\":[],\
-    //                 \"note_count\":0,\
-    //                 \"parent_id\":null,\
-    //                 \"priority\":3,\
-    //                 \"project_id\":11111111,\
-    //                 \"responsible_uid\":null,\
-    //                 \"section_id\":22222222,\
-    //                 \"sync_id\":null,\
-    //                 \"user_id\":3333333\
-    //             }\
-    //         ]\
-    //     }",
-    //     );
-    //     assert_eq!(
-    //         determine_next_item(json).unwrap(),
-    //         Item {
-    //             id: 222,
-    //             content: String::from("Get gifts for the twins"),
-    //             checked: 0,
-    //             description: String::from(""),
-    //             due: Some(DateInfo {
-    //                 date: String::from("2021-11-13"),
-    //                 is_recurring: false
-    //             }),
-    //             priority: 3,
-    //             is_deleted: 0,
-    //         }
-    //     );
-    // }
 
     #[test]
     fn date_value_can_handle_date() {

@@ -102,7 +102,7 @@ fn post(url: String, body: serde_json::Value) -> Result<String, String> {
         .expect("Did not get response from server");
 
     if response.status().is_success() {
-        Ok(dbg!(response.text().expect("could not read response")))
+        Ok(response.text().expect("could not read response"))
     } else {
         Err(format!("Error: {:#?}", response.text()))
     }
@@ -221,6 +221,22 @@ mod tests {
                 priority: 3,
                 is_deleted: 0,
             }])
+        );
+    }
+    #[test]
+    fn add_item_to_project_should_work() {
+        let body = "{\"full_sync\":true,\"sync_status\":{\"84b26a49-3a77-438b-99fb-90cc68f73390\":\"ok\"},\"sync_token\":\"AV8GoH_AgfMYZBxQZo35B1PWt18SbT2M3iflEJbUIi3bhGn1FjJ1VrfHV3bAmgQ2j-ORwVojy5j5ucUnCcpf7-eg4AN95jLWI29OjNDegv_0ZvWkUg\",\"temp_id_mapping\":{\"af3a9499-e145-4fb7-926e-8260951d8dd1\":5155500303}}";
+        let _m = mockito::mock("POST", "/sync/v8/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create();
+
+        let config = Config::new("12341234").add_project("some_project", 123);
+
+        assert_eq!(
+            add_item_to_project(config, "some task", "some_project"),
+            Ok(String::from("✓"))
         );
     }
 }

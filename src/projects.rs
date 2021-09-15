@@ -49,7 +49,8 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
 
     match request::items_for_project(config.clone(), &project_id) {
         Ok(items) => {
-            let maybe_item = items::sort_by_priority(items)
+            let filtered_items = items::filter_by_time(items);
+            let maybe_item = items::sort_by_priority(filtered_items)
                 .first()
                 .map(|item| item.to_owned());
 
@@ -112,50 +113,3 @@ pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, St
         Err(e) => Err(e),
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::config;
-//     use std::collections::HashMap;
-
-//     #[test]
-//     fn add_and_remove_project_should_work() {
-//         // Add a project
-//         let config = Config::new("abcd");
-//         let params = vec!["some_project", "1234"];
-
-//         let mut projects: HashMap<String, u32> = HashMap::new();
-//         projects.insert(String::from("some_project"), 1234);
-//         let new_config = config::Config {
-//             path: config::generate_path(),
-//             token: String::from("abcd"),
-//             next_id: None,
-//             projects: projects.clone(),
-//         };
-
-//         let config_with_one_project = add(config, params);
-
-//         assert_eq!(config_with_one_project, new_config);
-
-//         // Add a second project
-//         projects.insert(String::from("some_other_project"), 2345);
-//         let params = vec!["some_other_project", "3456"];
-
-//         let config_with_two_projects = add(config_with_one_project, params);
-
-//         // Remove the first project
-//         let config_with_other_project = remove(config_with_two_projects, "some_project");
-
-//         let mut projects: HashMap<String, u32> = HashMap::new();
-//         projects.insert(String::from("some_other_project"), 3456);
-//         let new_config = config::Config {
-//             path: config::generate_path(),
-//             token: String::from("abcd"),
-//             next_id: None,
-//             projects,
-//         };
-
-//         assert_eq!(config_with_other_project, new_config);
-//     }
-// }

@@ -1,12 +1,15 @@
 # Changelog
 
 ## Unreleased
+
+## 0.2.0
 - Breaking changes to commandline arguments. Switched over to Clap crate for parsing arguments which will help handle additional features.
 - Add `--complete` feature
 - Set priority of no date to 80
 - Set date as Today when it is... today.
 - Add `--sort` feature
 - Add `--prioritize` feature
+- Don't show items that are not today in the `--next` command
 - Update dependencies
 
 ## 2021-09-07 0.1.2

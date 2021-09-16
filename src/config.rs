@@ -124,13 +124,17 @@ pub fn generate_path() -> String {
 }
 
 pub fn get_input(desc: &str) -> String {
-    let mut input = String::new();
-    println!("{}", desc);
-    io::stdin()
-        .read_line(&mut input)
-        .expect("error: unable to read user input");
+    if cfg!(test) {
+        String::from("test")
+    } else {
+        let mut input = String::new();
+        println!("{}", desc);
+        io::stdin()
+            .read_line(&mut input)
+            .expect("error: unable to read user input");
 
-    String::from(input.trim())
+        String::from(input.trim())
+    }
 }
 
 #[cfg(test)]
@@ -215,8 +219,11 @@ mod tests {
     }
 
     #[test]
-    fn new_save_and_load_should_work() {
-        let new_config = Config::new("faketoken");
+    fn config_tests() {
+        // These need to be run sequentially as they write to the filesystem.
+
+        // Save and load
+        // Build path
         let home_directory = dirs::home_dir().expect("could not get home directory");
         let home_directory_str = home_directory
             .to_str()
@@ -224,17 +231,29 @@ mod tests {
         let path = format!("{}/test", home_directory_str);
         let _ = fs::remove_file(&path);
 
+        // create and load
+        let new_config = Config::new("faketoken");
         let created_config = new_config.clone().create();
         assert_eq!(new_config, created_config);
         let loaded_config = Config::load(path.clone());
         assert_eq!(created_config, loaded_config);
 
+        // save and load
         let different_new_config = Config::new("differenttoken");
         different_new_config.clone().save().unwrap();
         let loaded_config = Config::load(path.clone());
         assert_eq!(loaded_config, different_new_config);
+        assert_matches!(fs::remove_file(&path), Ok(_));
 
-        assert_matches!(fs::File::open(&path), Ok(_));
+        // get_or_create (create)
+        let config = get_or_create();
+        assert_eq!(config, Config::new("test"));
+        assert_matches!(fs::remove_file(&path), Ok(_));
+
+        // get_or_create (load)
+        Config::new("alreadycreated").create();
+        let config = get_or_create();
+        assert_eq!(config, Config::new("alreadycreated"));
         assert_matches!(fs::remove_file(&path), Ok(_));
     }
 }

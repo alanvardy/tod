@@ -19,7 +19,10 @@ pub fn add_item_to_inbox(config: Config, task: &str) -> Result<String, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"token": config.token, "text": task, "auto_reminder": true});
 
-    post(url, body)
+    match post(url, body) {
+        Ok(_) => Ok(String::from("✓")),
+        Err(e) => Err(e),
+    }
 }
 
 pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, String> {
@@ -157,7 +160,7 @@ mod tests {
 
         assert_eq!(
             add_item_to_inbox(config, "testy test"),
-            Ok(String::from(body))
+            Ok(String::from("✓"))
         );
     }
 

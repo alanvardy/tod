@@ -27,6 +27,7 @@ struct Arguments<'a> {
     remove_project: Option<&'a str>,
     sort_inbox: bool,
     prioritize_tasks: bool,
+    scheduled_items: bool,
 }
 
 fn main() {
@@ -105,6 +106,13 @@ fn main() {
                 .required(false)
                 .help("Assign priorities to tasks. Can specify project option, defaults to inbox."),
         )
+        .arg(
+            Arg::with_name("scheduled items")
+                .short("h")
+                .long("scheduled")
+                .required(false)
+                .help("Returns items that are today and have a time. Can specify project option, defaults to inbox."),
+        )
         .get_matches();
 
     let new_task = matches
@@ -124,6 +132,7 @@ fn main() {
         remove_project: matches.value_of("remove project"),
         sort_inbox: matches.is_present("sort inbox"),
         prioritize_tasks: matches.is_present("prioritize tasks"),
+        scheduled_items: matches.is_present("scheduled items"),
     };
 
     match dispatch(arguments) {
@@ -146,6 +155,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => request::add_item_to_project(config, &task, project),
         Arguments {
             new_task: Some(task),
@@ -157,6 +167,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => request::add_item_to_inbox(config, &task),
         Arguments {
             new_task: None,
@@ -168,6 +179,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => projects::next_item(config, project),
         Arguments {
             new_task: None,
@@ -179,6 +191,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => request::complete_item(config),
         Arguments {
             new_task: None,
@@ -190,6 +203,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => projects::list(config),
         Arguments {
             new_task: None,
@@ -201,6 +215,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => projects::add(config, params),
         Arguments {
             new_task: None,
@@ -212,6 +227,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: Some(project_name),
             sort_inbox: false,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => projects::remove(config, project_name),
         Arguments {
             new_task: None,
@@ -223,6 +239,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: true,
             prioritize_tasks: false,
+            scheduled_items: false,
         } => projects::sort_inbox(config),
         Arguments {
             new_task: None,
@@ -234,6 +251,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: true,
+            scheduled_items: false,
         } => projects::prioritize_items(config, "inbox"),
         Arguments {
             new_task: None,
@@ -245,7 +263,32 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: true,
+            scheduled_items: false,
         } => projects::prioritize_items(config, project_name),
+        Arguments {
+            new_task: None,
+            project: None,
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            scheduled_items: true,
+        } => projects::scheduled_items(config, "inbox"),
+        Arguments {
+            new_task: None,
+            project: Some(project_name),
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            scheduled_items: true,
+        } => projects::scheduled_items(config, project_name),
         _ => Err(String::from(
             "Unrecognized input. For more information try --help",
         )),

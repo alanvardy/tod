@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::items::Item;
 use crate::{items, projects, request};
+use colored::Colorize;
 
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
 
@@ -49,7 +50,7 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
 
     match request::items_for_project(config.clone(), &project_id) {
         Ok(items) => {
-            let filtered_items = items::filter_by_time(items);
+            let filtered_items = items::filter_today_or_no_date(items);
             let maybe_item = items::sort_by_priority(filtered_items)
                 .first()
                 .map(|item| item.to_owned());
@@ -66,6 +67,25 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
                 None => Ok(String::from("No items on list")),
             }
         }
+        Err(e) => Err(e),
+    }
+}
+
+// Scheduled that are today and have a time on them (AKA appointments)
+pub fn scheduled_items(config: Config, project_name: &str) -> Result<String, String> {
+    let project_id = projects::project_id(&config, project_name);
+
+    match request::items_for_project(config, &project_id) {
+        Ok(items) => match items::filter_today_and_has_time(items) {
+            results if !results.is_empty() => {
+                println!("Schedule for {}", project_name.green());
+                for item in items::sort_by_datetime(results) {
+                    println!("{}", item);
+                }
+                Ok(String::from(""))
+            }
+            _ => Ok(format!("No scheduled items for {}", project_name)),
+        },
         Err(e) => Err(e),
     }
 }

@@ -1,5 +1,5 @@
-use chrono::offset::Utc;
-use chrono::{DateTime, TimeZone};
+use chrono::offset::{TimeZone, Utc};
+use chrono::DateTime;
 use chrono_tz::Tz;
 use chrono_tz::US::Pacific;
 
@@ -12,23 +12,28 @@ pub fn today() -> String {
 }
 
 /// Returns today or date
-pub fn maybe_today(date: &str) -> String {
+pub fn format_date(date: &str) -> String {
     if *date == today() {
         String::from("Today")
-    } else {
+    } else if date.len() == 10 {
         String::from(date)
+    } else {
+        datetime_from_str(date).to_string()
     }
 }
 
 /// Parse DateTime
 pub fn datetime_from_str(date: &str) -> DateTime<Tz> {
-    let format = match date.len() {
-        19 => "%Y-%m-%dT%H:%M:%S",
-        _ => "%Y-%m-%dT%H:%M:%SZ",
-    };
-    Pacific
-        .datetime_from_str(date, format)
-        .expect("could not parse DateTime")
+    match date.len() {
+        19 => Pacific
+            .datetime_from_str(date, "%Y-%m-%dT%H:%M:%S")
+            .expect("could not parse DateTime"),
+        20 => Utc
+            .datetime_from_str(date, "%Y-%m-%dT%H:%M:%SZ")
+            .expect("could not parse DateTime")
+            .with_timezone(&Pacific),
+        _ => panic!("cannot parse datetime: {}", date),
+    }
 }
 
 pub fn now() -> DateTime<Tz> {

@@ -1,3 +1,5 @@
+use chrono::DateTime;
+use chrono_tz::Tz;
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -46,7 +48,7 @@ impl fmt::Display for Item {
             Some(DateInfo {
                 date,
                 is_recurring: _,
-            }) => format!("\nDue: {}", time::maybe_today(date)),
+            }) => format!("\nDue: {}", time::format_date(date)),
 
             None => String::from(""),
         };
@@ -88,6 +90,17 @@ impl Item {
         }
     }
 
+    /// Return the value of the due field
+    fn datetime(&self) -> Option<DateTime<Tz>> {
+        match &self.due {
+            Some(DateInfo {
+                date,
+                is_recurring: _,
+            }) if date.len() > 10 => Some(time::datetime_from_str(date)),
+            _ => None,
+        }
+    }
+
     fn priority_value(&self) -> u8 {
         match self.priority {
             2 => 1,
@@ -98,10 +111,15 @@ impl Item {
     }
 
     // Returns true if the datetime is today or there is no datetime
-    fn today_or_no_date(self) -> bool {
-        match self.due {
+    fn has_no_date(&self) -> bool {
+        self.due.is_none()
+    }
+
+    // Returns true if the datetime is today and there is a time
+    fn is_today(&self) -> bool {
+        match self.clone().due {
             // Date "2021-09-06"
-            Some(dateinfo) if dateinfo.date.len() == 10 => *dateinfo.date == time::today(),
+            Some(dateinfo) if dateinfo.date.len() == 10 => dateinfo.date == time::today(),
             // DateTime "2021-09-06T16:00:00(Z)"
             Some(dateinfo) => {
                 time::datetime_from_str(&dateinfo.date)
@@ -110,15 +128,35 @@ impl Item {
                     .to_string()
                     == time::today()
             }
+            None => false,
+        }
+    }
 
-            None => true,
+    // Returns true if the datetime is today and there is a time
+    fn has_time(&self) -> bool {
+        match self.clone().due {
+            // Date "2021-09-06"
+            Some(dateinfo) if dateinfo.date.len() == 10 => false,
+            // DateTime "2021-09-06T16:00:00(Z)"
+            Some(_dateinfo) => true,
+            None => false,
         }
     }
 }
 
-pub fn from_json(json: String) -> Vec<Item> {
-    let body: Body = serde_json::from_str(&json).expect("Could not parse items from JSON response");
-    body.items
+pub fn json_to_items(json: String) -> Result<Vec<Item>, String> {
+    let result: Result<Body, _> = serde_json::from_str(&json);
+    match result {
+        Ok(body) => Ok(body.items),
+        Err(err) => Err(format!("Could not parse response for item: {:?}", err)),
+    }
+}
+
+pub fn json_to_item(json: String) -> Result<Item, String> {
+    match serde_json::from_str(&json) {
+        Ok(item) => Ok(item),
+        Err(err) => Err(format!("Could not parse response for item: {:?}", err)),
+    }
 }
 
 pub fn sort_by_priority(mut items: Vec<Item>) -> Vec<Item> {
@@ -126,10 +164,22 @@ pub fn sort_by_priority(mut items: Vec<Item>) -> Vec<Item> {
     items
 }
 
-pub fn filter_by_time(items: Vec<Item>) -> Vec<Item> {
+pub fn sort_by_datetime(mut items: Vec<Item>) -> Vec<Item> {
+    items.sort_by_key(|i| i.datetime());
+    items
+}
+
+pub fn filter_today_or_no_date(items: Vec<Item>) -> Vec<Item> {
     items
         .into_iter()
-        .filter(|item| item.clone().today_or_no_date())
+        .filter(|item| item.clone().is_today() || item.clone().has_no_date())
+        .collect()
+}
+
+pub fn filter_today_and_has_time(items: Vec<Item>) -> Vec<Item> {
+    items
+        .into_iter()
+        .filter(|item| item.clone().is_today() && item.clone().has_time())
         .collect()
 }
 
@@ -254,5 +304,59 @@ mod tests {
         control::set_override(true);
         assert_eq!(format!("{}", item), output);
         control::unset_override();
+    }
+
+    #[test]
+    fn value_can_get_the_value_of_an_item() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: time::today(),
+                is_recurring: true,
+            }),
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        assert_eq!(item.value(), 103);
+    }
+
+    #[test]
+    fn datetime_works_with_datetime() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: String::from("2021-09-06T16:00:00"),
+                is_recurring: true,
+            }),
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        assert_matches!(item.datetime(), Some(DateTime { .. }));
+    }
+
+    #[test]
+    fn datetime_works_with_date() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: time::today(),
+                is_recurring: true,
+            }),
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        assert_eq!(item.datetime(), None);
     }
 }

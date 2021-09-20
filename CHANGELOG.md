@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+# 0.2.1
+- Add `--scheduled` feature
+- Refactor of codebase
+- Add pretty assertions and mockito to dev dependencies
+- Can now use natural language for creating tasks outside of inbox (sends task to inbox and then moves it to the other project)
+
 ## 0.2.0
 - Breaking changes to commandline arguments. Switched over to Clap crate for parsing arguments which will help handle additional features.
 - Add `--complete` feature

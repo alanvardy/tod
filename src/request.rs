@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::config::Config;
 use crate::items::Item;
-use crate::{config, items, projects};
+use crate::{items, projects};
 
 #[cfg(test)]
 use mockito;
@@ -15,40 +15,27 @@ const SYNC_URL: &str = "/sync/v8/sync";
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
 
 /// Add a new item to the inbox with natural language support
-pub fn add_item_to_inbox(config: Config, task: &str) -> Result<String, String> {
+pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"token": config.token, "text": task, "auto_reminder": true});
 
-    post(url, body)
+    let json = post(url, body)?;
+    items::json_to_item(json)
 }
 
 pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({"token": config.token, "project_id": project_id});
-    match post(url, body) {
-        Ok(text) => Ok(items::from_json(text)),
-        Err(err) => Err(err),
-    }
+    let json = post(url, body)?;
+    items::json_to_items(json)
 }
 
-pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
-    println!("{}", item);
+pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<String, String> {
+    let project_id = projects::project_id(&config, project_name);
+    let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
+    let url = String::from(SYNC_URL);
 
-    let project = config::get_input("Enter destination project name or (c)omplete:");
-
-    match project.as_str() {
-        "complete" | "c" => {
-            let config = config.set_next_id(item.id);
-            complete_item(config)
-        }
-        _ => {
-            let project_id = projects::project_id(&config, &project);
-            let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
-            let url = String::from(SYNC_URL);
-
-            post(url, body)
-        }
-    }
+    post(url, body)
 }
 
 /// Complete the last item returned by "next item"
@@ -56,33 +43,18 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
     let body = json!({"token": config.token, "commands": [{"type": "item_update", "uuid": new_uuid(), "args": {"id": item.id, "priority": priority}}]});
     let url = String::from(SYNC_URL);
 
-    match post(url, body) {
-        Ok(_) => Ok(String::from("✓")),
-        Err(e) => Err(e),
-    }
+    post(url, body)?;
+    Ok(String::from("✓"))
 }
 
 /// Complete the last item returned by "next item"
-pub fn complete_item(config: Config) -> Result<String, String> {
+pub fn complete_item(config: Config) -> Result<Item, String> {
     let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    match post(url, body) {
-        Ok(_) => config.clear_next_id().save(),
-        Err(e) => Err(e),
-    }
-}
-
-/// Add item to project without natural language processing
-pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<String, String> {
-    let project_id = config.projects.get(project).expect("Project not found");
-    let body = json!({"token": config.token, "commands": [{"type": "item_add", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"content": task, "project_id": project_id}}]});
-    let url = String::from(SYNC_URL);
-
-    match post(url, body) {
-        Ok(_) => Ok(String::from("✓")),
-        Err(e) => Err(e),
-    }
+    let json = post(url, body)?;
+    config.clear_next_id().save()?;
+    items::json_to_item(json)
 }
 
 /// Process an HTTP response
@@ -122,6 +94,7 @@ mod tests {
     use super::*;
     use crate::items::{DateInfo, Item};
     use crate::time;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn should_add_item_to_inbox() {
@@ -135,11 +108,14 @@ mod tests {
         \"date_added\":\"2021-09-12T19:11:07Z\",\
         \"date_completed\":null,\
         \"description\":\"\",\
-        \"due\":null,\"id\":5149481867,\
-        \"in_history\":0,\"is_deleted\":0,\
+        \"due\":null,\
+        \"id\":5149481867,\
+        \"in_history\":0,\
+        \"is_deleted\":0,\
         \"labels\":[],\
         \"legacy_project_id\":333333333,\
-        \"parent_id\":null,\"priority\":1,\
+        \"parent_id\":null,\
+        \"priority\":1,\
         \"project_id\":5555555,\
         \"reminder\":null,\
         \"responsible_uid\":null,\
@@ -156,14 +132,22 @@ mod tests {
         let config = Config::new("12341234");
 
         assert_eq!(
-            add_item_to_inbox(config, "testy test"),
-            Ok(String::from(body))
+            add_item_to_inbox(&config, "testy test"),
+            Ok(Item {
+                id: 5149481867,
+                priority: 1,
+                content: String::from("testy test"),
+                checked: 0,
+                description: String::from(""),
+                due: None,
+                is_deleted: 0,
+            })
         );
     }
 
     #[test]
     fn should_get_items_for_project() {
-        let body = &format!(
+        let body = format!(
             "{{\
         \"items\":\
             [
@@ -202,7 +186,7 @@ mod tests {
         let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(body)
+            .with_body(&body)
             .create();
 
         let config = Config::new("12341234");
@@ -221,22 +205,6 @@ mod tests {
                 priority: 3,
                 is_deleted: 0,
             }])
-        );
-    }
-    #[test]
-    fn add_item_to_project_should_work() {
-        let body = "{\"full_sync\":true,\"sync_status\":{\"84b26a49-3a77-438b-99fb-90cc68f73390\":\"ok\"},\"sync_token\":\"AV8GoH_AgfMYZBxQZo35B1PWt18SbT2M3iflEJbUIi3bhGn1FjJ1VrfHV3bAmgQ2j-ORwVojy5j5ucUnCcpf7-eg4AN95jLWI29OjNDegv_0ZvWkUg\",\"temp_id_mapping\":{\"af3a9499-e145-4fb7-926e-8260951d8dd1\":5155500303}}";
-        let _m = mockito::mock("POST", "/sync/v8/sync")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(body)
-            .create();
-
-        let config = Config::new("12341234").add_project("some_project", 123);
-
-        assert_eq!(
-            add_item_to_project(config, "some task", "some_project"),
-            Ok(String::from("✓"))
         );
     }
 }

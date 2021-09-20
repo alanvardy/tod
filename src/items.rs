@@ -144,9 +144,19 @@ impl Item {
     }
 }
 
-pub fn from_json(json: String) -> Vec<Item> {
-    let body: Body = serde_json::from_str(&json).expect("Could not parse items from JSON response");
-    body.items
+pub fn json_to_items(json: String) -> Result<Vec<Item>, String> {
+    let result: Result<Body, _> = serde_json::from_str(&json);
+    match result {
+        Ok(body) => Ok(body.items),
+        Err(err) => Err(format!("Could not parse response for item: {:?}", err)),
+    }
+}
+
+pub fn json_to_item(json: String) -> Result<Item, String> {
+    match serde_json::from_str(&json) {
+        Ok(item) => Ok(item),
+        Err(err) => Err(format!("Could not parse response for item: {:?}", err)),
+    }
 }
 
 pub fn sort_by_priority(mut items: Vec<Item>) -> Vec<Item> {

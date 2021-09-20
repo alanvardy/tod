@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::items::Item;
-use crate::{items, projects, request};
+use crate::{config, items, projects, request};
 use colored::Colorize;
 
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
@@ -44,30 +44,25 @@ pub fn project_id(config: &Config, project_name: &str) -> String {
     project_id.to_string()
 }
 
-/// Get the next item by priority
+/// Get the next item by priority and save its id to config
 pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name);
+    let items = request::items_for_project(config.clone(), &project_id)?;
+    let filtered_items = items::filter_today_or_no_date(items);
+    let maybe_item = items::sort_by_priority(filtered_items)
+        .first()
+        .map(|item| item.to_owned());
 
-    match request::items_for_project(config.clone(), &project_id) {
-        Ok(items) => {
-            let filtered_items = items::filter_today_or_no_date(items);
-            let maybe_item = items::sort_by_priority(filtered_items)
-                .first()
-                .map(|item| item.to_owned());
-
-            match maybe_item {
-                Some(item) => {
-                    config
-                        .set_next_id(item.id)
-                        .save()
-                        .expect("could not set next_id");
-                    println!("{}", item);
-                    Ok(String::from(""))
-                }
-                None => Ok(String::from("No items on list")),
-            }
+    match maybe_item {
+        Some(item) => {
+            config
+                .set_next_id(item.id)
+                .save()
+                .expect("could not set next_id");
+            println!("{}", item);
+            Ok(String::from(""))
         }
-        Err(e) => Err(e),
+        None => Ok(String::from("No items on list")),
     }
 }
 
@@ -75,61 +70,83 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
 pub fn scheduled_items(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name);
 
-    match request::items_for_project(config, &project_id) {
-        Ok(items) => match items::filter_today_and_has_time(items) {
-            results if !results.is_empty() => {
-                println!("Schedule for {}", project_name.green());
-                for item in items::sort_by_datetime(results) {
-                    println!("{}", item);
-                }
-                Ok(String::from(""))
+    let items = request::items_for_project(config, &project_id)?;
+    match items::filter_today_and_has_time(items) {
+        results if !results.is_empty() => {
+            println!("Schedule for {}", project_name.green());
+            for item in items::sort_by_datetime(results) {
+                println!("{}", item);
             }
-            _ => Ok(format!("No scheduled items for {}", project_name)),
-        },
-        Err(e) => Err(e),
+            Ok(String::from(""))
+        }
+        _no_items => Ok(format!("No scheduled items for {}", project_name)),
     }
 }
 
-/// Sort all the items in inbox
+/// Empty the inbox by sending items to other projects one at a time
 pub fn sort_inbox(config: Config) -> Result<String, String> {
     let inbox_id = projects::project_id(&config, "inbox");
 
-    match request::items_for_project(config.clone(), &inbox_id) {
-        Ok(items) if !items.is_empty() => {
-            projects::list(config.clone()).unwrap();
-            for item in items.iter() {
-                request::move_item_to_project(config.clone(), item.to_owned())
-                    .expect("Could not move item");
-            }
-            Ok(String::from("Successfully sorted inbox"))
-        }
-        Ok(_item) => Ok(String::from("No tasks to sort in inbox")),
+    let items = request::items_for_project(config.clone(), &inbox_id)?;
 
-        Err(e) => Err(e),
+    if items.is_empty() {
+        Ok(String::from("No tasks to sort in inbox"))
+    } else {
+        projects::list(config.clone()).unwrap();
+        for item in items.iter() {
+            move_item_to_project(config.clone(), item.to_owned()).expect("Could not move item");
+        }
+        Ok(String::from("Successfully sorted inbox"))
     }
 }
 
-/// Prioritize all items in a project
+/// Prioritize all unprioritized items in a project
 pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, String> {
     let inbox_id = projects::project_id(&config, project_name);
 
-    match request::items_for_project(config.clone(), &inbox_id) {
-        Ok(items) => {
-            let unprioritized_items: Vec<Item> = items
-                .into_iter()
-                .filter(|item| item.priority == 1)
-                .collect::<Vec<Item>>();
+    let items = request::items_for_project(config.clone(), &inbox_id)?;
 
-            if unprioritized_items.is_empty() {
-                Ok(format!("No tasks to prioritize in {}", project_name))
-            } else {
-                for item in unprioritized_items.iter() {
-                    items::set_priority(config.clone(), item.to_owned());
-                }
-                Ok(format!("Successfully prioritized {}", project_name))
-            }
+    let unprioritized_items: Vec<Item> = items
+        .into_iter()
+        .filter(|item| item.priority == 1)
+        .collect::<Vec<Item>>();
+
+    if unprioritized_items.is_empty() {
+        Ok(format!("No tasks to prioritize in {}", project_name))
+    } else {
+        for item in unprioritized_items.iter() {
+            items::set_priority(config.clone(), item.to_owned());
         }
+        Ok(format!("Successfully prioritized {}", project_name))
+    }
+}
 
-        Err(e) => Err(e),
+pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
+    println!("{}", item);
+
+    let project_name = config::get_input("Enter destination project name or (c)omplete:");
+
+    match project_name.as_str() {
+        "complete" | "c" => {
+            request::complete_item(config.set_next_id(item.id))?;
+            Ok(String::from("✓"))
+        }
+        _ => {
+            request::move_item(config, item, &project_name)?;
+            Ok(String::from("✓"))
+        }
+    }
+}
+
+/// Add item to project with natural language processing
+pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<String, String> {
+    let item = request::add_item_to_inbox(&config, task)?;
+
+    match project {
+        "inbox" | "i" => Ok(String::from("✓")),
+        project => {
+            request::move_item(config, item, project)?;
+            Ok(String::from("✓"))
+        }
     }
 }

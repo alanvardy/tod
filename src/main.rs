@@ -13,7 +13,7 @@ mod request;
 mod time;
 
 const APP: &str = "Tod";
-const VERSION: &str = "0.1.2";
+const VERSION: &str = "0.2.1";
 const AUTHOR: &str = "Alan Vardy <alan@alanvardy.com>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
 
@@ -108,7 +108,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("scheduled items")
-                .short("h")
+                .short("e")
                 .long("scheduled")
                 .required(false)
                 .help("Returns items that are today and have a time. Can specify project option, defaults to inbox."),
@@ -156,7 +156,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-        } => request::add_item_to_project(config, &task, project),
+        } => projects::add_item_to_project(config, &task, project),
         Arguments {
             new_task: Some(task),
             project: None,
@@ -168,7 +168,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-        } => request::add_item_to_inbox(config, &task),
+        } => projects::add_item_to_project(config, &task, "inbox"),
         Arguments {
             new_task: None,
             project: Some(project),
@@ -192,7 +192,10 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-        } => request::complete_item(config),
+        } => match request::complete_item(config) {
+            Ok(_) => Ok(String::from("✓")),
+            Err(err) => Err(err),
+        },
         Arguments {
             new_task: None,
             project: None,

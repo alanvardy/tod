@@ -80,7 +80,7 @@ fn post(url: String, body: serde_json::Value) -> Result<String, String> {
         .expect("Did not get response from server");
 
     if response.status().is_success() {
-        Ok(dbg!(response.text().expect("could not read response")))
+        Ok(response.text().expect("could not read response"))
     } else {
         Err(format!("Error: {:#?}", response.text()))
     }

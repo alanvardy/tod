@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Sort projects alphabetically when listing
+- Additional test coverage
+- Publish checklist
 
 # 0.2.1
 - Add `--scheduled` feature

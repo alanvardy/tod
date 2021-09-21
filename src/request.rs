@@ -44,17 +44,23 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
     let url = String::from(SYNC_URL);
 
     post(url, body)?;
+    // Does not pass back an item
     Ok(String::from("✓"))
 }
 
 /// Complete the last item returned by "next item"
-pub fn complete_item(config: Config) -> Result<Item, String> {
+pub fn complete_item(config: Config) -> Result<String, String> {
     let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    let json = post(url, body)?;
-    config.clear_next_id().save()?;
-    items::json_to_item(json)
+    post(url, body)?;
+
+    if !cfg!(test) {
+        config.clear_next_id().save()?;
+    }
+
+    // Does not pass back an item
+    Ok(String::from("✓"))
 }
 
 /// Process an HTTP response
@@ -74,7 +80,7 @@ fn post(url: String, body: serde_json::Value) -> Result<String, String> {
         .expect("Did not get response from server");
 
     if response.status().is_success() {
-        Ok(response.text().expect("could not read response"))
+        Ok(dbg!(response.text().expect("could not read response")))
     } else {
         Err(format!("Error: {:#?}", response.text()))
     }
@@ -93,40 +99,15 @@ fn new_uuid() -> String {
 mod tests {
     use super::*;
     use crate::items::{DateInfo, Item};
-    use crate::time;
+    use crate::{test, time};
     use pretty_assertions::assert_eq;
 
     #[test]
     fn should_add_item_to_inbox() {
-        let body = "\
-        {\"added_by_uid\":635166,\
-        \"assigned_by_uid\":null,\
-        \"checked\":0,\
-        \"child_order\":2,\
-        \"collapsed\":0,\
-        \"content\":\"testy test\",\
-        \"date_added\":\"2021-09-12T19:11:07Z\",\
-        \"date_completed\":null,\
-        \"description\":\"\",\
-        \"due\":null,\
-        \"id\":5149481867,\
-        \"in_history\":0,\
-        \"is_deleted\":0,\
-        \"labels\":[],\
-        \"legacy_project_id\":333333333,\
-        \"parent_id\":null,\
-        \"priority\":1,\
-        \"project_id\":5555555,\
-        \"reminder\":null,\
-        \"responsible_uid\":null,\
-        \"section_id\":null,\
-        \"sync_id\":null,\
-        \"user_id\":111111\
-    }";
         let _m = mockito::mock("POST", "/sync/v8/quick/add")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(body)
+            .with_body(&test::responses::item())
             .create();
 
         let config = Config::new("12341234");
@@ -147,46 +128,10 @@ mod tests {
 
     #[test]
     fn should_get_items_for_project() {
-        let body = format!(
-            "{{\
-        \"items\":\
-            [
-                {{\
-                \"added_by_uid\":44444444,\
-                \"assigned_by_uid\":null,\
-                \"checked\":0,\
-                \"child_order\":-5,\
-                \"collapsed\":0,\
-                \"content\":\"Put out recycling\",\
-                \"date_added\":\"2021-06-15T13:01:28Z\",\
-                \"date_completed\":null,\
-                \"description\":\"\",\
-                \"due\":{{\
-                \"date\":\"{}\",\
-                \"is_recurring\":true,\
-                \"lang\":\"en\",\
-                \"string\":\"every other mon at 16:30\",\
-                \"timezone\":null}},\
-                \"id\":999999,\
-                \"in_history\":0,\"is_deleted\":0,\
-                \"labels\":[],\
-                \"note_count\":0,\
-                \"parent_id\":null,\
-                \"priority\":3,\
-                \"project_id\":22222222,\
-                \"responsible_uid\":null,\
-                \"section_id\":333333333,\
-                \"sync_id\":null,\
-                \"user_id\":111111111\
-                }}
-            ]
-        }}",
-            time::today()
-        );
         let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&body)
+            .with_body(&test::responses::items())
             .create();
 
         let config = Config::new("12341234");
@@ -206,5 +151,43 @@ mod tests {
                 is_deleted: 0,
             }])
         );
+    }
+
+    #[test]
+    fn should_complete_an_item() {
+        let _m = mockito::mock("POST", "/sync/v8/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::sync())
+            .create();
+
+        let config = Config::new("12341234").set_next_id(112233);
+        let response = complete_item(config);
+        assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[test]
+    fn should_prioritize_an_item() {
+        let _m = mockito::mock("POST", "/sync/v8/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::sync())
+            .create();
+
+        let config = Config::new("12341234");
+        let item = Item {
+            id: 999999,
+            content: String::from("Put out recycling"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: time::today(),
+                is_recurring: true,
+            }),
+            priority: 1,
+            is_deleted: 0,
+        };
+        let response = update_item_priority(config, item, 4);
+        assert_eq!(response, Ok(String::from("✓")));
     }
 }

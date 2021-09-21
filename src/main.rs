@@ -10,6 +10,7 @@ mod config;
 mod items;
 mod projects;
 mod request;
+mod test;
 mod time;
 
 const APP: &str = "Tod";

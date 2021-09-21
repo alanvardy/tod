@@ -7,9 +7,11 @@ const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add pr
 
 /// List the projects in config
 pub fn list(config: Config) -> Result<String, String> {
+    let mut projects: Vec<String> = config.projects.iter().map(|(k, _v)| k.to_owned()).collect();
+    projects.sort();
     println!("== Projects ==");
-    for (k, _) in config.projects.iter() {
-        println!("{}", k);
+    for key in projects {
+        println!("{}", key);
     }
     Ok(String::from(""))
 }

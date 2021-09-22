@@ -208,6 +208,7 @@ pub fn set_priority(config: Config, item: items::Item) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn date_value_can_handle_date() {
@@ -358,5 +359,67 @@ mod tests {
         };
 
         assert_eq!(item.datetime(), None);
+    }
+
+    #[test]
+    fn has_no_date_works() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: None,
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        assert!(item.has_no_date());
+
+        let item_today = Item {
+            due: Some(DateInfo {
+                date: time::today(),
+                is_recurring: false,
+            }),
+            ..item
+        };
+        assert!(!item_today.has_no_date());
+    }
+
+    #[test]
+    fn is_today_works() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: None,
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        assert!(!item.is_today());
+
+        let item_today = Item {
+            due: Some(DateInfo {
+                date: time::today(),
+                is_recurring: false,
+            }),
+            ..item
+        };
+        assert!(item_today.is_today());
+    }
+
+    #[test]
+    fn json_to_items_works() {
+        let json = String::from("2{.e");
+        let error_text = String::from("Could not parse response for item: Error(\"invalid type: integer `2`, expected struct Body\", line: 1, column: 1)");
+        assert_eq!(json_to_items(json), Err(error_text));
+    }
+
+    #[test]
+    fn json_to_item_works() {
+        let json = String::from("2{.e");
+        let error_text = String::from("Could not parse response for item: Error(\"invalid type: integer `2`, expected struct Item\", line: 1, column: 1)");
+        assert_eq!(json_to_item(json), Err(error_text));
     }
 }

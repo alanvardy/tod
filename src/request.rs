@@ -35,7 +35,8 @@ pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<Strin
     let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
-    post(url, body)
+    post(url, body)?;
+    Ok(String::from("✓"))
 }
 
 /// Complete the last item returned by "next item"

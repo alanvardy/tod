@@ -140,6 +140,7 @@ pub fn get_input(desc: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn new_should_generate_config() {

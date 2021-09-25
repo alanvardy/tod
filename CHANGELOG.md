@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+# 0.2.2
 - Sort projects alphabetically when listing
 - Additional test coverage
 - Publish checklist

@@ -47,8 +47,12 @@ impl fmt::Display for Item {
         let due = match &self.due {
             Some(DateInfo {
                 date,
-                is_recurring: _,
+                is_recurring: false,
             }) => format!("\nDue: {}", time::format_date(date)),
+            Some(DateInfo {
+                date,
+                is_recurring: true,
+            }) => format!("\nDue: {} ↻", time::format_date(date)),
 
             None => String::from(""),
         };
@@ -71,9 +75,15 @@ impl Item {
         match &self.due {
             // Date "2021-09-06"
             Some(DateInfo { date, is_recurring }) if date.len() == 10 => {
-                let today_value = if *date == time::today() { 100 } else { 0 };
+                let date_value = if self.is_today() {
+                    100
+                } else if self.is_overdue() {
+                    150
+                } else {
+                    0
+                };
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
-                today_value + recurring_value
+                date_value + recurring_value
             }
             // DateTime "2021-09-06T16:00:00(Z)"
             Some(DateInfo { date, is_recurring }) => {
@@ -117,16 +127,28 @@ impl Item {
 
     // Returns true if the datetime is today and there is a time
     fn is_today(&self) -> bool {
-        match self.clone().due {
+        match self.to_owned().due {
             // Date "2021-09-06"
-            Some(dateinfo) if dateinfo.date.len() == 10 => dateinfo.date == time::today(),
+            Some(dateinfo) if dateinfo.date.len() == 10 => dateinfo.date == time::today_string(),
             // DateTime "2021-09-06T16:00:00(Z)"
             Some(dateinfo) => {
                 time::datetime_from_str(&dateinfo.date)
                     .date()
                     .format("%Y-%m-%d")
                     .to_string()
-                    == time::today()
+                    == time::today_string()
+            }
+            None => false,
+        }
+    }
+
+    fn is_overdue(&self) -> bool {
+        match self.to_owned().due {
+            Some(dateinfo) => {
+                time::date_from_str(&dateinfo.date)
+                    .signed_duration_since(time::today_date())
+                    .num_days()
+                    < 0
             }
             None => false,
         }
@@ -134,7 +156,7 @@ impl Item {
 
     // Returns true if the datetime is today and there is a time
     fn has_time(&self) -> bool {
-        match self.clone().due {
+        match self.to_owned().due {
             // Date "2021-09-06"
             Some(dateinfo) if dateinfo.date.len() == 10 => false,
             // DateTime "2021-09-06T16:00:00(Z)"
@@ -169,10 +191,10 @@ pub fn sort_by_datetime(mut items: Vec<Item>) -> Vec<Item> {
     items
 }
 
-pub fn filter_today_or_no_date(items: Vec<Item>) -> Vec<Item> {
+pub fn filter_not_in_future(items: Vec<Item>) -> Vec<Item> {
     items
         .into_iter()
-        .filter(|item| item.clone().is_today() || item.clone().has_no_date())
+        .filter(|item| item.is_today() || item.has_no_date() || item.is_overdue())
         .collect()
 }
 
@@ -218,7 +240,7 @@ mod tests {
             checked: 0,
             description: String::from(""),
             due: Some(DateInfo {
-                date: String::from("2021-11-13"),
+                date: String::from("2061-11-13"),
                 is_recurring: false,
             }),
             priority: 3,
@@ -231,12 +253,22 @@ mod tests {
         // Recurring
         let item = Item {
             due: Some(DateInfo {
-                date: String::from("2021-11-13"),
+                date: String::from("2061-11-13"),
                 is_recurring: true,
             }),
             ..item
         };
         assert_eq!(item.date_value(), 0);
+
+        // Overdue
+        let item = Item {
+            due: Some(DateInfo {
+                date: String::from("2001-11-13"),
+                is_recurring: true,
+            }),
+            ..item
+        };
+        assert_eq!(item.date_value(), 150);
 
         // No date
         let item = Item { due: None, ..item };
@@ -292,7 +324,7 @@ mod tests {
             checked: 0,
             description: String::from(""),
             due: Some(DateInfo {
-                date: time::today(),
+                date: time::today_string(),
                 is_recurring: false,
             }),
             priority: 3,
@@ -315,7 +347,7 @@ mod tests {
             checked: 0,
             description: String::from(""),
             due: Some(DateInfo {
-                date: time::today(),
+                date: time::today_string(),
                 is_recurring: true,
             }),
             priority: 3,
@@ -351,7 +383,7 @@ mod tests {
             checked: 0,
             description: String::from(""),
             due: Some(DateInfo {
-                date: time::today(),
+                date: time::today_string(),
                 is_recurring: true,
             }),
             priority: 3,
@@ -377,7 +409,7 @@ mod tests {
 
         let item_today = Item {
             due: Some(DateInfo {
-                date: time::today(),
+                date: time::today_string(),
                 is_recurring: false,
             }),
             ..item
@@ -401,12 +433,45 @@ mod tests {
 
         let item_today = Item {
             due: Some(DateInfo {
-                date: time::today(),
+                date: time::today_string(),
                 is_recurring: false,
             }),
             ..item
         };
         assert!(item_today.is_today());
+    }
+
+    #[test]
+    fn is_overdue_works() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: None,
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        assert!(!item.is_overdue());
+
+        let item_today = Item {
+            due: Some(DateInfo {
+                date: time::today_string(),
+                is_recurring: false,
+            }),
+            ..item.clone()
+        };
+        assert!(!item_today.is_overdue());
+
+        let item_today = Item {
+            due: Some(DateInfo {
+                date: String::from("2020-12-20"),
+                is_recurring: false,
+            }),
+            ..item
+        };
+        assert!(item_today.is_overdue());
     }
 
     #[test]

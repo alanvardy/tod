@@ -67,6 +67,7 @@ OPTIONS:
 - Add your most commonly used projects, the project ID is the last serials of numbers in the URL, the project name cannot include spaces.
 - You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
 - Items are ranked by points and the first is returned:
+  - Item is overdue: 150
   - Date is today with no time: 100
   - Date is today with time in next or last 15 min: 200
   - No date: 80

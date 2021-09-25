@@ -4,6 +4,8 @@
 - Sort projects alphabetically when listing
 - Additional test coverage
 - Publish checklist
+- Prioritize overdue items when fetching the next item
+- Add ascii icon ↻ for when an item is recurring
 
 # 0.2.1
 - Add `--scheduled` feature

@@ -50,7 +50,7 @@ pub mod responses {
                 }}
             ]
         }}",
-            time::today()
+            time::today_string()
         )
     }
 

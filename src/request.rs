@@ -145,7 +145,7 @@ mod tests {
                 checked: 0,
                 description: String::from(""),
                 due: Some(DateInfo {
-                    date: time::today(),
+                    date: time::today_string(),
                     is_recurring: true,
                 }),
                 priority: 3,
@@ -182,7 +182,7 @@ mod tests {
             checked: 0,
             description: String::from(""),
             due: Some(DateInfo {
-                date: time::today(),
+                date: time::today_string(),
                 is_recurring: true,
             }),
             priority: 1,

@@ -50,7 +50,7 @@ pub fn project_id(config: &Config, project_name: &str) -> String {
 pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name);
     let items = request::items_for_project(config.clone(), &project_id)?;
-    let filtered_items = items::filter_today_or_no_date(items);
+    let filtered_items = items::filter_not_in_future(items);
     let maybe_item = items::sort_by_priority(filtered_items)
         .first()
         .map(|item| item.to_owned());

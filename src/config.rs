@@ -1,4 +1,5 @@
 use crate::{request, time, VERSION};
+use colored::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -75,13 +76,22 @@ impl Config {
 
         if last_version != Some(time::today_string()) {
             match request::get_latest_version() {
-                Ok(version) if version.as_str() != VERSION => println!(
-                    "Latest version is {}, found {}. Run cargo install tod to update",
-                    version, VERSION
+                Ok(version) if version.as_str() != VERSION => {
+                    println!(
+                        "Latest Tod version is {}, found {}. Run {} to update",
+                        version,
+                        VERSION,
+                        "cargo install tod".bright_cyan()
+                    );
+                    new_config.clone().save().unwrap();
+                }
+                Ok(_) => (),
+                Err(err) => println!(
+                    "{}, {:?}",
+                    "Could not fetch Tod version from Cargo.io".red(),
+                    err
                 ),
-                _ => (),
             };
-            new_config.clone().save().unwrap();
         }
 
         new_config

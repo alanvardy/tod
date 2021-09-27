@@ -14,7 +14,7 @@ mod test;
 mod time;
 
 const APP: &str = "Tod";
-const VERSION: &str = "0.2.2";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = "Alan Vardy <alan@alanvardy.com>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
 

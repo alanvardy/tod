@@ -3,17 +3,18 @@ use chrono::{Date, DateTime, NaiveDate};
 use chrono_tz::Tz;
 use chrono_tz::US::Pacific;
 
+pub fn now() -> DateTime<Tz> {
+    Utc::now().with_timezone(&Pacific)
+}
+
 /// Return today's date in format 2021-09-16
 pub fn today_string() -> String {
-    Utc::now()
-        .with_timezone(&Pacific)
-        .format("%Y-%m-%d")
-        .to_string()
+    now().format("%Y-%m-%d").to_string()
 }
 
 /// Return today's date in Utc
-pub fn today_date() -> Date<Utc> {
-    Utc::now().date()
+pub fn today_date() -> Date<Tz> {
+    now().date()
 }
 
 /// Returns today or date
@@ -59,8 +60,4 @@ pub fn date_from_str(str: &str) -> Date<Utc> {
             .date(),
         _ => panic!("cannot parse NaiveDate: {}", str),
     }
-}
-
-pub fn now() -> DateTime<Tz> {
-    Utc::now().with_timezone(&Pacific)
 }

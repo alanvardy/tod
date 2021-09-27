@@ -1,3 +1,4 @@
+use crate::{request, time, VERSION};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -16,6 +17,7 @@ pub struct Config {
     pub path: String,
     /// The ID of the next task
     pub next_id: Option<u64>,
+    last_version_check: Option<String>,
 }
 
 impl Config {
@@ -25,6 +27,7 @@ impl Config {
             path: generate_path(),
             token: String::from(token),
             next_id: None,
+            last_version_check: Some(time::today_string()),
             projects,
         }
     }
@@ -63,14 +66,25 @@ impl Config {
             .read_to_string(&mut json)
             .expect("Could not read to string");
 
-        let json_output: Config = serde_json::from_str(&json).expect("Could not parse JSON");
+        let config: Config = serde_json::from_str(&json).expect("Could not parse JSON");
+        let last_version = config.clone().last_version_check;
+        let new_config = Config {
+            last_version_check: Some(time::today_string()),
+            ..config
+        };
 
-        Config {
-            token: json_output.token,
-            projects: json_output.projects,
-            next_id: json_output.next_id,
-            path,
+        if last_version != Some(time::today_string()) {
+            match request::get_latest_version() {
+                Ok(version) if version.as_str() != VERSION => println!(
+                    "Latest version is {}, found {}. Run cargo install tod to update",
+                    version, VERSION
+                ),
+                _ => (),
+            };
+            new_config.clone().save().unwrap();
         }
+
+        new_config
     }
 
     pub fn add_project(self, name: &str, number: u32) -> Config {
@@ -140,6 +154,7 @@ pub fn get_input(desc: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::time;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -168,6 +183,7 @@ mod tests {
                 token: String::from("something"),
                 path: generate_path(),
                 next_id: None,
+                last_version_check: Some(time::today_string()),
                 projects: projects.clone(),
             }
         );
@@ -179,6 +195,7 @@ mod tests {
                 token: String::from("something"),
                 path: generate_path(),
                 next_id: None,
+                last_version_check: Some(time::today_string()),
                 projects,
             }
         );
@@ -193,6 +210,7 @@ mod tests {
             token: String::from("something"),
             path: generate_path(),
             next_id: None,
+            last_version_check: None,
             projects: projects.clone(),
         };
 
@@ -202,6 +220,7 @@ mod tests {
                 token: String::from("something"),
                 path: generate_path(),
                 next_id: None,
+                last_version_check: None,
                 projects: projects.clone(),
             }
         );
@@ -214,6 +233,7 @@ mod tests {
                 token: String::from("something"),
                 path: generate_path(),
                 next_id: None,
+                last_version_check: None,
                 projects,
             }
         );

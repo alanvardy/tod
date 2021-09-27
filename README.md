@@ -12,6 +12,10 @@ Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on
 ### Install from Crates.io
 
 [Install Rust](https://www.rust-lang.org/tools/install)
+```
+# Linux and MacOS
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
 Install Tod
 

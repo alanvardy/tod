@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Check for latest version once per day and prompt to update with `cargo install tod`
 
 # 0.2.2
 - Sort projects alphabetically when listing

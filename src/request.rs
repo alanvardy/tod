@@ -1,4 +1,6 @@
 use reqwest::blocking::Client;
+use reqwest::header::USER_AGENT;
+use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -9,24 +11,39 @@ use crate::{items, projects};
 #[cfg(test)]
 use mockito;
 
+// TODOIST URLS
 const QUICK_ADD_URL: &str = "/sync/v8/quick/add";
 const PROJECT_DATA_URL: &str = "/sync/v8/projects/get_data";
 const SYNC_URL: &str = "/sync/v8/sync";
+
+// CRATES.IO URLS
+const VERSIONS_URL: &str = "https://crates.io/api/v1/crates/tod/versions";
+
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
+
+#[derive(Deserialize)]
+struct CargoResponse {
+    versions: Vec<Version>,
+}
+
+#[derive(Deserialize)]
+struct Version {
+    num: String,
+}
 
 /// Add a new item to the inbox with natural language support
 pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"token": config.token, "text": task, "auto_reminder": true});
 
-    let json = post(url, body)?;
+    let json = post_todoist(url, body)?;
     items::json_to_item(json)
 }
 
 pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({"token": config.token, "project_id": project_id});
-    let json = post(url, body)?;
+    let json = post_todoist(url, body)?;
     items::json_to_items(json)
 }
 
@@ -35,7 +52,7 @@ pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<Strin
     let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
-    post(url, body)?;
+    post_todoist(url, body)?;
     Ok(String::from("✓"))
 }
 
@@ -44,7 +61,7 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
     let body = json!({"token": config.token, "commands": [{"type": "item_update", "uuid": new_uuid(), "args": {"id": item.id, "priority": priority}}]});
     let url = String::from(SYNC_URL);
 
-    post(url, body)?;
+    post_todoist(url, body)?;
     // Does not pass back an item
     Ok(String::from("✓"))
 }
@@ -54,7 +71,7 @@ pub fn complete_item(config: Config) -> Result<String, String> {
     let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    post(url, body)?;
+    post_todoist(url, body)?;
 
     if !cfg!(test) {
         config.clear_next_id().save()?;
@@ -64,8 +81,8 @@ pub fn complete_item(config: Config) -> Result<String, String> {
     Ok(String::from("✓"))
 }
 
-/// Process an HTTP response
-fn post(url: String, body: serde_json::Value) -> Result<String, String> {
+/// Post to Todoist
+fn post_todoist(url: String, body: serde_json::Value) -> Result<String, String> {
     #[cfg(not(test))]
     let todoist_url: &str = "https://api.todoist.com";
 
@@ -87,6 +104,22 @@ fn post(url: String, body: serde_json::Value) -> Result<String, String> {
     }
 }
 
+/// Get request
+pub fn get_latest_version() -> Result<String, String> {
+    let response = Client::new()
+        .get(VERSIONS_URL)
+        .header(USER_AGENT, "Tod")
+        .send()
+        .expect("Did not get response from server");
+
+    if response.status().is_success() {
+        let cr: CargoResponse = serde_json::from_str(&response.text().unwrap()).unwrap();
+        Ok(cr.versions.first().unwrap().num.clone())
+    } else {
+        Err(format!("Error: {:#?}", response.text()))
+    }
+}
+
 /// Create a new UUID, required for Todoist API
 fn new_uuid() -> String {
     if cfg!(test) {
@@ -100,7 +133,7 @@ fn new_uuid() -> String {
 mod tests {
     use super::*;
     use crate::items::{DateInfo, Item};
-    use crate::{test, time};
+    use crate::{test, time, VERSION};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -190,5 +223,13 @@ mod tests {
         };
         let response = update_item_priority(config, item, 4);
         assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[test]
+
+    fn latest_version_works() {
+        let response = get_latest_version();
+
+        assert_eq!(response, Ok(String::from(VERSION)));
     }
 }

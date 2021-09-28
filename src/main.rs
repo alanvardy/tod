@@ -51,7 +51,7 @@ fn main() {
                 .long("project")
                 .required(false)
                 .value_name("PROJECT NAME")
-                .help("The project namespace"),
+                .help("The project namespace, for use with other commands"),
         )
         .arg(
             Arg::with_name("next task")
@@ -137,7 +137,7 @@ fn main() {
     };
 
     match dispatch(arguments) {
-        Ok(text) => println!("{}", text.green()),
+        Ok(text) => println!("{}", text),
         Err(e) => println!("{}", e.red()),
     }
 }

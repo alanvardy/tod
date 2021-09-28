@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::items::Item;
 use crate::{config, items, projects, request};
-use colored::Colorize;
+use colored::*;
 
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
 
@@ -9,11 +9,14 @@ const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add pr
 pub fn list(config: Config) -> Result<String, String> {
     let mut projects: Vec<String> = config.projects.iter().map(|(k, _v)| k.to_owned()).collect();
     projects.sort();
-    println!("== Projects ==");
+    let mut buffer = String::new();
+    buffer.push_str(&green_string("Projects"));
+
     for key in projects {
-        println!("{}", key);
+        buffer.push_str("\n - ");
+        buffer.push_str(&key);
     }
-    Ok(String::from(""))
+    Ok(buffer)
 }
 
 /// Add a project to the projects HashMap in Config
@@ -57,14 +60,10 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
 
     match maybe_item {
         Some(item) => {
-            config
-                .set_next_id(item.id)
-                .save()
-                .expect("could not set next_id");
-            println!("{}", item);
-            Ok(String::from(""))
+            config.set_next_id(item.id).save()?;
+            Ok(format!("{}", item))
         }
-        None => Ok(String::from("No items on list")),
+        None => Ok(green_string("No items on list")),
     }
 }
 
@@ -92,13 +91,13 @@ pub fn sort_inbox(config: Config) -> Result<String, String> {
     let items = request::items_for_project(config.clone(), &inbox_id)?;
 
     if items.is_empty() {
-        Ok(String::from("No tasks to sort in inbox"))
+        Ok(green_string("No tasks to sort in inbox"))
     } else {
-        projects::list(config.clone()).unwrap();
+        projects::list(config.clone())?;
         for item in items.iter() {
-            move_item_to_project(config.clone(), item.to_owned()).expect("Could not move item");
+            move_item_to_project(config.clone(), item.to_owned())?;
         }
-        Ok(String::from("Successfully sorted inbox"))
+        Ok(green_string("Successfully sorted inbox"))
     }
 }
 
@@ -114,12 +113,16 @@ pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, St
         .collect::<Vec<Item>>();
 
     if unprioritized_items.is_empty() {
-        Ok(format!("No tasks to prioritize in {}", project_name))
+        Ok(format!("No tasks to prioritize in {}", project_name)
+            .green()
+            .to_string())
     } else {
         for item in unprioritized_items.iter() {
             items::set_priority(config.clone(), item.to_owned());
         }
-        Ok(format!("Successfully prioritized {}", project_name))
+        Ok(format!("Successfully prioritized {}", project_name)
+            .green()
+            .to_string())
     }
 }
 
@@ -131,11 +134,11 @@ pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String
     match project_name.as_str() {
         "complete" | "c" => {
             request::complete_item(config.set_next_id(item.id))?;
-            Ok(String::from("✓"))
+            Ok(green_string("✓"))
         }
         _ => {
             request::move_item(config, item, &project_name)?;
-            Ok(String::from("✓"))
+            Ok(green_string("✓"))
         }
     }
 }
@@ -145,10 +148,14 @@ pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<
     let item = request::add_item_to_inbox(&config, task)?;
 
     match project {
-        "inbox" | "i" => Ok(String::from("✓")),
+        "inbox" | "i" => Ok(green_string("✓")),
         project => {
             request::move_item(config, item, project)?;
-            Ok(String::from("✓"))
+            Ok(green_string("✓"))
         }
     }
+}
+
+fn green_string(str: &str) -> String {
+    String::from(str).green().to_string()
 }

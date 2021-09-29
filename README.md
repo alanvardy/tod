@@ -65,7 +65,7 @@ FLAGS:
 OPTIONS:
     -a, --add <PROJECT NAME> <PROJECT ID>    Add a project to config with id
     -t, --task <new task>...                 Create a new task with text. Can specify project option, defaults to inbox.
-    -p, --project <PROJECT NAME>             The project namespace
+    -p, --project <PROJECT NAME>             The project namespace, for use with other commands
     -r, --remove <PROJECT NAME>              Remove a project from config by name
 ```
 

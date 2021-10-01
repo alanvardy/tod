@@ -146,6 +146,7 @@ impl Item {
         match self.to_owned().due {
             Some(dateinfo) => {
                 time::date_from_str(&dateinfo.date)
+                    .unwrap()
                     .signed_duration_since(time::today_date())
                     .num_days()
                     < 0
@@ -154,7 +155,7 @@ impl Item {
         }
     }
 
-    // Returns true if the datetime is today and there is a time
+    // Returns true if there is a time component (not just date)
     fn has_time(&self) -> bool {
         match self.to_owned().due {
             // Date "2021-09-06"
@@ -181,7 +182,7 @@ pub fn json_to_item(json: String) -> Result<Item, String> {
     }
 }
 
-pub fn sort_by_priority(mut items: Vec<Item>) -> Vec<Item> {
+pub fn sort_by_value(mut items: Vec<Item>) -> Vec<Item> {
     items.sort_by_key(|b| Reverse(b.value()));
     items
 }
@@ -191,24 +192,27 @@ pub fn sort_by_datetime(mut items: Vec<Item>) -> Vec<Item> {
     items
 }
 
-pub fn filter_not_in_future(items: Vec<Item>) -> Vec<Item> {
-    items
+pub fn filter_not_in_future(items: Vec<Item>) -> Result<Vec<Item>, String> {
+    let items = items
         .into_iter()
         .filter(|item| item.is_today() || item.has_no_date() || item.is_overdue())
-        .collect()
+        .collect();
+
+    Ok(items)
 }
 
 pub fn filter_today_and_has_time(items: Vec<Item>) -> Vec<Item> {
     items
         .into_iter()
-        .filter(|item| item.clone().is_today() && item.clone().has_time())
+        .filter(|item| item.is_today() && item.has_time())
         .collect()
 }
 
 pub fn set_priority(config: Config, item: items::Item) {
     println!("{}", item);
 
-    let priority = config::get_input("Choose a priority from 1 (lowest) to 3 (highest):");
+    let priority = config::get_input("Choose a priority from 1 (lowest) to 3 (highest):")
+        .expect("Please enter a number from 1 to 3");
 
     match priority.as_str() {
         "1" => {
@@ -418,6 +422,39 @@ mod tests {
     }
 
     #[test]
+    fn has_time_works() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: None,
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        assert!(!item.has_time());
+
+        let item_with_date = Item {
+            due: Some(DateInfo {
+                date: time::today_string(),
+                is_recurring: false,
+            }),
+            ..item.clone()
+        };
+        assert!(!item_with_date.has_time());
+
+        let item_with_datetime = Item {
+            due: Some(DateInfo {
+                date: String::from("2021-09-06T16:00:00"),
+                is_recurring: false,
+            }),
+            ..item
+        };
+        assert!(item_with_datetime.has_time());
+    }
+
+    #[test]
     fn is_today_works() {
         let item = Item {
             id: 222,
@@ -436,9 +473,116 @@ mod tests {
                 date: time::today_string(),
                 is_recurring: false,
             }),
-            ..item
+            ..item.clone()
         };
         assert!(item_today.is_today());
+
+        let item_in_past = Item {
+            due: Some(DateInfo {
+                date: String::from("2021-09-06T16:00:00"),
+                is_recurring: false,
+            }),
+            ..item
+        };
+        assert!(!item_in_past.is_today());
+    }
+
+    #[test]
+    fn sort_by_value_works() {
+        let item = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: None,
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        let today = Item {
+            due: Some(DateInfo {
+                date: time::today_string(),
+                is_recurring: false,
+            }),
+            ..item.clone()
+        };
+
+        let today_recurring = Item {
+            due: Some(DateInfo {
+                date: time::today_string(),
+                is_recurring: false,
+            }),
+            ..item.clone()
+        };
+
+        let future = Item {
+            due: Some(DateInfo {
+                date: String::from("2035-12-12"),
+                is_recurring: false,
+            }),
+            ..item.clone()
+        };
+
+        let input = vec![future.clone(), today_recurring.clone(), today.clone()];
+        let result = vec![today, today_recurring, future];
+
+        assert_eq!(sort_by_value(input), result);
+    }
+
+    #[test]
+    fn sort_by_datetime_works() {
+        let no_date = Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: None,
+            priority: 3,
+            is_deleted: 0,
+        };
+
+        let date_not_datetime = Item {
+            due: Some(DateInfo {
+                date: time::today_string(),
+                is_recurring: false,
+            }),
+            ..no_date.clone()
+        };
+
+        let present = Item {
+            due: Some(DateInfo {
+                date: String::from("2020-09-06T16:00:00"),
+                is_recurring: false,
+            }),
+            ..no_date.clone()
+        };
+
+        let future = Item {
+            due: Some(DateInfo {
+                date: String::from("2035-09-06T16:00:00"),
+                is_recurring: false,
+            }),
+            ..no_date.clone()
+        };
+
+        let past = Item {
+            due: Some(DateInfo {
+                date: String::from("2015-09-06T16:00:00"),
+                is_recurring: false,
+            }),
+            ..no_date.clone()
+        };
+
+        let input = vec![
+            future.clone(),
+            past.clone(),
+            present.clone(),
+            no_date.clone(),
+            date_not_datetime.clone(),
+        ];
+        let result = vec![no_date, date_not_datetime, past, present, future];
+
+        assert_eq!(sort_by_datetime(input), result);
     }
 
     #[test]
@@ -463,6 +607,15 @@ mod tests {
             ..item.clone()
         };
         assert!(!item_today.is_overdue());
+
+        let item_future = Item {
+            due: Some(DateInfo {
+                date: String::from("2035-12-12"),
+                is_recurring: false,
+            }),
+            ..item.clone()
+        };
+        assert!(!item_future.is_overdue());
 
         let item_today = Item {
             due: Some(DateInfo {

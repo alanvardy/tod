@@ -143,7 +143,7 @@ fn main() {
 }
 
 fn dispatch(arguments: Arguments) -> Result<String, String> {
-    let config: config::Config = config::get_or_create();
+    let config: config::Config = config::get_or_create()?;
 
     match arguments {
         Arguments {

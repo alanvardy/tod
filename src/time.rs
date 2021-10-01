@@ -49,21 +49,24 @@ pub fn datetime_from_str(str: &str) -> DateTime<Tz> {
 }
 
 /// Parse Date
-pub fn date_from_str(str: &str) -> Date<Utc> {
-    match str.len() {
+pub fn date_from_str(str: &str) -> Result<Date<Utc>, String> {
+    let date = match str.len() {
         10 => {
-            let date = NaiveDate::parse_from_str(str, "%Y-%m-%d").expect("could not parse Date");
+            let date =
+                NaiveDate::parse_from_str(str, "%Y-%m-%d").or(Err("could not parse Date"))?;
             Utc.from_local_date(&date).unwrap()
         }
         19 => Utc
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%S")
-            .expect("could not parse DateTime")
+            .or(Err("could not parse DateTime"))?
             .date(),
 
         20 => Utc
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%SZ")
-            .expect("could not parse DateTime")
+            .or(Err("could not parse DateTime"))?
             .date(),
-        _ => panic!("cannot parse NaiveDate: {}", str),
-    }
+        _ => return Err(format!("cannot parse NaiveDate, unknown length: {}", str)),
+    };
+
+    Ok(date)
 }

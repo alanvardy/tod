@@ -95,10 +95,10 @@ fn post_todoist(url: String, body: serde_json::Value) -> Result<String, String> 
         .post(&request_url)
         .json(&body)
         .send()
-        .expect("Did not get response from server");
+        .or(Err("Did not get response from server"))?;
 
     if response.status().is_success() {
-        Ok(response.text().expect("could not read response"))
+        Ok(response.text().or(Err("Could not read response text"))?)
     } else {
         Err(format!("Error: {:#?}", response.text()))
     }
@@ -110,10 +110,12 @@ pub fn get_latest_version() -> Result<String, String> {
         .get(VERSIONS_URL)
         .header(USER_AGENT, "Tod")
         .send()
-        .expect("Did not get response from server");
+        .or(Err("Did not get response from server"))?;
 
     if response.status().is_success() {
-        let cr: CargoResponse = serde_json::from_str(&response.text().unwrap()).unwrap();
+        let cr: CargoResponse =
+            serde_json::from_str(&response.text().or(Err("Could not read response text"))?)
+                .or(Err("Could not serialize to CargoResponse"))?;
         Ok(cr.versions.first().unwrap().num.clone())
     } else {
         Err(format!("Error: {:#?}", response.text()))
@@ -144,7 +146,7 @@ mod tests {
             .with_body(&test::responses::item())
             .create();
 
-        let config = Config::new("12341234");
+        let config = Config::new("12341234").unwrap();
 
         assert_eq!(
             add_item_to_inbox(&config, "testy test"),
@@ -168,7 +170,7 @@ mod tests {
             .with_body(&test::responses::items())
             .create();
 
-        let config = Config::new("12341234");
+        let config = Config::new("12341234").unwrap();
 
         assert_eq!(
             items_for_project(config, "123123"),
@@ -195,8 +197,36 @@ mod tests {
             .with_body(&test::responses::sync())
             .create();
 
-        let config = Config::new("12341234").set_next_id(112233);
+        let config = Config::new("12341234").unwrap().set_next_id(112233);
         let response = complete_item(config);
+        assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[test]
+    fn should_move_an_item() {
+        let _m = mockito::mock("POST", "/sync/v8/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::sync())
+            .create();
+
+        let item = Item {
+            id: 999999,
+            content: String::from("Put out recycling"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: time::today_string(),
+                is_recurring: true,
+            }),
+            priority: 3,
+            is_deleted: 0,
+        };
+        let project_name = "testy";
+        let config = Config::new("12341234")
+            .unwrap()
+            .add_project(project_name, 1);
+        let response = move_item(config, item, project_name);
         assert_eq!(response, Ok(String::from("✓")));
     }
 
@@ -208,7 +238,7 @@ mod tests {
             .with_body(&test::responses::sync())
             .create();
 
-        let config = Config::new("12341234");
+        let config = Config::new("12341234").unwrap();
         let item = Item {
             id: 999999,
             content: String::from("Put out recycling"),

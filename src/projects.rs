@@ -24,11 +24,11 @@ pub fn add(config: Config, params: Vec<&str>) -> Result<String, String> {
     let mut params = params.clone();
     let num = params
         .pop()
-        .expect(ADD_ERROR)
+        .ok_or(ADD_ERROR)?
         .parse::<u32>()
-        .expect(ADD_ERROR);
+        .or(Err(ADD_ERROR))?;
 
-    let name = params.pop().expect(ADD_ERROR);
+    let name = params.pop().ok_or(ADD_ERROR)?;
 
     config.add_project(name, num).save()
 }
@@ -53,8 +53,8 @@ pub fn project_id(config: &Config, project_name: &str) -> String {
 pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name);
     let items = request::items_for_project(config.clone(), &project_id)?;
-    let filtered_items = items::filter_not_in_future(items);
-    let maybe_item = items::sort_by_priority(filtered_items)
+    let filtered_items = items::filter_not_in_future(items)?;
+    let maybe_item = items::sort_by_value(filtered_items)
         .first()
         .map(|item| item.to_owned());
 
@@ -129,7 +129,7 @@ pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, St
 pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
     println!("{}", item);
 
-    let project_name = config::get_input("Enter destination project name or (c)omplete:");
+    let project_name = config::get_input("Enter destination project name or (c)omplete:")?;
 
     match project_name.as_str() {
         "complete" | "c" => {
@@ -158,4 +158,24 @@ pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<
 
 fn green_string(str: &str) -> String {
     String::from(str).green().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_list_projects() {
+        let config = Config::new("123123")
+            .unwrap()
+            .add_project("first", 1)
+            .add_project("second", 2);
+
+        assert_eq!(
+            list(config),
+            Ok(String::from(
+                "\u{1b}[32mProjects\u{1b}[0m\n - first\n - second"
+            ))
+        );
+    }
 }

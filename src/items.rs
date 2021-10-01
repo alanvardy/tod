@@ -234,6 +234,7 @@ pub fn set_priority(config: Config, item: items::Item) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -312,12 +313,13 @@ mod tests {
             is_deleted: 0,
         };
 
-        let output = "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: 2021-08-13";
+        let output = if test::helpers::is_colored() {
+            "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: 2021-08-13"
+        } else {
+            "\nGet gifts for the twins\nDue: 2021-08-13"
+        };
 
-        // CI has color turned off by default
-        control::set_override(true);
         assert_eq!(format!("{}", item), output);
-        control::unset_override();
     }
 
     #[test]
@@ -335,12 +337,12 @@ mod tests {
             is_deleted: 0,
         };
 
-        let output = "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: Today";
-
-        // CI has color turned off by default
-        control::set_override(true);
+        let output = if test::helpers::is_colored() {
+            "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: Today"
+        } else {
+            "\nGet gifts for the twins\nDue: Today"
+        };
         assert_eq!(format!("{}", item), output);
-        control::unset_override();
     }
 
     #[test]

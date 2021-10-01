@@ -180,7 +180,7 @@ mod tests {
                 checked: 0,
                 description: String::from(""),
                 due: Some(DateInfo {
-                    date: time::today_string(),
+                    date: String::from(format!("{}T13:01:28Z", time::today_string())),
                     is_recurring: true,
                 }),
                 priority: 3,

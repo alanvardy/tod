@@ -8,6 +8,9 @@ const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add pr
 /// List the projects in config
 pub fn list(config: Config) -> Result<String, String> {
     let mut projects: Vec<String> = config.projects.iter().map(|(k, _v)| k.to_owned()).collect();
+    if projects.is_empty() {
+        return Ok(String::from("No projects found"));
+    }
     projects.sort();
     let mut buffer = String::new();
     buffer.push_str(&green_string("Projects"));
@@ -38,20 +41,22 @@ pub fn remove(config: Config, project_name: &str) -> Result<String, String> {
     config.remove_project(project_name).save()
 }
 
-pub fn project_id(config: &Config, project_name: &str) -> String {
-    let project_id = *config.projects.get(project_name).unwrap_or_else(|| {
-        panic!(
+pub fn project_id(config: &Config, project_name: &str) -> Result<String, String> {
+    let project_id = config
+        .projects
+        .get(project_name)
+        .ok_or(format!(
             "Project {} not found, please add it to config",
             project_name
-        )
-    });
+        ))?
+        .to_string();
 
-    project_id.to_string()
+    Ok(project_id)
 }
 
 /// Get the next item by priority and save its id to config
 pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
-    let project_id = projects::project_id(&config, project_name);
+    let project_id = projects::project_id(&config, project_name)?;
     let items = request::items_for_project(config.clone(), &project_id)?;
     let filtered_items = items::filter_not_in_future(items)?;
     let maybe_item = items::sort_by_value(filtered_items)
@@ -69,24 +74,28 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
 
 // Scheduled that are today and have a time on them (AKA appointments)
 pub fn scheduled_items(config: Config, project_name: &str) -> Result<String, String> {
-    let project_id = projects::project_id(&config, project_name);
+    let project_id = projects::project_id(&config, project_name)?;
 
     let items = request::items_for_project(config, &project_id)?;
-    match items::filter_today_and_has_time(items) {
-        results if !results.is_empty() => {
-            println!("Schedule for {}", project_name.green());
-            for item in items::sort_by_datetime(results) {
-                println!("{}", item);
-            }
-            Ok(String::from(""))
-        }
-        _no_items => Ok(format!("No scheduled items for {}", project_name)),
+    let filtered_items = items::filter_today_and_has_time(items);
+
+    if filtered_items.is_empty() {
+        return Ok(String::from("No scheduled items found"));
     }
+
+    let mut buffer = String::new();
+    buffer.push_str(&green_string(&format!("Schedule for {}", project_name)));
+
+    for item in items::sort_by_datetime(filtered_items) {
+        buffer.push('\n');
+        buffer.push_str(&item.to_string());
+    }
+    Ok(buffer)
 }
 
 /// Empty the inbox by sending items to other projects one at a time
 pub fn sort_inbox(config: Config) -> Result<String, String> {
-    let inbox_id = projects::project_id(&config, "inbox");
+    let inbox_id = projects::project_id(&config, "inbox")?;
 
     let items = request::items_for_project(config.clone(), &inbox_id)?;
 
@@ -103,7 +112,7 @@ pub fn sort_inbox(config: Config) -> Result<String, String> {
 
 /// Prioritize all unprioritized items in a project
 pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, String> {
-    let inbox_id = projects::project_id(&config, project_name);
+    let inbox_id = projects::project_id(&config, project_name)?;
 
     let items = request::items_for_project(config.clone(), &inbox_id)?;
 
@@ -163,6 +172,9 @@ fn green_string(str: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test;
+    use mockito;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn should_list_projects() {
@@ -171,11 +183,37 @@ mod tests {
             .add_project("first", 1)
             .add_project("second", 2);
 
+        let str = if test::helpers::is_colored() {
+            "\u{1b}[32mProjects\u{1b}[0m\n - first\n - second"
+        } else {
+            "Projects\n - first\n - second"
+        };
+
+        assert_eq!(list(config), Ok(String::from(str)));
+    }
+
+    #[test]
+    fn should_display_scheduled_items() {
+        let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::items())
+            .create();
+
+        let config = Config::new("12341234").unwrap().add_project("good", 1);
+
         assert_eq!(
-            list(config),
-            Ok(String::from(
-                "\u{1b}[32mProjects\u{1b}[0m\n - first\n - second"
+            scheduled_items(config.clone(), "test"),
+            Err(String::from(
+                "Project test not found, please add it to config"
             ))
         );
+
+        let str = if test::helpers::is_colored() {
+            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 06:01 ↻"
+        } else {
+            "Schedule for good\n\nPut out recycling\nDue: 06:01 ↻"
+        };
+        assert_eq!(scheduled_items(config, "good"), Ok(String::from(str)));
     }
 }

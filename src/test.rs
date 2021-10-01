@@ -1,4 +1,11 @@
 #[cfg(test)]
+pub mod helpers {
+    /// Checks if environment supports colored output (GitHub Actions does not)
+    pub fn is_colored() -> bool {
+        colored::control::SHOULD_COLORIZE.should_colorize()
+    }
+}
+#[cfg(test)]
 pub mod responses {
     use crate::time;
 
@@ -31,7 +38,7 @@ pub mod responses {
                 \"date_completed\":null,\
                 \"description\":\"\",\
                 \"due\":{{\
-                \"date\":\"{}\",\
+                \"date\":\"{}T13:01:28Z\",\
                 \"is_recurring\":true,\
                 \"lang\":\"en\",\
                 \"string\":\"every other mon at 16:30\",\

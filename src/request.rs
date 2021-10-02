@@ -40,6 +40,7 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
     items::json_to_item(json)
 }
 
+/// Get a vector of all items for a project
 pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({"token": config.token, "project_id": project_id});
@@ -47,6 +48,7 @@ pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, 
     items::json_to_items(json)
 }
 
+/// Move an item to a different project
 pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name);
     let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
@@ -104,7 +106,7 @@ fn post_todoist(url: String, body: serde_json::Value) -> Result<String, String> 
     }
 }
 
-/// Get request
+/// Get latest version number from Cargo.io
 pub fn get_latest_version() -> Result<String, String> {
     #[cfg(not(test))]
     let cargo_url: &str = "https://crates.io/api";

@@ -17,7 +17,7 @@ const PROJECT_DATA_URL: &str = "/sync/v8/projects/get_data";
 const SYNC_URL: &str = "/sync/v8/sync";
 
 // CRATES.IO URLS
-const VERSIONS_URL: &str = "https://crates.io/api/v1/crates/tod/versions";
+const VERSIONS_URL: &str = "/v1/crates/tod/versions";
 
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
 
@@ -106,8 +106,16 @@ fn post_todoist(url: String, body: serde_json::Value) -> Result<String, String> 
 
 /// Get request
 pub fn get_latest_version() -> Result<String, String> {
+    #[cfg(not(test))]
+    let cargo_url: &str = "https://crates.io/api";
+
+    #[cfg(test)]
+    let cargo_url: &str = &mockito::server_url();
+
+    let request_url = format!("{}{}", cargo_url, VERSIONS_URL);
+
     let response = Client::new()
-        .get(VERSIONS_URL)
+        .get(&request_url)
         .header(USER_AGENT, "Tod")
         .send()
         .or(Err("Did not get response from server"))?;
@@ -258,6 +266,12 @@ mod tests {
     #[test]
 
     fn latest_version_works() {
+        let _m = mockito::mock("GET", "/v1/crates/tod/versions")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::versions())
+            .create();
+
         let response = get_latest_version();
 
         assert_eq!(response, Ok(String::from(VERSION)));

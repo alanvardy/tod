@@ -23,20 +23,24 @@ pub fn format_date(date: &str) -> String {
         String::from("Today")
     } else if date.len() == 10 {
         String::from(date)
-    } else if is_today(datetime_from_str(date)) {
-        datetime_from_str(date).format("%H:%M").to_string()
+    } else if is_today(datetime_from_str(date).unwrap()) {
+        datetime_from_str(date).unwrap().format("%H:%M").to_string()
     } else {
-        datetime_from_str(date).to_string()
+        datetime_from_str(date).unwrap().to_string()
     }
 }
 
-fn is_today(datetime: DateTime<Tz>) -> bool {
+pub fn is_today(datetime: DateTime<Tz>) -> bool {
     datetime.date().format("%Y-%m-%d").to_string() == today_string()
 }
 
+pub fn is_date_in_future(date: Date<Utc>) -> bool {
+    date.signed_duration_since(today_date()).num_days() < 0
+}
+
 /// Parse DateTime
-pub fn datetime_from_str(str: &str) -> DateTime<Tz> {
-    match str.len() {
+pub fn datetime_from_str(str: &str) -> Result<DateTime<Tz>, String> {
+    let datetime = match str.len() {
         19 => Pacific
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%S")
             .expect("could not parse DateTime"),
@@ -44,8 +48,10 @@ pub fn datetime_from_str(str: &str) -> DateTime<Tz> {
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%SZ")
             .expect("could not parse DateTime")
             .with_timezone(&Pacific),
-        _ => panic!("cannot parse DateTime: {}", str),
-    }
+        _ => return Err(format!("cannot parse DateTime: {}", str)),
+    };
+
+    Ok(datetime)
 }
 
 /// Parse Date

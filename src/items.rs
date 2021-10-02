@@ -1,3 +1,5 @@
+use chrono::offset::Utc;
+use chrono::Date;
 use chrono::DateTime;
 use chrono_tz::Tz;
 use colored::*;
@@ -28,6 +30,18 @@ pub struct DateInfo {
 #[derive(Serialize, Deserialize, Debug)]
 struct Body {
     items: Vec<Item>,
+}
+
+enum DateTimeInfo {
+    NoDateTime,
+    Date {
+        date: Date<Utc>,
+        is_recurring: bool,
+    },
+    DateTime {
+        datetime: DateTime<Tz>,
+        is_recurring: bool,
+    },
 }
 
 impl fmt::Display for Item {
@@ -72,41 +86,33 @@ impl Item {
 
     /// Return the value of the due field
     fn date_value(&self) -> u8 {
-        match &self.due {
-            // Date "2021-09-06"
-            Some(DateInfo { date, is_recurring }) if date.len() == 10 => {
-                let date_value = if self.is_today() {
-                    100
-                } else if self.is_overdue() {
-                    150
-                } else {
-                    0
-                };
+        match &self.datetimeinfo() {
+            Ok(DateTimeInfo::NoDateTime) => 80,
+            Ok(DateTimeInfo::Date { date, is_recurring }) => {
+                let today_value = if *date == time::today_date() { 100 } else { 0 };
+                let overdue_value = if self.is_overdue() { 150 } else { 0 };
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
-                date_value + recurring_value
+                today_value + overdue_value + recurring_value
             }
-            // DateTime "2021-09-06T16:00:00(Z)"
-            Some(DateInfo { date, is_recurring }) => {
+            Ok(DateTimeInfo::DateTime {
+                datetime,
+                is_recurring,
+            }) => {
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
-                let dt = time::datetime_from_str(date);
-
-                let duration = dt - time::now();
+                let duration = *datetime - time::now();
                 match duration.num_minutes() {
                     -15..=15 => 200 + recurring_value,
                     _ => recurring_value,
                 }
             }
-            None => 80,
+            Err(_) => 50,
         }
     }
 
     /// Return the value of the due field
     fn datetime(&self) -> Option<DateTime<Tz>> {
-        match &self.due {
-            Some(DateInfo {
-                date,
-                is_recurring: _,
-            }) if date.len() > 10 => Some(time::datetime_from_str(date)),
+        match self.datetimeinfo() {
+            Ok(DateTimeInfo::DateTime { datetime, .. }) => Some(datetime),
             _ => None,
         }
     }
@@ -120,6 +126,21 @@ impl Item {
         }
     }
 
+    /// Converts the JSON date representation into Date or Datetime
+    fn datetimeinfo(&self) -> Result<DateTimeInfo, String> {
+        match &self.due {
+            None => Ok(DateTimeInfo::NoDateTime),
+            Some(DateInfo { date, is_recurring }) if date.len() == 10 => Ok(DateTimeInfo::Date {
+                date: time::date_from_str(date)?,
+                is_recurring: *is_recurring,
+            }),
+            Some(DateInfo { date, is_recurring }) => Ok(DateTimeInfo::DateTime {
+                datetime: time::datetime_from_str(date)?,
+                is_recurring: *is_recurring,
+            }),
+        }
+    }
+
     // Returns true if the datetime is today or there is no datetime
     fn has_no_date(&self) -> bool {
         self.due.is_none()
@@ -127,43 +148,28 @@ impl Item {
 
     // Returns true if the datetime is today and there is a time
     fn is_today(&self) -> bool {
-        match self.to_owned().due {
-            // Date "2021-09-06"
-            Some(dateinfo) if dateinfo.date.len() == 10 => dateinfo.date == time::today_string(),
-            // DateTime "2021-09-06T16:00:00(Z)"
-            Some(dateinfo) => {
-                time::datetime_from_str(&dateinfo.date)
-                    .date()
-                    .format("%Y-%m-%d")
-                    .to_string()
-                    == time::today_string()
-            }
-            None => false,
+        match self.datetimeinfo() {
+            Ok(DateTimeInfo::NoDateTime) => false,
+            Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(),
+            Ok(DateTimeInfo::DateTime { datetime, .. }) => time::is_today(datetime),
+            Err(_) => false,
         }
     }
 
     fn is_overdue(&self) -> bool {
-        match self.to_owned().due {
-            Some(dateinfo) => {
-                time::date_from_str(&dateinfo.date)
-                    .unwrap()
-                    .signed_duration_since(time::today_date())
-                    .num_days()
-                    < 0
+        match self.datetimeinfo() {
+            Ok(DateTimeInfo::NoDateTime) => false,
+            Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_future(date),
+            Ok(DateTimeInfo::DateTime { datetime, .. }) => {
+                time::is_date_in_future(datetime.with_timezone(&Utc).date())
             }
-            None => false,
+            Err(_) => false,
         }
     }
 
-    // Returns true if there is a time component (not just date)
+    /// Returns true when it is a datetime, otherwise false
     fn has_time(&self) -> bool {
-        match self.to_owned().due {
-            // Date "2021-09-06"
-            Some(dateinfo) if dateinfo.date.len() == 10 => false,
-            // DateTime "2021-09-06T16:00:00(Z)"
-            Some(_dateinfo) => true,
-            None => false,
-        }
+        matches!(self.datetimeinfo(), Ok(DateTimeInfo::DateTime { .. }))
     }
 }
 

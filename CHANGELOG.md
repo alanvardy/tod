@@ -1,10 +1,13 @@
 # Changelog
 
 ## Unreleased
+
+# 0.2.3
 - Check for latest version once per day and prompt to update with `cargo install tod`
 - Update dependencies
 - Only show the time when a datetime is today
 - Code cleanup around error handling
+- Code cleanup around handling
 
 # 0.2.2
 - Sort projects alphabetically when listing

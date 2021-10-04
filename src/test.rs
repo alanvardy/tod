@@ -117,7 +117,7 @@ pub mod responses {
                         \"dependencies\":\"/api/v1/crates/tod/0.2.2/dependencies\",\
                         \"version_downloads\":\"/api/v1/crates/tod/0.2.2/downloads\"\
                     },\
-                    \"num\":\"0.2.3\",\
+                    \"num\":\"0.2.4\",\
                     \"published_by\":{\
                         \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
                         \"id\":105078,\

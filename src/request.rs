@@ -50,7 +50,7 @@ pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, 
 
 /// Move an item to a different project
 pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<String, String> {
-    let project_id = projects::project_id(&config, project_name);
+    let project_id = projects::project_id(&config, project_name)?;
     let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 

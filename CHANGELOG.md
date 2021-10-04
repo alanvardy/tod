@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+# 0.2.4
+- Hotfix for moving items to different projects
+
 # 0.2.3
 - Check for latest version once per day and prompt to update with `cargo install tod`
 - Update dependencies

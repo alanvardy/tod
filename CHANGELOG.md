@@ -2,37 +2,37 @@
 
 ## Unreleased
 
-# 0.2.5
+# 2021-10-13 0.2.5
 - Update dependencies
 - Adding releases
 - Added MIT licence
 - GitIgnore binaries
 - Added some philosophical ramblings to README
 
-# 0.2.4
+# 2021-10-03 0.2.4
 - Hotfix for moving items to different projects
 
-# 0.2.3
+# 2021-10-02 0.2.3
 - Check for latest version once per day and prompt to update with `cargo install tod`
 - Update dependencies
 - Only show the time when a datetime is today
 - Code cleanup around error handling
 - Code cleanup around handling
 
-# 0.2.2
+# 2021-09-25 0.2.2
 - Sort projects alphabetically when listing
 - Additional test coverage
 - Publish checklist
 - Prioritize overdue items when fetching the next item
 - Add ascii icon ↻ for when an item is recurring
 
-# 0.2.1
+# 2021-09-20 0.2.1
 - Add `--scheduled` feature
 - Refactor of codebase
 - Add pretty assertions and mockito to dev dependencies
 - Can now use natural language for creating tasks outside of inbox (sends task to inbox and then moves it to the other project)
 
-## 0.2.0
+## 2021-09-14 0.2.0
 - Breaking changes to commandline arguments. Switched over to Clap crate for parsing arguments which will help handle additional features.
 - Add `--complete` feature
 - Set priority of no date to 80

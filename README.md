@@ -8,7 +8,6 @@ A tiny todoist CLI program. Takes simple input and dumps it in your inbox or ano
 
 Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `~/.tod.cfg`. 
 
-
 ### Install from Crates.io
 
 [Install Rust](https://www.rust-lang.org/tools/install)
@@ -21,6 +20,13 @@ Install Tod
 
 ```bash
 cargo install tod
+```
+
+### Install from AUR
+
+```bash
+# Use yay or another AUR helper
+yay tod-bin
 ```
 
 ### Install from GitHub

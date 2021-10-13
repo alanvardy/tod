@@ -1,11 +1,38 @@
+# Setup checklist
+
+Create tod-bin directory for pushing to AUR
+```
+mkdir ../tod-bin
+cd ../tod-bin
+git init
+git remote add aur ssh://aur@aur.archlinux.org/tod-bin.git
+git fetch aur
+```
+
 # Publish Checklist
 
 This checklist is just here for me to reduce the friction of publishing new versions.
+
+Code changes
 
 - Change version in Cargo.toml
 - Update CHANGELOG.md with version number
 - Update README.md with help text `cargo run -- -h`
 - Add any new examples to README.md
+- Open PR for version and wait for it to pass
 - Build cargo release with `cargo aur`
+- Commit and merge PR
+
+Releases
 - [Create a new release](https://github.com/alanvardy/tod/releases/new) and add binary
-- Create .SRCINFO with `makepkg --printsrcinfo > .SRCINFO`
+
+```bash
+# Cargo
+cargo publish
+makepkg --printsrcinfo > ../tod-bin/.SRCINFO
+mv PKGBUILD ../tod-bin/
+cd ../tod-bin/
+git add .
+git commit -m "new release"
+git push aur
+```

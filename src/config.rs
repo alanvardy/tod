@@ -119,7 +119,7 @@ fn check_for_latest_version(config: Config) -> Result<Config, String> {
         match request::get_latest_version() {
             Ok(version) if version.as_str() != VERSION => {
                 println!(
-                    "Latest Tod version is {}, found {}. Run {} to update",
+                    "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
                     version,
                     VERSION,
                     "cargo install tod".bright_cyan()

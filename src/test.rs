@@ -7,7 +7,7 @@ pub mod helpers {
 }
 #[cfg(test)]
 pub mod responses {
-    use crate::time;
+    use crate::{time, VERSION};
 
     pub fn sync() -> String {
         String::from("\
@@ -92,76 +92,77 @@ pub mod responses {
     }
 
     pub fn versions() -> String {
-        String::from(
-            "{\"versions\":[{\
-                \"audit_actions\":[{\
+        format!(
+            "{{\"versions\":[{{\
+                \"audit_actions\":[{{\
                     \"action\":\"publish\",\
                     \"time\":\"2021-09-25T20:57:23.608723+00:00\",\
-                    \"user\":{\
+                    \"user\":{{\
                         \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
                         \"id\":105078,\
                         \"login\":\"alanvardy\",\
                         \"name\":\"Alan Vardy\",\
                         \"url\":\"https://github.com/alanvardy\"\
-                    }}],\
+                    }}}}],\
                     \"crate\":\"tod\",\
                     \"crate_size\":22875,\
                     \"created_at\":\"2021-09-25T20:57:23.608723+00:00\",\
                     \"dl_path\":\"/api/v1/crates/tod/0.2.2/download\",\
                     \"downloads\":15,\
-                    \"features\":{},\
+                    \"features\":{{}},\
                     \"id\":429968,\
                     \"license\":\"MIT\",\
-                    \"links\":{\
+                    \"links\":{{\
                         \"authors\":\"/api/v1/crates/tod/0.2.2/authors\",\
                         \"dependencies\":\"/api/v1/crates/tod/0.2.2/dependencies\",\
                         \"version_downloads\":\"/api/v1/crates/tod/0.2.2/downloads\"\
-                    },\
-                    \"num\":\"0.2.4\",\
-                    \"published_by\":{\
+                    }},\
+                    \"num\":\"{}\",\
+                    \"published_by\":{{\
                         \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
                         \"id\":105078,\
                         \"login\":\"alanvardy\",\
                         \"name\":\"Alan Vardy\",\
                         \"url\":\"https://github.com/alanvardy\"\
-                    },\
+                    }},\
                     \"readme_path\":\"/api/v1/crates/tod/0.2.2/readme\",\
                     \"updated_at\":\"2021-09-25T20:57:23.608723+00:00\",\
-                    \"yanked\":false},\
-                    {\"audit_actions\":[{\
+                    \"yanked\":false}},\
+                    {{\"audit_actions\":[{{\
                         \"action\":\"publish\",\
                         \"time\":\"2021-09-20T16:16:21.682425+00:00\",\
-                        \"user\":{\
+                        \"user\":{{\
                             \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
                             \"id\":105078,\
                             \"login\":\"alanvardy\",\
                             \"name\":\"Alan Vardy\",\
                             \"url\":\"https://github.com/alanvardy\"\
-                        }}],\
+                        }}}}],\
                         \"crate\":\"tod\",\
                         \"crate_size\":21686,\
                         \"created_at\":\"2021-09-20T16:16:21.682425+00:00\",\
                         \"dl_path\":\"/api/v1/crates/tod/0.2.1/download\",\
                         \"downloads\":18,\
-                        \"features\":{},\
+                        \"features\":{{}},\
                         \"id\":428020,\
                         \"license\":\"MIT\",\
-                        \"links\":{\
+                        \"links\":{{\
                             \"authors\":\"/api/v1/crates/tod/0.2.1/authors\",\
                         \"dependencies\":\"/api/v1/crates/tod/0.2.1/dependencies\",\
                         \"version_downloads\":\"/api/v1/crates/tod/0.2.1/downloads\"\
-                    },\
+                    }},\
                     \"num\":\"0.2.1\",\
-                    \"published_by\":{\
+                    \"published_by\":{{\
                         \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
                         \"id\":105078,\
                         \"login\":\"alanvardy\",\
                         \"name\":\"Alan Vardy\",\
                         \"url\":\"https://github.com/alanvardy\"\
-                    },\
+                    }},\
                     \"readme_path\":\"/api/v1/crates/tod/0.2.1/readme\",\
                     \"updated_at\":\"2021-09-20T16:16:21.682425+00:00\",\
-                    \"yanked\":false}]}",
+                    \"yanked\":false}}]}}",
+            VERSION
         )
     }
 }

@@ -159,9 +159,9 @@ impl Item {
     fn is_overdue(&self) -> bool {
         match self.datetimeinfo() {
             Ok(DateTimeInfo::NoDateTime) => false,
-            Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_future(date),
+            Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date),
             Ok(DateTimeInfo::DateTime { datetime, .. }) => {
-                time::is_date_in_future(datetime.with_timezone(&Utc).date())
+                time::is_date_in_past(datetime.with_timezone(&Utc).date())
             }
             Err(_) => false,
         }

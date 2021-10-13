@@ -101,3 +101,21 @@ tod -c && tod -np myproject
 # Get your work schedule
 tod -ep work
 ```
+
+### Why I made this
+
+I am a developer who uses Todoist to reduce stress and cognitive overhead, by delegating things that a machine does well to a machine. This CLI application scratches some very specific itches for me, and I hope that it may be of use to others as well!
+
+Some points around my general strategy:
+
+- Do one thing at a time, multi-tasking is an illusion (see `--next`)
+- Capture all tasks immediately with the inbox and add detail later (see `--task`)
+- Use prioritize and sort to batch process the inbox infrequently (see `--prioritize` and `--sort`)
+- Make all your tasks "actions", concrete tasks that can be acted on. Add phone numbers, hyperlinks etc to your tasks
+- Batch process like things as infrequently as possble to lower context switching, i.e. clear your email inbox once per day, spam once per week.
+- Remember that the objective is to **get the important things done with less friction**, not just get more things done.
+- Further to the above point, make sure to leave yourself margin. It is in the spaces between the periouds work that we recover and get our best ideas.
+- Less projects is better than more projects
+- Use projects as "modes" where you only work in one at a time
+- Don't put a date on it unless it needs to be done that day
+- Don't put a time on it unless it is an appointment with yourself or others

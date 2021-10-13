@@ -34,7 +34,7 @@ pub fn is_today(datetime: DateTime<Tz>) -> bool {
     datetime.date().format("%Y-%m-%d").to_string() == today_string()
 }
 
-pub fn is_date_in_future(date: Date<Utc>) -> bool {
+pub fn is_date_in_past(date: Date<Utc>) -> bool {
     date.signed_duration_since(today_date()).num_days() < 0
 }
 

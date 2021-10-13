@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+# 0.2.5
+- Update dependencies
+- Adding releases
+- Added MIT licence
+- GitIgnore binaries
+- Added some philosophical ramblings to README
+
 # 0.2.4
 - Hotfix for moving items to different projects
 

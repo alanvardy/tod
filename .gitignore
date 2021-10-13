@@ -1,3 +1,4 @@
 /target
 tarpaulin-report.html
 lcov.info
+*.tar.gz

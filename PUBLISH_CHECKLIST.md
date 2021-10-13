@@ -20,8 +20,9 @@ Code changes
 - Update README.md with help text `cargo run -- -h`
 - Add any new examples to README.md
 - Open PR for version and wait for it to pass
-- Build cargo release with `cargo aur`
 - Commit and merge PR
+
+- Build cargo release with `cargo aur`
 
 Releases
 - [Create a new release](https://github.com/alanvardy/tod/releases/new) and add binary
@@ -33,6 +34,6 @@ makepkg --printsrcinfo > ../tod-bin/.SRCINFO
 mv PKGBUILD ../tod-bin/
 cd ../tod-bin/
 git add .
-git commit -m "new release"
+git commit -m VERSION NUMBER
 git push aur
 ```

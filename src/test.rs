@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod helpers {
     /// Checks if environment supports colored output (GitHub Actions does not)
-    pub fn is_colored() -> bool {
+    pub fn supports_coloured_output() -> bool {
         colored::control::SHOULD_COLORIZE.should_colorize()
     }
 }

@@ -1,4 +1,3 @@
-use chrono::offset::Utc;
 use chrono::Date;
 use chrono::DateTime;
 use chrono_tz::Tz;
@@ -25,6 +24,7 @@ pub struct Item {
 pub struct DateInfo {
     pub date: String,
     pub is_recurring: bool,
+    pub timezone: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -35,7 +35,7 @@ struct Body {
 enum DateTimeInfo {
     NoDateTime,
     Date {
-        date: Date<Utc>,
+        date: Date<Tz>,
         is_recurring: bool,
     },
     DateTime {
@@ -58,17 +58,24 @@ impl fmt::Display for Item {
             _ => format!("\n{}", self.description),
         };
 
-        let due = match &self.due {
-            Some(DateInfo {
-                date,
-                is_recurring: false,
-            }) => format!("\nDue: {}", time::format_date(date)),
-            Some(DateInfo {
-                date,
-                is_recurring: true,
-            }) => format!("\nDue: {} ↻", time::format_date(date)),
+        let due = match &self.datetimeinfo() {
+            Ok(DateTimeInfo::Date { date, is_recurring }) => {
+                let recurring_icon = if *is_recurring { " ↻" } else { "" };
+                let date_string = time::format_date(date);
 
-            None => String::from(""),
+                format!("\nDue: {}{}", date_string, recurring_icon)
+            }
+            Ok(DateTimeInfo::DateTime {
+                datetime,
+                is_recurring,
+            }) => {
+                let recurring_icon = if *is_recurring { " ↻" } else { "" };
+                let datetime_string = time::format_datetime(datetime);
+
+                format!("\nDue: {}{}", datetime_string, recurring_icon)
+            }
+            Ok(DateTimeInfo::NoDateTime) => String::from(""),
+            Err(string) => string.clone(),
         };
 
         write!(formatter, "\n{}{}{}", content, description, due)
@@ -130,14 +137,28 @@ impl Item {
     fn datetimeinfo(&self) -> Result<DateTimeInfo, String> {
         match &self.due {
             None => Ok(DateTimeInfo::NoDateTime),
-            Some(DateInfo { date, is_recurring }) if date.len() == 10 => Ok(DateTimeInfo::Date {
-                date: time::date_from_str(date)?,
-                is_recurring: *is_recurring,
-            }),
-            Some(DateInfo { date, is_recurring }) => Ok(DateTimeInfo::DateTime {
-                datetime: time::datetime_from_str(date)?,
-                is_recurring: *is_recurring,
-            }),
+            Some(DateInfo {
+                date,
+                is_recurring,
+                timezone,
+            }) if date.len() == 10 => {
+                let timezone = time::timezone_from_str(timezone);
+                Ok(DateTimeInfo::Date {
+                    date: time::date_from_str(date, timezone)?,
+                    is_recurring: *is_recurring,
+                })
+            }
+            Some(DateInfo {
+                date,
+                is_recurring,
+                timezone,
+            }) => {
+                let timezone = time::timezone_from_str(timezone);
+                Ok(DateTimeInfo::DateTime {
+                    datetime: time::datetime_from_str(date, timezone)?,
+                    is_recurring: *is_recurring,
+                })
+            }
         }
     }
 
@@ -151,7 +172,7 @@ impl Item {
         match self.datetimeinfo() {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(),
-            Ok(DateTimeInfo::DateTime { datetime, .. }) => time::is_today(datetime),
+            Ok(DateTimeInfo::DateTime { datetime, .. }) => time::datetime_is_today(datetime),
             Err(_) => false,
         }
     }
@@ -160,9 +181,7 @@ impl Item {
         match self.datetimeinfo() {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date),
-            Ok(DateTimeInfo::DateTime { datetime, .. }) => {
-                time::is_date_in_past(datetime.with_timezone(&Utc).date())
-            }
+            Ok(DateTimeInfo::DateTime { datetime, .. }) => time::is_date_in_past(datetime.date()),
             Err(_) => false,
         }
     }
@@ -253,6 +272,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2061-11-13"),
                 is_recurring: false,
+                timezone: Some(String::from("America/Los_Angeles")),
             }),
             priority: 3,
             is_deleted: 0,
@@ -266,6 +286,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2061-11-13"),
                 is_recurring: true,
+                timezone: Some(String::from("America/Los_Angeles")),
             }),
             ..item
         };
@@ -276,6 +297,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2001-11-13"),
                 is_recurring: true,
+                timezone: Some(String::from("America/Los_Angeles")),
             }),
             ..item
         };
@@ -296,6 +318,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2021-02-27T19:41:56Z"),
                 is_recurring: false,
+                timezone: Some(String::from("America/Los_Angeles")),
             }),
             priority: 3,
             is_deleted: 0,
@@ -314,12 +337,13 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2021-08-13"),
                 is_recurring: false,
+                timezone: None,
             }),
             priority: 3,
             is_deleted: 0,
         };
 
-        let output = if test::helpers::is_colored() {
+        let output = if test::helpers::supports_coloured_output() {
             "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: 2021-08-13"
         } else {
             "\nGet gifts for the twins\nDue: 2021-08-13"
@@ -338,12 +362,13 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             priority: 3,
             is_deleted: 0,
         };
 
-        let output = if test::helpers::is_colored() {
+        let output = if test::helpers::supports_coloured_output() {
             "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: Today"
         } else {
             "\nGet gifts for the twins\nDue: Today"
@@ -361,6 +386,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: true,
+                timezone: None,
             }),
             priority: 3,
             is_deleted: 0,
@@ -379,6 +405,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: true,
+                timezone: None,
             }),
             priority: 3,
             is_deleted: 0,
@@ -397,6 +424,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: true,
+                timezone: None,
             }),
             priority: 3,
             is_deleted: 0,
@@ -423,6 +451,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item
         };
@@ -447,6 +476,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item.clone()
         };
@@ -456,6 +486,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item
         };
@@ -480,6 +511,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item.clone()
         };
@@ -489,6 +521,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item
         };
@@ -511,6 +544,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item.clone()
         };
@@ -519,6 +553,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item.clone()
         };
@@ -527,6 +562,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item.clone()
         };
@@ -553,6 +589,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             ..no_date.clone()
         };
@@ -561,6 +598,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2020-09-06T16:00:00"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..no_date.clone()
         };
@@ -569,6 +607,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2035-09-06T16:00:00"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..no_date.clone()
         };
@@ -577,6 +616,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2015-09-06T16:00:00"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..no_date.clone()
         };
@@ -611,6 +651,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item.clone()
         };
@@ -620,6 +661,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item.clone()
         };
@@ -629,6 +671,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2020-12-20"),
                 is_recurring: false,
+                timezone: None,
             }),
             ..item
         };

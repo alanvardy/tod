@@ -41,7 +41,8 @@ impl Config {
     }
 
     pub fn save(self) -> std::result::Result<String, String> {
-        let json = json!(self).to_string();
+        let json = json!(self);
+        let string = serde_json::to_string_pretty(&json).or(Err("Could not convert to JSON"))?;
 
         fs::OpenOptions::new()
             .write(true)
@@ -49,7 +50,7 @@ impl Config {
             .truncate(true)
             .open(&self.path)
             .or(Err("Could not find config"))?
-            .write_all(json.as_bytes())
+            .write_all(string.as_bytes())
             .or(Err("Could not write to file"))?;
 
         Ok(String::from("✓"))

@@ -32,7 +32,6 @@ Releases
 cargo publish
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
 mv PKGBUILD ../tod-bin/
-cd ../tod-bin/
 git add .
 git commit -m VERSION NUMBER
 git push aur

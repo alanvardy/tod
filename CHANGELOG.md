@@ -4,6 +4,7 @@
 
 # 2021-10-15 0.2.6
 - Update dependencies
+- Use exit code 1 when an error occurs, otherwise 0
 
 # 2021-10-13 0.2.5
 - Update dependencies

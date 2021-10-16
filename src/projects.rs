@@ -183,7 +183,7 @@ mod tests {
             .add_project("first", 1)
             .add_project("second", 2);
 
-        let str = if test::helpers::is_colored() {
+        let str = if test::helpers::supports_coloured_output() {
             "\u{1b}[32mProjects\u{1b}[0m\n - first\n - second"
         } else {
             "Projects\n - first\n - second"
@@ -209,10 +209,10 @@ mod tests {
             ))
         );
 
-        let str = if test::helpers::is_colored() {
-            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 06:01 ↻"
+        let str = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 13:01 ↻"
         } else {
-            "Schedule for good\n\nPut out recycling\nDue: 06:01 ↻"
+            "Schedule for good\n\nPut out recycling\nDue: 13:01 ↻"
         };
         assert_eq!(scheduled_items(config, "good"), Ok(String::from(str)));
     }

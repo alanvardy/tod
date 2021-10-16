@@ -192,6 +192,7 @@ mod tests {
                 due: Some(DateInfo {
                     date: String::from(format!("{}T13:01:28Z", time::today_string())),
                     is_recurring: true,
+                    timezone: None,
                 }),
                 priority: 3,
                 is_deleted: 0,
@@ -228,6 +229,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: true,
+                timezone: Some(String::from("America/Los_Angeles")),
             }),
             priority: 3,
             is_deleted: 0,
@@ -257,6 +259,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(),
                 is_recurring: true,
+                timezone: Some(String::from("America/Los_Angeles")),
             }),
             priority: 1,
             is_deleted: 0,

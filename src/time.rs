@@ -3,7 +3,8 @@ use chrono::{Date, DateTime, NaiveDate};
 use chrono_tz::Tz;
 
 pub fn now() -> DateTime<Tz> {
-    Utc::now().with_timezone(&Tz::UTC)
+    // TODO this needs to be defined by config
+    Utc::now().with_timezone(&Tz::America__Vancouver)
 }
 
 /// Return today's date in format 2021-09-16
@@ -62,11 +63,9 @@ pub fn datetime_from_str(str: &str, timezone: Tz) -> Result<DateTime<Tz>, String
 
 pub fn timezone_from_str(timezone_string: &Option<String>) -> Tz {
     match timezone_string {
-        None => Tz::UTC,
-        Some(string) => {
-            let tz: Tz = string.parse().unwrap();
-            tz
-        }
+        // TODO this needs to be defined by config
+        None => Tz::America__Vancouver,
+        Some(string) => string.parse::<Tz>().unwrap(),
     }
 }
 

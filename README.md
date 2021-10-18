@@ -51,7 +51,7 @@ Start with the help flag to get the latest commands
 ```
 > tod -h
 
-Tod 0.2.6
+Tod 0.2.7
 Alan Vardy <alan@alanvardy.com>
 A tiny unofficial Todoist client
 

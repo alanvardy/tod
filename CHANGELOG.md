@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+# 2021-10-18 0.2.7
+- Default to Pacific Timezone instead of UTC when no timezone in response (sorry for people not on the Wet Coast, I will be adding time zones to the config shortly)
+- Improve publish instructions
+- Update dependencies
+
 # 2021-10-15 0.2.6
 - Update dependencies
 - Use exit code 1 when an error occurs, otherwise 0

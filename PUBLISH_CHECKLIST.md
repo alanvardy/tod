@@ -23,11 +23,13 @@ Code changes
 - Commit and merge PR
 
 - Build cargo release with `cargo aur`
-
-Releases
-- [Create a new release](https://github.com/alanvardy/tod/releases/new) and add binary
+- [Create a new release](https://github.com/alanvardy/tod/releases/new)
+  - Make sure to use the label and title in format v0.2.6
+  - Add binary
 
 ```bash
+rm *.tar.gz
+cargo build --release
 cargo publish
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
 mv PKGBUILD ../tod-bin/

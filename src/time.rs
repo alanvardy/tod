@@ -38,10 +38,14 @@ pub fn format_date(date: &Date<Tz>) -> String {
 }
 
 pub fn format_datetime(datetime: &DateTime<Tz>) -> String {
+    // TODO use timezone from config
     if datetime_is_today(*datetime) {
-        datetime.format("%H:%M").to_string()
+        datetime
+            .with_timezone(&Tz::America__Vancouver)
+            .format("%H:%M")
+            .to_string()
     } else {
-        datetime.to_string()
+        datetime.with_timezone(&Tz::America__Vancouver).to_string()
     }
 }
 

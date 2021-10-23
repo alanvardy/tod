@@ -24,17 +24,17 @@ Code changes
 
 - Build cargo release with `cargo aur`
 - [Create a new release](https://github.com/alanvardy/tod/releases/new)
-  - Make sure to use the label and title in format v0.2.6
+  - Make sure to use the label and title in format v0.2.7
   - Add binary
 
 ```bash
 rm *.tar.gz
+mv PKGBUILD ../tod-bin/
 cargo build --release
 cargo publish
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
-mv PKGBUILD ../tod-bin/
 cd ../tod-bin/
 git add .
-git commit -m 0.2.6
+git commit -m 0.2.7
 git push aur
 ```

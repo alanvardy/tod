@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+# 2021-10-23 0.2.8
+- Fix timezone for formatted datetimes
 # 2021-10-18 0.2.7
 - Default to Pacific Timezone instead of UTC when no timezone in response (sorry for people not on the Wet Coast, I will be adding time zones to the config shortly)
 - Improve publish instructions

@@ -29,10 +29,10 @@ Code changes
 
 ```bash
 rm *.tar.gz
+mv PKGBUILD ../tod-bin/
 cargo build --release
 cargo publish
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
-mv PKGBUILD ../tod-bin/
 cd ../tod-bin/
 git add .
 git commit -m 0.2.7

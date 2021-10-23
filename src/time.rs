@@ -95,3 +95,26 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<Date<Tz>, String> {
 
     Ok(date)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn format_datetime_works_with_date_in_past() {
+        let pacific_time = Tz::America__Vancouver.ymd(1990, 5, 6).and_hms(12, 30, 45);
+        assert_eq!(
+            format_datetime(&pacific_time),
+            String::from("1990-05-06 12:30:45 PDT")
+        );
+    }
+
+    #[test]
+    fn format_datetime_works_with_todays_date() {
+        let pacific_time = today_date()
+            .with_timezone(&Tz::America__Vancouver)
+            .and_hms(12, 30, 45);
+        assert_eq!(format_datetime(&pacific_time), String::from("12:30"));
+    }
+}

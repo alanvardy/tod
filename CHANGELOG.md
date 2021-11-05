@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Use an Item fixture for test setup
+- Update dependencies
 
 # 2021-10-23 0.2.8
 - Fix timezone for formatted datetimes

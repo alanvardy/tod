@@ -1,8 +1,26 @@
 #[cfg(test)]
 pub mod helpers {
+    use crate::items::{DateInfo, Item};
+
     /// Checks if environment supports colored output (GitHub Actions does not)
     pub fn supports_coloured_output() -> bool {
         colored::control::SHOULD_COLORIZE.should_colorize()
+    }
+
+    pub fn item_fixture() -> Item {
+        Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: String::from("2061-11-13"),
+                is_recurring: false,
+                timezone: Some(String::from("America/Los_Angeles")),
+            }),
+            priority: 3,
+            is_deleted: 0,
+        }
     }
 }
 #[cfg(test)]

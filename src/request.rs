@@ -221,19 +221,7 @@ mod tests {
             .with_body(&test::responses::sync())
             .create();
 
-        let item = Item {
-            id: 999999,
-            content: String::from("Put out recycling"),
-            checked: 0,
-            description: String::from(""),
-            due: Some(DateInfo {
-                date: time::today_string(),
-                is_recurring: true,
-                timezone: Some(String::from("America/Los_Angeles")),
-            }),
-            priority: 3,
-            is_deleted: 0,
-        };
+        let item = test::helpers::item_fixture();
         let project_name = "testy";
         let config = Config::new("12341234")
             .unwrap()
@@ -251,19 +239,7 @@ mod tests {
             .create();
 
         let config = Config::new("12341234").unwrap();
-        let item = Item {
-            id: 999999,
-            content: String::from("Put out recycling"),
-            checked: 0,
-            description: String::from(""),
-            due: Some(DateInfo {
-                date: time::today_string(),
-                is_recurring: true,
-                timezone: Some(String::from("America/Los_Angeles")),
-            }),
-            priority: 1,
-            is_deleted: 0,
-        };
+        let item = test::helpers::item_fixture();
         let response = update_item_priority(config, item, 4);
         assert_eq!(response, Ok(String::from("✓")));
     }

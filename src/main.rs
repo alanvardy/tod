@@ -262,7 +262,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: true,
             scheduled_items: false,
-        } => projects::prioritize_items(config, "inbox"),
+        } => projects::prioritize_items(&config, "inbox"),
         Arguments {
             new_task: None,
             project: Some(project_name),
@@ -274,7 +274,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: true,
             scheduled_items: false,
-        } => projects::prioritize_items(config, project_name),
+        } => projects::prioritize_items(&config, project_name),
         Arguments {
             new_task: None,
             project: None,
@@ -286,7 +286,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: true,
-        } => projects::scheduled_items(config, "inbox"),
+        } => projects::scheduled_items(&config, "inbox"),
         Arguments {
             new_task: None,
             project: Some(project_name),
@@ -298,7 +298,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: true,
-        } => projects::scheduled_items(config, project_name),
+        } => projects::scheduled_items(&config, project_name),
         _ => Err(String::from(
             "Unrecognized input. For more information try --help",
         )),

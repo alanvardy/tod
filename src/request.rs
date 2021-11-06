@@ -41,7 +41,7 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
 }
 
 /// Get a vector of all items for a project
-pub fn items_for_project(config: Config, project_id: &str) -> Result<Vec<Item>, String> {
+pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({"token": config.token, "project_id": project_id});
     let json = post_todoist(url, body)?;
@@ -183,14 +183,14 @@ mod tests {
         let config = Config::new("12341234").unwrap();
 
         assert_eq!(
-            items_for_project(config, "123123"),
+            items_for_project(&config, "123123"),
             Ok(vec![Item {
                 id: 999999,
                 content: String::from("Put out recycling"),
                 checked: 0,
                 description: String::from(""),
                 due: Some(DateInfo {
-                    date: String::from(format!("{}T13:01:28Z", time::today_string())),
+                    date: String::from(format!("{}T13:01:28Z", time::today_string(&config))),
                     is_recurring: true,
                     timezone: None,
                 }),

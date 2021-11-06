@@ -17,7 +17,8 @@ pub struct Config {
     pub path: String,
     /// The ID of the next task
     pub next_id: Option<u64>,
-    last_version_check: Option<String>,
+    pub timezone: Option<String>,
+    pub last_version_check: Option<String>,
 }
 
 impl Config {
@@ -27,7 +28,8 @@ impl Config {
             path: generate_path()?,
             token: String::from(token),
             next_id: None,
-            last_version_check: Some(time::today_string()),
+            last_version_check: None,
+            timezone: None,
             projects,
         })
     }
@@ -64,9 +66,7 @@ impl Config {
             .read_to_string(&mut json)
             .or(Err("Could not read to string"))?;
 
-        let config: Config = serde_json::from_str(&json).or(Err("Could not parse JSON"))?;
-
-        check_for_latest_version(config)
+        serde_json::from_str::<Config>(&json).map_err(|_| String::from("Could not parse JSON"))
     }
 
     pub fn add_project(self, name: &str, number: u32) -> Config {
@@ -83,16 +83,69 @@ impl Config {
         Config { projects, ..self }
     }
 
-    pub fn set_next_id(self, next_id: u64) -> Config {
+    pub fn set_next_id(&self, next_id: u64) -> Config {
         let next_id: Option<u64> = Some(next_id);
 
-        Config { next_id, ..self }
+        Config {
+            next_id,
+            ..self.clone()
+        }
     }
 
     pub fn clear_next_id(self) -> Config {
         let next_id: Option<u64> = None;
 
         Config { next_id, ..self }
+    }
+
+    fn check_for_latest_version(self: Config) -> Result<Config, String> {
+        let last_version = self.clone().last_version_check;
+        let new_config = Config {
+            last_version_check: Some(time::today_string(&self)),
+            ..self.clone()
+        };
+
+        if last_version != Some(time::today_string(&self)) {
+            match request::get_latest_version() {
+                Ok(version) if version.as_str() != VERSION => {
+                    println!(
+                        "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
+                        version,
+                        VERSION,
+                        "cargo install tod".bright_cyan()
+                    );
+                    new_config.clone().save().unwrap();
+                }
+                Ok(_) => (),
+                Err(err) => println!(
+                    "{}, {:?}",
+                    "Could not fetch Tod version from Cargo.io".red(),
+                    err
+                ),
+            };
+        }
+
+        Ok(new_config)
+    }
+
+    fn check_for_timezone(self: Config) -> Result<Config, String> {
+        if self.timezone.is_none() {
+            time::list_timezones();
+            let desc = "Please enter the number of your timezone";
+            let num: usize = get_input(desc)?
+                .parse::<usize>()
+                .map_err(|_| String::from("Could not parse string into number"))?;
+            let config = Config {
+                timezone: Some(time::get_timezone(num)),
+                ..self
+            };
+
+            config.clone().save()?;
+
+            Ok(config)
+        } else {
+            Ok(self)
+        }
     }
 }
 
@@ -101,42 +154,14 @@ pub fn get_or_create() -> Result<Config, String> {
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
     match fs::File::open(&path) {
-        Ok(_) => Config::load(path),
+        Ok(_) => Config::load(path)?
+            .check_for_latest_version()?
+            .check_for_timezone(),
         Err(_) => {
             let token = get_input(desc)?;
-            Config::new(&token)?.create()
+            Config::new(&token)?.create()?.check_for_timezone()
         }
     }
-}
-
-fn check_for_latest_version(config: Config) -> Result<Config, String> {
-    let last_version = config.clone().last_version_check;
-    let new_config = Config {
-        last_version_check: Some(time::today_string()),
-        ..config
-    };
-
-    if last_version != Some(time::today_string()) {
-        match request::get_latest_version() {
-            Ok(version) if version.as_str() != VERSION => {
-                println!(
-                    "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
-                    version,
-                    VERSION,
-                    "cargo install tod".bright_cyan()
-                );
-                new_config.clone().save().unwrap();
-            }
-            Ok(_) => (),
-            Err(err) => println!(
-                "{}, {:?}",
-                "Could not fetch Tod version from Cargo.io".red(),
-                err
-            ),
-        };
-    }
-
-    Ok(new_config)
 }
 
 pub fn generate_path() -> Result<String, String> {
@@ -152,7 +177,7 @@ pub fn generate_path() -> Result<String, String> {
 
 pub fn get_input(desc: &str) -> Result<String, String> {
     if cfg!(test) {
-        return Ok(String::from("test"));
+        return Ok(String::from("5"));
     }
 
     let mut input = String::new();
@@ -196,8 +221,9 @@ mod tests {
                 token: String::from("something"),
                 path: generate_path().unwrap(),
                 next_id: None,
-                last_version_check: Some(time::today_string()),
+                last_version_check: None,
                 projects: projects.clone(),
+                timezone: None,
             }
         );
         let config = config.add_project("test", 1234);
@@ -208,8 +234,9 @@ mod tests {
                 token: String::from("something"),
                 path: generate_path().unwrap(),
                 next_id: None,
-                last_version_check: Some(time::today_string()),
+                last_version_check: None,
                 projects,
+                timezone: None,
             }
         );
     }
@@ -225,6 +252,7 @@ mod tests {
             next_id: None,
             last_version_check: None,
             projects: projects.clone(),
+            timezone: Some(String::from("Asia/Pyongyang")),
         };
 
         assert_eq!(
@@ -235,6 +263,7 @@ mod tests {
                 next_id: None,
                 last_version_check: None,
                 projects: projects.clone(),
+                timezone: Some(String::from("Asia/Pyongyang")),
             }
         );
         let config_with_one_project = config_with_two_projects.remove_project("test");
@@ -248,6 +277,7 @@ mod tests {
                 next_id: None,
                 last_version_check: None,
                 projects,
+                timezone: Some(String::from("Asia/Pyongyang")),
             }
         );
     }
@@ -281,13 +311,33 @@ mod tests {
 
         // get_or_create (create)
         let config = get_or_create();
-        assert_eq!(config, Config::new("test"));
+        assert_eq!(
+            config.clone(),
+            Ok(Config {
+                token: String::from("5"),
+                projects: HashMap::new(),
+                path: generate_path().unwrap(),
+                next_id: None,
+                last_version_check: None,
+                timezone: Some(String::from("Africa/Asmera")),
+            })
+        );
         assert_matches!(fs::remove_file(&path), Ok(_));
 
         // get_or_create (load)
         Config::new("alreadycreated").unwrap().create().unwrap();
         let config = get_or_create();
-        assert_eq!(config, Config::new("alreadycreated"));
+        assert_eq!(
+            config.clone(),
+            Ok(Config {
+                token: String::from("alreadycreated"),
+                projects: HashMap::new(),
+                path: generate_path().unwrap(),
+                next_id: None,
+                last_version_check: Some(time::today_string(&config.unwrap())),
+                timezone: Some(String::from("Africa/Asmera")),
+            })
+        );
         assert_matches!(fs::remove_file(&path), Ok(_));
     }
 }

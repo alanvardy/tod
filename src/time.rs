@@ -1,51 +1,49 @@
+use crate::config::Config;
 use chrono::offset::{TimeZone, Utc};
 use chrono::{Date, DateTime, NaiveDate};
-use chrono_tz::Tz;
+use chrono_tz::{Tz, TZ_VARIANTS};
 
-pub fn now() -> DateTime<Tz> {
-    // TODO this needs to be defined by config
-    Utc::now().with_timezone(&Tz::America__Vancouver)
+pub fn now(config: &Config) -> DateTime<Tz> {
+    let tz = timezone_from_str(&config.timezone);
+    Utc::now().with_timezone(&tz)
 }
 
 /// Return today's date in format 2021-09-16
-pub fn today_string() -> String {
-    now().format("%Y-%m-%d").to_string()
+pub fn today_string(config: &Config) -> String {
+    now(config).format("%Y-%m-%d").to_string()
 }
 
 /// Return today's date in Utc
-pub fn today_date() -> Date<Tz> {
-    now().date()
+pub fn today_date(config: &Config) -> Date<Tz> {
+    now(config).date()
 }
 
-pub fn datetime_is_today(datetime: DateTime<Tz>) -> bool {
-    date_is_today(datetime.date())
+pub fn datetime_is_today(datetime: DateTime<Tz>, config: &Config) -> bool {
+    date_is_today(datetime.date(), config)
 }
 
-pub fn date_is_today(date: Date<Tz>) -> bool {
-    date.format("%Y-%m-%d").to_string() == today_string()
+pub fn date_is_today(date: Date<Tz>, config: &Config) -> bool {
+    date.format("%Y-%m-%d").to_string() == today_string(config)
 }
 
-pub fn is_date_in_past(date: Date<Tz>) -> bool {
-    date.signed_duration_since(today_date()).num_days() < 0
+pub fn is_date_in_past(date: Date<Tz>, config: &Config) -> bool {
+    date.signed_duration_since(today_date(config)).num_days() < 0
 }
 
-pub fn format_date(date: &Date<Tz>) -> String {
-    if date_is_today(*date) {
+pub fn format_date(date: &Date<Tz>, config: &Config) -> String {
+    if date_is_today(*date, config) {
         String::from("Today")
     } else {
         date.format("%Y-%m-%d").to_string()
     }
 }
 
-pub fn format_datetime(datetime: &DateTime<Tz>) -> String {
-    // TODO use timezone from config
-    if datetime_is_today(*datetime) {
-        datetime
-            .with_timezone(&Tz::America__Vancouver)
-            .format("%H:%M")
-            .to_string()
+pub fn format_datetime(datetime: &DateTime<Tz>, config: &Config) -> String {
+    let tz = timezone_from_str(&config.timezone);
+    if datetime_is_today(*datetime, config) {
+        datetime.with_timezone(&tz).format("%H:%M").to_string()
     } else {
-        datetime.with_timezone(&Tz::America__Vancouver).to_string()
+        datetime.with_timezone(&tz).to_string()
     }
 }
 
@@ -67,8 +65,7 @@ pub fn datetime_from_str(str: &str, timezone: Tz) -> Result<DateTime<Tz>, String
 
 pub fn timezone_from_str(timezone_string: &Option<String>) -> Tz {
     match timezone_string {
-        // TODO this needs to be defined by config
-        None => Tz::America__Vancouver,
+        None => Tz::UTC,
         Some(string) => string.parse::<Tz>().unwrap(),
     }
 }
@@ -96,25 +93,13 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<Date<Tz>, String> {
     Ok(date)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn format_datetime_works_with_date_in_past() {
-        let pacific_time = Tz::America__Vancouver.ymd(1990, 5, 6).and_hms(12, 30, 45);
-        assert_eq!(
-            format_datetime(&pacific_time),
-            String::from("1990-05-06 12:30:45 PDT")
-        );
+pub fn list_timezones() {
+    println!("Timezones:");
+    for (num, tz) in TZ_VARIANTS.iter().enumerate() {
+        println!("{}: {}", num, tz);
     }
+}
 
-    #[test]
-    fn format_datetime_works_with_todays_date() {
-        let pacific_time = today_date()
-            .with_timezone(&Tz::America__Vancouver)
-            .and_hms(12, 30, 45);
-        assert_eq!(format_datetime(&pacific_time), String::from("12:30"));
-    }
+pub fn get_timezone(num: usize) -> String {
+    TZ_VARIANTS[num].to_string()
 }

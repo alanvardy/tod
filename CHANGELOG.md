@@ -3,6 +3,7 @@
 ## Unreleased
 
 # 2021-11-06 0.2.9
+- Get timezone from user and use that for formatting. (Previously defaulted to Pacific)
 - Use an Item fixture for test setup
 - Update dependencies
 

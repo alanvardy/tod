@@ -37,13 +37,13 @@ cargo aur
 
 10. Publish to Cargo and push to AUR repository
 ```bash
-rm *.tar.gz
-mv PKGBUILD ../tod-bin/
 cargo build --release
 cargo publish
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
+mv PKGBUILD ../tod-bin/
+rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m 0.2.8
+git commit -m 0.2.9
 git push aur
 ```

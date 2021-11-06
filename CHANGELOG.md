@@ -2,8 +2,14 @@
 
 ## Unreleased
 
+# 2021-11-06 0.2.9
+- Get timezone from user and use that for formatting. (Previously defaulted to Pacific)
+- Use an Item fixture for test setup
+- Update dependencies
+
 # 2021-10-23 0.2.8
 - Fix timezone for formatted datetimes
+
 # 2021-10-18 0.2.7
 - Default to Pacific Timezone instead of UTC when no timezone in response (sorry for people not on the Wet Coast, I will be adding time zones to the config shortly)
 - Improve publish instructions

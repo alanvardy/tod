@@ -57,27 +57,27 @@ pub fn project_id(config: &Config, project_name: &str) -> Result<String, String>
 /// Get the next item by priority and save its id to config
 pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name)?;
-    let items = request::items_for_project(config.clone(), &project_id)?;
-    let filtered_items = items::filter_not_in_future(items)?;
-    let maybe_item = items::sort_by_value(filtered_items)
+    let items = request::items_for_project(&config, &project_id)?;
+    let filtered_items = items::filter_not_in_future(items, &config)?;
+    let maybe_item = items::sort_by_value(filtered_items, &config)
         .first()
         .map(|item| item.to_owned());
 
     match maybe_item {
         Some(item) => {
             config.set_next_id(item.id).save()?;
-            Ok(format!("{}", item))
+            Ok(item.fmt(&config))
         }
         None => Ok(green_string("No items on list")),
     }
 }
 
 // Scheduled that are today and have a time on them (AKA appointments)
-pub fn scheduled_items(config: Config, project_name: &str) -> Result<String, String> {
-    let project_id = projects::project_id(&config, project_name)?;
+pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, String> {
+    let project_id = projects::project_id(config, project_name)?;
 
     let items = request::items_for_project(config, &project_id)?;
-    let filtered_items = items::filter_today_and_has_time(items);
+    let filtered_items = items::filter_today_and_has_time(items, config);
 
     if filtered_items.is_empty() {
         return Ok(String::from("No scheduled items found"));
@@ -86,9 +86,9 @@ pub fn scheduled_items(config: Config, project_name: &str) -> Result<String, Str
     let mut buffer = String::new();
     buffer.push_str(&green_string(&format!("Schedule for {}", project_name)));
 
-    for item in items::sort_by_datetime(filtered_items) {
+    for item in items::sort_by_datetime(filtered_items, config) {
         buffer.push('\n');
-        buffer.push_str(&item.to_string());
+        buffer.push_str(&item.fmt(config));
     }
     Ok(buffer)
 }
@@ -97,7 +97,7 @@ pub fn scheduled_items(config: Config, project_name: &str) -> Result<String, Str
 pub fn sort_inbox(config: Config) -> Result<String, String> {
     let inbox_id = projects::project_id(&config, "inbox")?;
 
-    let items = request::items_for_project(config.clone(), &inbox_id)?;
+    let items = request::items_for_project(&config, &inbox_id)?;
 
     if items.is_empty() {
         Ok(green_string("No tasks to sort in inbox"))
@@ -111,10 +111,10 @@ pub fn sort_inbox(config: Config) -> Result<String, String> {
 }
 
 /// Prioritize all unprioritized items in a project
-pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, String> {
-    let inbox_id = projects::project_id(&config, project_name)?;
+pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, String> {
+    let inbox_id = projects::project_id(config, project_name)?;
 
-    let items = request::items_for_project(config.clone(), &inbox_id)?;
+    let items = request::items_for_project(config, &inbox_id)?;
 
     let unprioritized_items: Vec<Item> = items
         .into_iter()
@@ -136,7 +136,7 @@ pub fn prioritize_items(config: Config, project_name: &str) -> Result<String, St
 }
 
 pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
-    println!("{}", item);
+    println!("{}", item.fmt(&config));
 
     let project_name = config::get_input("Enter destination project name or (c)omplete:")?;
 
@@ -203,17 +203,17 @@ mod tests {
         let config = Config::new("12341234").unwrap().add_project("good", 1);
 
         assert_eq!(
-            scheduled_items(config.clone(), "test"),
+            scheduled_items(&config, "test"),
             Err(String::from(
                 "Project test not found, please add it to config"
             ))
         );
 
         let str = if test::helpers::supports_coloured_output() {
-            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 06:01 ↻"
+            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 13:01 ↻"
         } else {
-            "Schedule for good\n\nPut out recycling\nDue: 06:01 ↻"
+            "Schedule for good\n\nPut out recycling\nDue: 13:01 ↻"
         };
-        assert_eq!(scheduled_items(config, "good"), Ok(String::from(str)));
+        assert_eq!(scheduled_items(&config, "good"), Ok(String::from(str)));
     }
 }

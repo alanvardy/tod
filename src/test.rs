@@ -1,12 +1,45 @@
 #[cfg(test)]
 pub mod helpers {
+    use crate::config;
+    use crate::config::Config;
+    use crate::items::{DateInfo, Item};
+    use std::collections::HashMap;
+
     /// Checks if environment supports colored output (GitHub Actions does not)
     pub fn supports_coloured_output() -> bool {
         colored::control::SHOULD_COLORIZE.should_colorize()
     }
+
+    pub fn item_fixture() -> Item {
+        Item {
+            id: 222,
+            content: String::from("Get gifts for the twins"),
+            checked: 0,
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: String::from("2061-11-13"),
+                is_recurring: false,
+                timezone: Some(String::from("America/Los_Angeles")),
+            }),
+            priority: 3,
+            is_deleted: 0,
+        }
+    }
+
+    pub fn config_fixture() -> Config {
+        Config {
+            token: String::from("alreadycreated"),
+            projects: HashMap::new(),
+            path: config::generate_path().unwrap(),
+            next_id: None,
+            last_version_check: None,
+            timezone: Some(String::from("US/Pacific")),
+        }
+    }
 }
 #[cfg(test)]
 pub mod responses {
+    use crate::test::helpers;
     use crate::{time, VERSION};
 
     pub fn sync() -> String {
@@ -57,7 +90,7 @@ pub mod responses {
                 }}
             ]
         }}",
-            time::today_string()
+            time::today_string(&helpers::config_fixture())
         )
     }
 

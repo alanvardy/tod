@@ -4,7 +4,6 @@ use chrono_tz::Tz;
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
-use std::fmt;
 
 use crate::config::Config;
 use crate::{config, items, request, time};
@@ -44,8 +43,8 @@ enum DateTimeInfo {
     },
 }
 
-impl fmt::Display for Item {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+impl Item {
+    pub fn fmt(&self, config: &Config) -> String {
         let content = match self.priority {
             2 => self.content.blue(),
             3 => self.content.yellow(),
@@ -58,10 +57,10 @@ impl fmt::Display for Item {
             _ => format!("\n{}", self.description),
         };
 
-        let due = match &self.datetimeinfo() {
+        let due = match &self.datetimeinfo(config) {
             Ok(DateTimeInfo::Date { date, is_recurring }) => {
                 let recurring_icon = if *is_recurring { " ↻" } else { "" };
-                let date_string = time::format_date(date);
+                let date_string = time::format_date(date, config);
 
                 format!("\nDue: {}{}", date_string, recurring_icon)
             }
@@ -70,7 +69,7 @@ impl fmt::Display for Item {
                 is_recurring,
             }) => {
                 let recurring_icon = if *is_recurring { " ↻" } else { "" };
-                let datetime_string = time::format_datetime(datetime);
+                let datetime_string = time::format_datetime(datetime, config);
 
                 format!("\nDue: {}{}", datetime_string, recurring_icon)
             }
@@ -78,26 +77,28 @@ impl fmt::Display for Item {
             Err(string) => string.clone(),
         };
 
-        write!(formatter, "\n{}{}{}", content, description, due)
+        format!("\n{}{}{}", content, description, due)
     }
-}
 
-impl Item {
     /// Determines the numeric value of an item for sorting
-    fn value(&self) -> u32 {
-        let date_value: u8 = self.date_value();
+    fn value(&self, config: &Config) -> u32 {
+        let date_value: u8 = self.date_value(config);
         let priority_value: u8 = self.priority_value();
 
         date_value as u32 + priority_value as u32
     }
 
     /// Return the value of the due field
-    fn date_value(&self) -> u8 {
-        match &self.datetimeinfo() {
+    fn date_value(&self, config: &Config) -> u8 {
+        match &self.datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => 80,
             Ok(DateTimeInfo::Date { date, is_recurring }) => {
-                let today_value = if *date == time::today_date() { 100 } else { 0 };
-                let overdue_value = if self.is_overdue() { 150 } else { 0 };
+                let today_value = if *date == time::today_date(config) {
+                    100
+                } else {
+                    0
+                };
+                let overdue_value = if self.is_overdue(config) { 150 } else { 0 };
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
                 today_value + overdue_value + recurring_value
             }
@@ -106,7 +107,7 @@ impl Item {
                 is_recurring,
             }) => {
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
-                let duration = *datetime - time::now();
+                let duration = *datetime - time::now(config);
                 match duration.num_minutes() {
                     -15..=15 => 200 + recurring_value,
                     _ => recurring_value,
@@ -117,8 +118,8 @@ impl Item {
     }
 
     /// Return the value of the due field
-    fn datetime(&self) -> Option<DateTime<Tz>> {
-        match self.datetimeinfo() {
+    fn datetime(&self, config: &Config) -> Option<DateTime<Tz>> {
+        match self.datetimeinfo(config) {
             Ok(DateTimeInfo::DateTime { datetime, .. }) => Some(datetime),
             _ => None,
         }
@@ -134,61 +135,68 @@ impl Item {
     }
 
     /// Converts the JSON date representation into Date or Datetime
-    fn datetimeinfo(&self) -> Result<DateTimeInfo, String> {
-        match &self.due {
+    fn datetimeinfo(&self, config: &Config) -> Result<DateTimeInfo, String> {
+        let tz = match (self.clone().due, config.clone().timezone) {
+            (None, Some(tz_string)) => time::timezone_from_str(&Some(tz_string)),
+            (None, None) => Tz::UTC,
+            (Some(DateInfo { timezone: None, .. }), Some(tz_string)) => time::timezone_from_str(&Some(tz_string)),
+            (Some(DateInfo { timezone: None, .. }), None) => Tz::UTC,
+            (Some(DateInfo {
+                timezone: Some(tz_string),
+                ..
+                // Remove the Some here
+            }), _) => time::timezone_from_str(&Some(tz_string)),
+        };
+        match self.clone().due {
             None => Ok(DateTimeInfo::NoDateTime),
             Some(DateInfo {
-                date,
+                date, is_recurring, ..
+            }) if date.len() == 10 => Ok(DateTimeInfo::Date {
+                date: time::date_from_str(&date, tz)?,
                 is_recurring,
-                timezone,
-            }) if date.len() == 10 => {
-                let timezone = time::timezone_from_str(timezone);
-                Ok(DateTimeInfo::Date {
-                    date: time::date_from_str(date, timezone)?,
-                    is_recurring: *is_recurring,
-                })
-            }
+            }),
             Some(DateInfo {
-                date,
+                date, is_recurring, ..
+            }) => Ok(DateTimeInfo::DateTime {
+                datetime: time::datetime_from_str(&date, tz)?,
                 is_recurring,
-                timezone,
-            }) => {
-                let timezone = time::timezone_from_str(timezone);
-                Ok(DateTimeInfo::DateTime {
-                    datetime: time::datetime_from_str(date, timezone)?,
-                    is_recurring: *is_recurring,
-                })
-            }
+            }),
         }
     }
 
-    // Returns true if the datetime is today or there is no datetime
     fn has_no_date(&self) -> bool {
         self.due.is_none()
     }
 
     // Returns true if the datetime is today and there is a time
-    fn is_today(&self) -> bool {
-        match self.datetimeinfo() {
+    fn is_today(&self, config: &Config) -> bool {
+        match self.datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
-            Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(),
-            Ok(DateTimeInfo::DateTime { datetime, .. }) => time::datetime_is_today(datetime),
+            Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(config),
+            Ok(DateTimeInfo::DateTime { datetime, .. }) => {
+                time::datetime_is_today(datetime, config)
+            }
             Err(_) => false,
         }
     }
 
-    fn is_overdue(&self) -> bool {
-        match self.datetimeinfo() {
+    fn is_overdue(&self, config: &Config) -> bool {
+        match self.clone().datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
-            Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date),
-            Ok(DateTimeInfo::DateTime { datetime, .. }) => time::is_date_in_past(datetime.date()),
+            Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date, config),
+            Ok(DateTimeInfo::DateTime { datetime, .. }) => {
+                time::is_date_in_past(datetime.date(), config)
+            }
             Err(_) => false,
         }
     }
 
     /// Returns true when it is a datetime, otherwise false
-    fn has_time(&self) -> bool {
-        matches!(self.datetimeinfo(), Ok(DateTimeInfo::DateTime { .. }))
+    fn has_time(&self, config: &Config) -> bool {
+        matches!(
+            self.clone().datetimeinfo(config),
+            Ok(DateTimeInfo::DateTime { .. })
+        )
     }
 }
 
@@ -207,34 +215,34 @@ pub fn json_to_item(json: String) -> Result<Item, String> {
     }
 }
 
-pub fn sort_by_value(mut items: Vec<Item>) -> Vec<Item> {
-    items.sort_by_key(|b| Reverse(b.value()));
+pub fn sort_by_value(mut items: Vec<Item>, config: &Config) -> Vec<Item> {
+    items.sort_by_key(|b| Reverse(b.value(config)));
     items
 }
 
-pub fn sort_by_datetime(mut items: Vec<Item>) -> Vec<Item> {
-    items.sort_by_key(|i| i.datetime());
+pub fn sort_by_datetime(mut items: Vec<Item>, config: &Config) -> Vec<Item> {
+    items.sort_by_key(|i| i.datetime(config));
     items
 }
 
-pub fn filter_not_in_future(items: Vec<Item>) -> Result<Vec<Item>, String> {
+pub fn filter_not_in_future(items: Vec<Item>, config: &Config) -> Result<Vec<Item>, String> {
     let items = items
         .into_iter()
-        .filter(|item| item.is_today() || item.has_no_date() || item.is_overdue())
+        .filter(|item| item.is_today(config) || item.has_no_date() || item.is_overdue(config))
         .collect();
 
     Ok(items)
 }
 
-pub fn filter_today_and_has_time(items: Vec<Item>) -> Vec<Item> {
+pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item> {
     items
         .into_iter()
-        .filter(|item| item.is_today() && item.has_time())
+        .filter(|item| item.is_today(config) && item.has_time(config))
         .collect()
 }
 
 pub fn set_priority(config: Config, item: items::Item) {
-    println!("{}", item);
+    println!("{}", item.fmt(&config));
 
     let priority = config::get_input("Choose a priority from 1 (lowest) to 3 (highest):")
         .expect("Please enter a number from 1 to 3");
@@ -264,33 +272,19 @@ mod tests {
 
     #[test]
     fn date_value_can_handle_date() {
-        let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
-            due: Some(DateInfo {
-                date: String::from("2061-11-13"),
-                is_recurring: false,
-                timezone: Some(String::from("America/Los_Angeles")),
-            }),
-            priority: 3,
-            is_deleted: 0,
-        };
-
+        let config = test::helpers::config_fixture();
         // On another day
-        assert_eq!(item.date_value(), 50);
+        assert_eq!(test::helpers::item_fixture().date_value(&config), 50);
 
         // Recurring
         let item = Item {
             due: Some(DateInfo {
-                date: String::from("2061-11-13"),
                 is_recurring: true,
-                timezone: Some(String::from("America/Los_Angeles")),
+                ..test::helpers::item_fixture().due.unwrap()
             }),
-            ..item
+            ..test::helpers::item_fixture()
         };
-        assert_eq!(item.date_value(), 0);
+        assert_eq!(item.date_value(&config), 0);
 
         // Overdue
         let item = Item {
@@ -299,48 +293,39 @@ mod tests {
                 is_recurring: true,
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
-            ..item
+            ..test::helpers::item_fixture()
         };
-        assert_eq!(item.date_value(), 150);
+        assert_eq!(item.date_value(&config), 150);
 
         // No date
         let item = Item { due: None, ..item };
-        assert_eq!(item.date_value(), 80);
+        assert_eq!(item.date_value(&config), 80);
     }
 
     #[test]
     fn date_value_can_handle_datetime() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
-            content: String::from("Find car"),
-            checked: 0,
-            description: String::from(""),
             due: Some(DateInfo {
                 date: String::from("2021-02-27T19:41:56Z"),
-                is_recurring: false,
-                timezone: Some(String::from("America/Los_Angeles")),
+                ..test::helpers::item_fixture().due.unwrap()
             }),
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
-        assert_eq!(item.date_value(), 50);
+        assert_eq!(item.date_value(&config), 50);
     }
 
     #[test]
     fn can_format_item_with_a_date() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
             content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
             due: Some(DateInfo {
                 date: String::from("2021-08-13"),
-                is_recurring: false,
-                timezone: None,
+                ..test::helpers::item_fixture().due.unwrap()
             }),
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
         let output = if test::helpers::supports_coloured_output() {
@@ -349,23 +334,19 @@ mod tests {
             "\nGet gifts for the twins\nDue: 2021-08-13"
         };
 
-        assert_eq!(format!("{}", item), output);
+        assert_eq!(format!("{}", item.fmt(&config)), output);
     }
 
     #[test]
     fn can_format_item_with_today() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
             content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
             due: Some(DateInfo {
-                date: time::today_string(),
-                is_recurring: false,
-                timezone: None,
+                date: time::today_string(&config),
+                ..test::helpers::item_fixture().due.unwrap()
             }),
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
         let output = if test::helpers::supports_coloured_output() {
@@ -373,114 +354,84 @@ mod tests {
         } else {
             "\nGet gifts for the twins\nDue: Today"
         };
-        assert_eq!(format!("{}", item), output);
+        assert_eq!(format!("{}", item.fmt(&config)), output);
     }
 
     #[test]
     fn value_can_get_the_value_of_an_item() {
-        let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
-            due: Some(DateInfo {
-                date: time::today_string(),
-                is_recurring: true,
-                timezone: None,
-            }),
-            priority: 3,
-            is_deleted: 0,
-        };
+        let config = test::helpers::config_fixture();
+        let item = test::helpers::item_fixture();
 
-        assert_eq!(item.value(), 103);
+        assert_eq!(item.value(&config), 53);
     }
 
     #[test]
     fn datetime_works_with_datetime() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
-                is_recurring: true,
-                timezone: None,
+                ..test::helpers::item_fixture().due.unwrap()
             }),
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
-        assert_matches!(item.datetime(), Some(DateTime { .. }));
+        assert_matches!(item.datetime(&config), Some(DateTime { .. }));
     }
 
     #[test]
     fn datetime_works_with_date() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
             due: Some(DateInfo {
-                date: time::today_string(),
-                is_recurring: true,
-                timezone: None,
+                date: time::today_string(&config),
+                ..test::helpers::item_fixture().due.unwrap()
             }),
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
-        assert_eq!(item.datetime(), None);
+        assert_eq!(item.datetime(&config), None);
     }
 
     #[test]
     fn has_no_date_works() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
             due: None,
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
         assert!(item.has_no_date());
 
         let item_today = Item {
             due: Some(DateInfo {
-                date: time::today_string(),
-                is_recurring: false,
-                timezone: None,
+                date: time::today_string(&config),
+                ..test::helpers::item_fixture().due.unwrap()
             }),
-            ..item
+            ..test::helpers::item_fixture()
         };
         assert!(!item_today.has_no_date());
     }
 
     #[test]
     fn has_time_works() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
             due: None,
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
-        assert!(!item.has_time());
+        assert!(!item.has_time(&config));
 
         let item_with_date = Item {
             due: Some(DateInfo {
-                date: time::today_string(),
+                date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
             ..item.clone()
         };
-        assert!(!item_with_date.has_time());
+        assert!(!item_with_date.has_time(&config));
 
         let item_with_datetime = Item {
             due: Some(DateInfo {
@@ -490,32 +441,28 @@ mod tests {
             }),
             ..item
         };
-        assert!(item_with_datetime.has_time());
+        assert!(item_with_datetime.has_time(&config));
     }
 
     #[test]
     fn is_today_works() {
+        let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
             due: None,
-            priority: 3,
-            is_deleted: 0,
+            ..test::helpers::item_fixture()
         };
 
-        assert!(!item.is_today());
+        assert!(!item.is_today(&config));
 
         let item_today = Item {
             due: Some(DateInfo {
-                date: time::today_string(),
+                date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item.clone()
+            ..test::helpers::item_fixture()
         };
-        assert!(item_today.is_today());
+        assert!(item_today.is_today(&config));
 
         let item_in_past = Item {
             due: Some(DateInfo {
@@ -523,39 +470,30 @@ mod tests {
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item
+            ..test::helpers::item_fixture()
         };
-        assert!(!item_in_past.is_today());
+        assert!(!item_in_past.is_today(&config));
     }
 
     #[test]
     fn sort_by_value_works() {
-        let item = Item {
-            id: 222,
-            content: String::from("Get gifts for the twins"),
-            checked: 0,
-            description: String::from(""),
-            due: None,
-            priority: 3,
-            is_deleted: 0,
-        };
-
+        let config = test::helpers::config_fixture();
         let today = Item {
             due: Some(DateInfo {
-                date: time::today_string(),
+                date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item.clone()
+            ..test::helpers::item_fixture()
         };
 
         let today_recurring = Item {
             due: Some(DateInfo {
-                date: time::today_string(),
+                date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item.clone()
+            ..test::helpers::item_fixture()
         };
 
         let future = Item {
@@ -564,17 +502,18 @@ mod tests {
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item.clone()
+            ..test::helpers::item_fixture()
         };
 
         let input = vec![future.clone(), today_recurring.clone(), today.clone()];
         let result = vec![today, today_recurring, future];
 
-        assert_eq!(sort_by_value(input), result);
+        assert_eq!(sort_by_value(input, &config), result);
     }
 
     #[test]
     fn sort_by_datetime_works() {
+        let config = test::helpers::config_fixture();
         let no_date = Item {
             id: 222,
             content: String::from("Get gifts for the twins"),
@@ -587,7 +526,7 @@ mod tests {
 
         let date_not_datetime = Item {
             due: Some(DateInfo {
-                date: time::today_string(),
+                date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
@@ -630,11 +569,12 @@ mod tests {
         ];
         let result = vec![no_date, date_not_datetime, past, present, future];
 
-        assert_eq!(sort_by_datetime(input), result);
+        assert_eq!(sort_by_datetime(input, &config), result);
     }
 
     #[test]
     fn is_overdue_works() {
+        let config = test::helpers::config_fixture();
         let item = Item {
             id: 222,
             content: String::from("Get gifts for the twins"),
@@ -645,17 +585,17 @@ mod tests {
             is_deleted: 0,
         };
 
-        assert!(!item.is_overdue());
+        assert!(!item.is_overdue(&config));
 
         let item_today = Item {
             due: Some(DateInfo {
-                date: time::today_string(),
+                date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
             ..item.clone()
         };
-        assert!(!item_today.is_overdue());
+        assert!(!item_today.is_overdue(&config));
 
         let item_future = Item {
             due: Some(DateInfo {
@@ -665,7 +605,7 @@ mod tests {
             }),
             ..item.clone()
         };
-        assert!(!item_future.is_overdue());
+        assert!(!item_future.is_overdue(&config));
 
         let item_today = Item {
             due: Some(DateInfo {
@@ -675,7 +615,7 @@ mod tests {
             }),
             ..item
         };
-        assert!(item_today.is_overdue());
+        assert!(item_today.is_overdue(&config));
     }
 
     #[test]

@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+# 2021-11-06 0.2.9
 - Use an Item fixture for test setup
 - Update dependencies
 

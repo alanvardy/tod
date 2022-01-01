@@ -4,6 +4,8 @@ Create tod-bin directory for pushing to AUR
 ```
 cd ~/dev
 git clone ssh://aur@aur.archlinux.org/tod-bin.git
+cd tod-bin
+git remote add aur ssh://aur@aur.archlinux.org/tod-bin.git
 ```
 
 # Publish Checklist
@@ -32,10 +34,14 @@ cargo aur
   - Make sure to use the label and title in format v0.2.10
   - Add binary from tod directory
 
-10. Publish to Cargo and push to AUR repository
+10. Publish to Cargo
 ```bash
 cargo build --release
 cargo publish
+```
+
+11. Push to AUR
+```
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
 mv PKGBUILD ../tod-bin/
 rm *.tar.gz

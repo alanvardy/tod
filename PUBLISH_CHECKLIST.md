@@ -33,7 +33,7 @@ cargo aur
 
 9. [Create a new release](https://github.com/alanvardy/tod/releases/new)
   - Make sure to use the label and title in format v0.2.10
-  - Add binary
+  - Add binary from tod directory
 
 10. Publish to Cargo and push to AUR repository
 ```bash

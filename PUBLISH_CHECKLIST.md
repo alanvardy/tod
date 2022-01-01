@@ -2,11 +2,8 @@
 
 Create tod-bin directory for pushing to AUR
 ```
-mkdir ../tod-bin
-cd ../tod-bin
-git init
-git remote add aur ssh://aur@aur.archlinux.org/tod-bin.git
-git fetch aur
+cd ~/dev
+git clone ssh://aur@aur.archlinux.org/tod-bin.git
 ```
 
 # Publish Checklist

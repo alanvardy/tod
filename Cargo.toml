@@ -1,8 +1,8 @@
 [package]
 name = "tod"
-version = "0.2.9"
+version = "0.2.10"
 authors = ["Alan Vardy <alan@alanvardy.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "A tiny unofficial Todoist client"
 readme = "README.md"

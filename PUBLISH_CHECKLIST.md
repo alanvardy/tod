@@ -42,6 +42,7 @@ cargo publish
 
 11. Push to AUR
 ```
+cargo aur
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
 mv PKGBUILD ../tod-bin/
 rm *.tar.gz

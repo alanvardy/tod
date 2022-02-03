@@ -76,7 +76,7 @@ OPTIONS:
 ```
 
 - You will be asked for an API key on first login, which is stored in `~/.tod.cfg`
-- Add your most commonly used projects, the project ID is the last serials of numbers in the URL, the project name cannot include spaces.
+- Add your most commonly used projects, the project ID is the last serials of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
 - You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
 - Items are ranked by points and the first is returned:
   - Item is overdue: 150

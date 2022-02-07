@@ -76,7 +76,7 @@ OPTIONS:
 ```
 
 - You will be asked for an API key on first login, which is stored in `~/.tod.cfg`
-- Add your most commonly used projects, the project ID is the last serials of numbers in the URL, the project name cannot include spaces.
+- Add your most commonly used projects, the project ID is the last serials of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
 - You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
 - Items are ranked by points and the first is returned:
   - Item is overdue: 150
@@ -118,7 +118,7 @@ Some points around my general strategy:
 - Capture all tasks immediately with the inbox and add detail later (see `--task`)
 - Use prioritize and sort to batch process the inbox infrequently (see `--prioritize` and `--sort`)
 - Make all your tasks "actions", concrete tasks that can be acted on. Add phone numbers, hyperlinks etc to your tasks
-- Batch process like things as infrequently as possble to lower context switching, i.e. clear your email inbox once per day, spam once per week.
+- Batch process like things as infrequently as possible to lower context switching, i.e. clear your email inbox once per day, spam once per week.
 - Remember that the objective is to **get the important things done with less friction**, not just get more things done.
 - Further to the above point, make sure to leave yourself margin. It is in the spaces between the periouds work that we recover and get our best ideas.
 - Less projects is better than more projects

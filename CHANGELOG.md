@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Update dependencies
 
 ## 2022-01-01 v0.2.10
 - Update to 2021 Edition

@@ -7,4 +7,3 @@ updates:
     interval: daily
   assignees: 
     - alanvardy
-  insecure-external-code-execution: allow

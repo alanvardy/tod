@@ -1,0 +1,10 @@
+version: 1
+
+updates:
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: daily
+  assignees: 
+    - alanvardy
+  insecure-external-code-execution: allow

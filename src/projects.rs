@@ -202,18 +202,26 @@ mod tests {
 
         let config = Config::new("12341234").unwrap().add_project("good", 1);
 
+        let config_with_timezone = Config {
+            timezone: Some(String::from("US/Pacific")),
+            ..config
+        };
+
         assert_eq!(
-            scheduled_items(&config, "test"),
+            scheduled_items(&config_with_timezone, "test"),
             Err(String::from(
                 "Project test not found, please add it to config"
             ))
         );
 
         let str = if test::helpers::supports_coloured_output() {
-            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 13:01 ↻"
+            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 15:59 ↻"
         } else {
-            "Schedule for good\n\nPut out recycling\nDue: 13:01 ↻"
+            "Schedule for good\n\nPut out recycling\nDue: 15:59 ↻"
         };
-        assert_eq!(scheduled_items(&config, "good"), Ok(String::from(str)));
+        assert_eq!(
+            scheduled_items(&config_with_timezone, "good"),
+            Ok(String::from(str))
+        );
     }
 }

@@ -181,16 +181,23 @@ mod tests {
             .create();
 
         let config = Config::new("12341234").unwrap();
+        let config_with_timezone = Config {
+            timezone: Some(String::from("US/Pacific")),
+            ..config
+        };
 
         assert_eq!(
-            items_for_project(&config, "123123"),
+            items_for_project(&config_with_timezone, "123123"),
             Ok(vec![Item {
                 id: 999999,
                 content: String::from("Put out recycling"),
                 checked: 0,
                 description: String::from(""),
                 due: Some(DateInfo {
-                    date: String::from(format!("{}T13:01:28Z", time::today_string(&config))),
+                    date: String::from(format!(
+                        "{}T23:59:00Z",
+                        time::today_string(&config_with_timezone)
+                    )),
                     is_recurring: true,
                     timezone: None,
                 }),

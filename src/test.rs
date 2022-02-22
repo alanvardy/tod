@@ -71,7 +71,7 @@ pub mod responses {
                 \"date_completed\":null,\
                 \"description\":\"\",\
                 \"due\":{{\
-                \"date\":\"{}T13:01:28Z\",\
+                \"date\":\"{}T23:59:00Z\",\
                 \"is_recurring\":true,\
                 \"lang\":\"en\",\
                 \"string\":\"every other mon at 16:30\",\

@@ -2,6 +2,8 @@
 
 ## Unreleased
 - Update dependencies
+- Add dependabot
+- Add timezone to test cases
 
 ## 2022-01-01 v0.2.10
 - Update to 2021 Edition

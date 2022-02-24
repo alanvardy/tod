@@ -3,7 +3,7 @@
 extern crate matches;
 
 extern crate clap;
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use colored::*;
 
 mod config;
@@ -32,84 +32,87 @@ struct Arguments<'a> {
 }
 
 fn main() {
-    let app = App::new(APP).version(VERSION).author(AUTHOR).about(ABOUT);
+    let app = Command::new(APP)
+        .version(VERSION)
+        .author(AUTHOR)
+        .about(ABOUT);
     let matches = app
         .arg(
-            Arg::with_name("new task")
-                .short("t")
+            Arg::new("new task")
+                .short('t')
                 .long("task")
                 .required(false)
-                .multiple(true)
+                .multiple_occurrences(true)
                 .min_values(1)
                 .help(
                     "Create a new task with text. Can specify project option, defaults to inbox.",
                 ),
         )
         .arg(
-            Arg::with_name("project")
-                .short("p")
+            Arg::new("project")
+                .short('p')
                 .long("project")
                 .required(false)
                 .value_name("PROJECT NAME")
                 .help("The project namespace, for use with other commands"),
         )
         .arg(
-            Arg::with_name("next task")
-                .short("n")
+            Arg::new("next task")
+                .short('n')
                 .long("next")
                 .required(false)
                 .help("Get the next task by priority. Requires project option."),
         )
         .arg(
-            Arg::with_name("complete task")
-                .short("c")
+            Arg::new("complete task")
+                .short('c')
                 .long("complete")
                 .required(false)
                 .help("Complete the last task fetched with next"),
         )
         .arg(
-            Arg::with_name("list projects")
-                .short("l")
+            Arg::new("list projects")
+                .short('l')
                 .long("list")
                 .required(false)
                 .help("List all the projects in local config"),
         )
         .arg(
-            Arg::with_name("add project")
-                .short("a")
+            Arg::new("add project")
+                .short('a')
                 .long("add")
                 .required(false)
-                .multiple(true)
+                .multiple_occurrences(true)
                 .min_values(2)
                 .max_values(2)
                 .value_names(&["PROJECT NAME", "PROJECT ID"])
                 .help("Add a project to config with id"),
         )
         .arg(
-            Arg::with_name("remove project")
-                .short("r")
+            Arg::new("remove project")
+                .short('r')
                 .long("remove")
                 .required(false)
                 .value_name("PROJECT NAME")
                 .help("Remove a project from config by name"),
         )
         .arg(
-            Arg::with_name("sort inbox")
-                .short("s")
+            Arg::new("sort inbox")
+                .short('s')
                 .long("sort")
                 .required(false)
                 .help("Sort inbox by moving tasks into projects"),
         )
         .arg(
-            Arg::with_name("prioritize tasks")
-                .short("z")
+            Arg::new("prioritize tasks")
+                .short('z')
                 .long("prioritize")
                 .required(false)
                 .help("Assign priorities to tasks. Can specify project option, defaults to inbox."),
         )
         .arg(
-            Arg::with_name("scheduled items")
-                .short("e")
+            Arg::new("scheduled items")
+                .short('e')
                 .long("scheduled")
                 .required(false)
                 .help("Returns items that are today and have a time. Can specify project option, defaults to inbox."),

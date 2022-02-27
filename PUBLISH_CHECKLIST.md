@@ -14,15 +14,17 @@ This checklist is just here for me to reduce the friction of publishing new vers
 
 Code changes
 
-1. Change version in Cargo.toml
-2. Change version in this document
-3. Update CHANGELOG.md with version number
-4. Update README.md with help text `cargo run -- -h`
-5. Add any new examples to README.md
-6. Open PR for version and wait for it to pass
-7. Commit and merge PR
+1. Run `cargo update` to make sure dependencies are up to date
+2. Run `./test.sh` to make sure that didn't break anything
+3. Change version in Cargo.toml
+4. Change version in this document
+5. Update CHANGELOG.md with version number
+6. Update README.md with help text `cargo run -- -h`
+7. Add any new examples to README.md
+8. Open PR for version and wait for it to pass
+9. Commit and merge PR
 
-8. Build release
+10. Build release
 
 ```bash
 git checkout master
@@ -30,17 +32,17 @@ git pull
 cargo aur
 ```
 
-9. [Create a new release](https://github.com/alanvardy/tod/releases/new)
-  - Make sure to use the label and title in format v0.2.10
+11. [Create a new release](https://github.com/alanvardy/tod/releases/new)
+  - Make sure to use the label and title in format v0.2.11
   - Add binary from tod directory
 
-10. Publish to Cargo
+12. Publish to Cargo
 ```bash
 cargo build --release
 cargo publish
 ```
 
-11. Push to AUR
+13. Push to AUR
 ```
 cargo aur
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
@@ -48,6 +50,6 @@ mv PKGBUILD ../tod-bin/
 rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m v0.2.10
+git commit -m v0.2.11
 git push aur
 ```

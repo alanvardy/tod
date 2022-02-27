@@ -51,28 +51,53 @@ Start with the help flag to get the latest commands
 ```
 > tod -h
 
-Tod 0.2.9
-Alan Vardy <alan@alanvardy.com>
+Tod 0.2.10
+Alan Vardy <alan@vardy.cc>
 A tiny unofficial Todoist client
 
 USAGE:
-    tod [FLAGS] [OPTIONS]
-
-FLAGS:
-    -c, --complete      Complete the last task fetched with next
-    -h, --help          Prints help information
-    -l, --list          List all the projects in local config
-    -n, --next          Get the next task by priority. Requires project option.
-    -z, --prioritize    Assign priorities to tasks. Can specify project option, defaults to inbox.
-    -e, --scheduled     Returns items that are today and have a time. Can specify project option, defaults to inbox.
-    -s, --sort          Sort inbox by moving tasks into projects
-    -V, --version       Prints version information
+    tod [OPTIONS]
 
 OPTIONS:
-    -a, --add <PROJECT NAME> <PROJECT ID>    Add a project to config with id
-    -t, --task <new task>...                 Create a new task with text. Can specify project option, defaults to inbox.
-    -p, --project <PROJECT NAME>             The project namespace, for use with other commands
-    -r, --remove <PROJECT NAME>              Remove a project from config by name
+    -a, --add <PROJECT NAME> <PROJECT ID>
+            Add a project to config with id
+
+    -c, --complete
+            Complete the last task fetched with next
+
+    -e, --scheduled
+            Returns items that are today and have a time. Can specify project option, defaults to
+            inbox.
+
+    -h, --help
+            Print help information
+
+    -l, --list
+            List all the projects in local config
+
+    -n, --next
+            Get the next task by priority. Requires project option.
+
+    -o, --config
+            Absolute path of configuration. Defaults to ~/.tod.cfg.
+
+    -p, --project <PROJECT NAME>
+            The project namespace, for use with other commands
+
+    -r, --remove <PROJECT NAME>
+            Remove a project from config by name
+
+    -s, --sort
+            Sort inbox by moving tasks into projects
+
+    -t, --task <new task>...
+            Create a new task with text. Can specify project option, defaults to inbox.
+
+    -V, --version
+            Print version information
+
+    -z, --prioritize
+            Assign priorities to tasks. Can specify project option, defaults to inbox.
 ```
 
 - You will be asked for an API key on first login, which is stored in `~/.tod.cfg`

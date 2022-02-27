@@ -149,8 +149,11 @@ impl Config {
     }
 }
 
-pub fn get_or_create() -> Result<Config, String> {
-    let path: String = generate_path()?;
+pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
+    let path: String = match config_path {
+        None => generate_path()?,
+        Some(path) => String::from(path),
+    };
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
     match fs::File::open(&path) {
@@ -293,6 +296,8 @@ mod tests {
             .to_str()
             .expect("could not set home directory to str");
         let path = format!("{}/test", home_directory_str);
+
+        // Just in case there is a leftover config from a previous test run
         let _ = fs::remove_file(&path);
 
         // create and load
@@ -307,10 +312,10 @@ mod tests {
         different_new_config.clone().save().unwrap();
         let loaded_config = Config::load(path.clone()).unwrap();
         assert_eq!(loaded_config, different_new_config);
-        assert_matches!(fs::remove_file(&path), Ok(_));
+        delete_config(&path);
 
         // get_or_create (create)
-        let config = get_or_create();
+        let config = get_or_create(None);
         assert_eq!(
             config.clone(),
             Ok(Config {
@@ -322,11 +327,11 @@ mod tests {
                 timezone: Some(String::from("Africa/Asmera")),
             })
         );
-        assert_matches!(fs::remove_file(&path), Ok(_));
+        delete_config(&path);
 
         // get_or_create (load)
         Config::new("alreadycreated").unwrap().create().unwrap();
-        let config = get_or_create();
+        let config = get_or_create(None);
         assert_eq!(
             config.clone(),
             Ok(Config {
@@ -338,6 +343,31 @@ mod tests {
                 timezone: Some(String::from("Africa/Asmera")),
             })
         );
-        assert_matches!(fs::remove_file(&path), Ok(_));
+        delete_config(&path);
+    }
+
+    #[test]
+    fn custom_config_path() {
+        let path = String::from("./test/.tod.cfg");
+        let loaded_config = Config::load(path.clone()).unwrap();
+
+        let mut projects = HashMap::new();
+        projects.insert(String::from("home"), 2255636821);
+        projects.insert(String::from("inbox"), 337585113);
+        projects.insert(String::from("work"), 2243742250);
+
+        let config = Config {
+            token: String::from("23984719029"),
+            timezone: Some(String::from("US/Pacific")),
+            last_version_check: Some(String::from("2022-02-26")),
+            projects,
+            path: String::from("/home/vardy/dev/tod/.tod.cfg"),
+            next_id: Some(3592652665),
+        };
+        assert_eq!(loaded_config, config);
+    }
+
+    fn delete_config(path: &str) {
+        assert_matches!(fs::remove_file(path), Ok(_));
     }
 }

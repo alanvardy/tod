@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+
+## 2022-02-27 v0.2.11
+- Add support for custom configuration path
 - Update dependencies
 - Add dependabot
 - Add timezone to test cases

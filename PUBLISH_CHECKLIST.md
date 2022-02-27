@@ -27,13 +27,13 @@ Code changes
 10. Build release
 
 ```bash
-git checkout master
+git checkout main
 git pull
 cargo aur
 ```
 
 11. [Create a new release](https://github.com/alanvardy/tod/releases/new)
-  - Make sure to use the label and title in format v0.2.11
+  - Make sure to use the label and title in format `v0.2.11`
   - Add binary from tod directory
 
 12. Publish to Cargo

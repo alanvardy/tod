@@ -28,4 +28,4 @@ clap = "3.1.6"
 
 [dev-dependencies]
 mockito = "0.31.0"
-pretty_assertions = "1.1.0"
+pretty_assertions = "1.2.0"

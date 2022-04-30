@@ -55,7 +55,7 @@ fn main() {
                 .long("project")
                 .required(false)
                 .value_name("PROJECT NAME")
-                .help("The project namespace, for use with other commands"),
+                .help("The project namespace, for filtering other commands, use by itself to list all tasks for the project"),
         )
         .arg(
             Arg::new("next task")
@@ -324,6 +324,19 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             scheduled_items: true,
             config_path: _,
         } => projects::scheduled_items(&config, project_name),
+        Arguments {
+            new_task: None,
+            project: Some(project_name),
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            scheduled_items: false,
+            config_path: _,
+        } => projects::all_items(&config, project_name),
         _ => Err(String::from(
             "Unrecognized input. For more information try --help",
         )),

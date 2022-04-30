@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- List all tasks by using -p without other flags
+## 2022-04-30 v0.2.12
+
+- List all tasks by using -p (projects) without other flags
 
 ## 2022-02-27 v0.2.11
 
@@ -17,29 +19,29 @@
 - Update to 2021 Edition
 - Update dependencies
 
-# 2021-11-06 v0.2.9
+## 2021-11-06 v0.2.9
 
 - Get timezone from user and use that for formatting. (Previously defaulted to Pacific)
 - Use an Item fixture for test setup
 - Update dependencies
 
-# 2021-10-23 v0.2.8
+## 2021-10-23 v0.2.8
 
 - Fix timezone for formatted datetimes
 
-# 2021-10-18 v0.2.7
+## 2021-10-18 v0.2.7
 
 - Default to Pacific Timezone instead of UTC when no timezone in response (sorry for people not on the Wet Coast, I will be adding time zones to the config shortly)
 - Improve publish instructions
 - Update dependencies
 
-# 2021-10-15 v0.2.6
+## 2021-10-15 v0.2.6
 
 - Update dependencies
 - Use exit code 1 when an error occurs, otherwise 0
 - Use timezone specified by Todoist response
 
-# 2021-10-13 v0.2.5
+## 2021-10-13 v0.2.5
 
 - Update dependencies
 - Adding releases
@@ -47,11 +49,11 @@
 - GitIgnore binaries
 - Added some philosophical ramblings to README
 
-# 2021-10-03 v0.2.4
+## 2021-10-03 v0.2.4
 
 - Hotfix for moving items to different projects
 
-# 2021-10-02 v0.2.3
+## 2021-10-02 v0.2.3
 
 - Check for latest version once per day and prompt to update with `cargo install tod`
 - Update dependencies
@@ -59,7 +61,7 @@
 - Code cleanup around error handling
 - Code cleanup around handling
 
-# 2021-09-25 v0.2.2
+## 2021-09-25 v0.2.2
 
 - Sort projects alphabetically when listing
 - Additional test coverage
@@ -67,7 +69,7 @@
 - Prioritize overdue items when fetching the next item
 - Add ascii icon ↻ for when an item is recurring
 
-# 2021-09-20 v0.2.1
+## 2021-09-20 v0.2.1
 
 - Add `--scheduled` feature
 - Refactor of codebase
@@ -103,7 +105,7 @@
   
   Items are ranked by points and the first is returned:
 
-  ```
+  ```monospace
     Date is today with no time: 100
     Date is today with time in next or last 15 min: 200
     Item has no priority: 2

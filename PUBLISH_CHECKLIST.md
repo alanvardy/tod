@@ -1,14 +1,17 @@
-# Setup checklist
+# Publish Checklist
+
+## Setup tod-bin
 
 Create tod-bin directory for pushing to AUR
-```
+
+```bash
 cd ~/dev
 git clone ssh://aur@aur.archlinux.org/tod-bin.git
 cd tod-bin
 git remote add aur ssh://aur@aur.archlinux.org/tod-bin.git
 ```
 
-# Publish Checklist
+## Publish to Cargo and AUR
 
 This checklist is just here for me to reduce the friction of publishing new versions.
 
@@ -33,16 +36,19 @@ cargo aur
 ```
 
 11. [Create a new release](https://github.com/alanvardy/tod/releases/new)
-  - Make sure to use the label and title in format `v0.2.11`
-  - Add binary from tod directory
+
+- Make sure to use the label and title in format `v0.2.12`
+- Add binary from tod directory
 
 12. Publish to Cargo
+
 ```bash
 cargo build --release
 cargo publish
 ```
 
 13. Push to AUR
+
 ```
 cargo aur
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO

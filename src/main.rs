@@ -123,6 +123,7 @@ fn main() {
                 .short('o')
                 .long("config")
                 .required(false)
+                .value_name("CONFIGURATION PATH")
                 .help("Absolute path of configuration. Defaults to ~/.tod.cfg."),
         )
         .get_matches();
@@ -175,7 +176,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::add_item_to_project(config, &task, project),
         Arguments {
             new_task: Some(task),
@@ -188,7 +189,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::add_item_to_project(config, &task, "inbox"),
         Arguments {
             new_task: None,
@@ -201,7 +202,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::next_item(config, project),
         Arguments {
             new_task: None,
@@ -214,7 +215,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => match request::complete_item(config) {
             Ok(_) => Ok(String::from("✓")),
             Err(err) => Err(err),
@@ -230,7 +231,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::list(config),
         Arguments {
             new_task: None,
@@ -243,7 +244,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::add(config, params),
         Arguments {
             new_task: None,
@@ -256,7 +257,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::remove(config, project_name),
         Arguments {
             new_task: None,
@@ -269,7 +270,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: true,
             prioritize_tasks: false,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::sort_inbox(config),
         Arguments {
             new_task: None,
@@ -282,7 +283,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: true,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::prioritize_items(&config, "inbox"),
         Arguments {
             new_task: None,
@@ -295,7 +296,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: true,
             scheduled_items: false,
-            config_path: None,
+            config_path: _,
         } => projects::prioritize_items(&config, project_name),
         Arguments {
             new_task: None,
@@ -308,7 +309,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: true,
-            config_path: None,
+            config_path: _,
         } => projects::scheduled_items(&config, "inbox"),
         Arguments {
             new_task: None,
@@ -321,7 +322,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: true,
-            config_path: None,
+            config_path: _,
         } => projects::scheduled_items(&config, project_name),
         _ => Err(String::from(
             "Unrecognized input. For more information try --help",

@@ -152,14 +152,14 @@ impl Config {
 pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
     let path: String = match config_path {
         None => generate_path()?,
-        Some(path) => String::from(path),
+        Some(path) => String::from(path).trim().to_owned(),
     };
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
     match fs::File::open(&path) {
         Ok(_) => Config::load(path)?
-            .check_for_latest_version()?
-            .check_for_timezone(),
+            .check_for_timezone()?
+            .check_for_latest_version(),
         Err(_) => {
             let token = get_input(desc)?;
             Config::new(&token)?.create()?.check_for_timezone()
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn custom_config_path() {
-        let path = String::from("./test/.tod.cfg");
+        let path = String::from("./tests/.tod.cfg");
         let loaded_config = Config::load(path.clone()).unwrap();
 
         let mut projects = HashMap::new();

@@ -131,6 +131,9 @@ tod -c && tod -np myproject
 
 # Get your work schedule
 tod -ep work
+
+# Get all tasks for work
+tod -p work
 ```
 
 ### Why I made this

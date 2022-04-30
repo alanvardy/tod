@@ -93,6 +93,22 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
     Ok(buffer)
 }
 
+// All items for a project
+pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> {
+    let project_id = projects::project_id(config, project_name)?;
+
+    let items = request::items_for_project(config, &project_id)?;
+
+    let mut buffer = String::new();
+    buffer.push_str(&green_string(&format!("Tasks for {}", project_name)));
+
+    for item in items::sort_by_datetime(items, config) {
+        buffer.push('\n');
+        buffer.push_str(&item.fmt(config));
+    }
+    Ok(buffer)
+}
+
 /// Empty the inbox by sending items to other projects one at a time
 pub fn sort_inbox(config: Config) -> Result<String, String> {
     let inbox_id = projects::project_id(&config, "inbox")?;
@@ -221,6 +237,32 @@ mod tests {
         };
         assert_eq!(
             scheduled_items(&config_with_timezone, "good"),
+            Ok(String::from(str))
+        );
+    }
+
+    #[test]
+    fn should_list_all_items() {
+        let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::items())
+            .create();
+
+        let config = Config::new("12341234").unwrap().add_project("good", 1);
+
+        let config_with_timezone = Config {
+            timezone: Some(String::from("US/Pacific")),
+            ..config
+        };
+
+        let str = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mTasks for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 16:59 ↻"
+        } else {
+            "Tasks for good\n\nPut out recycling\nDue: 16:59 ↻"
+        };
+        assert_eq!(
+            all_items(&config_with_timezone, "good"),
             Ok(String::from(str))
         );
     }

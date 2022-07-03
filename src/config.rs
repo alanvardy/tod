@@ -156,10 +156,13 @@ pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
     };
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
-    if ! std::path::Path::new(&path).exists() {
+    if !std::path::Path::new(&path).exists() {
         let legacy_path = check_legacy_path()?;
         if std::path::Path::new(&legacy_path).exists() {
-            println!("INFO: Moving the config file from \"{}\" to \"{}\".\n", legacy_path, path);
+            println!(
+                "INFO: Moving the config file from \"{}\" to \"{}\".\n",
+                legacy_path, path
+            );
             fs::rename(legacy_path, &path).map_err(|e| e.to_string())?;
         }
     }
@@ -184,15 +187,17 @@ pub fn generate_path() -> Result<String, String> {
         .ok_or_else(|| String::from("Could not convert config directory to string"))?
         .to_owned();
     Ok(format!("{}/{}", config_directory, filename))
-} 
+}
 
 pub fn check_legacy_path() -> Result<String, String> {
+    let filename = if cfg!(test) { "test" } else { ".tod.cfg" };
+
     let home_directory = dirs::home_dir()
         .ok_or_else(|| String::from("Could not find home directory"))?
         .to_str()
         .ok_or_else(|| String::from("Could not convert directory to string"))?
         .to_owned();
-    Ok(format!("{}/{}", home_directory, ".tod.cfg"))
+    Ok(format!("{}/{}", home_directory, filename))
 }
 
 pub fn get_input(desc: &str) -> Result<String, String> {
@@ -308,11 +313,11 @@ mod tests {
 
         // Save and load
         // Build path
-        let home_directory = dirs::home_dir().expect("could not get home directory");
-        let home_directory_str = home_directory
+        let config_directory = dirs::config_dir().expect("could not get home directory");
+        let config_directory_str = config_directory
             .to_str()
             .expect("could not set home directory to str");
-        let path = format!("{}/test", home_directory_str);
+        let path = format!("{}/test", config_directory_str);
 
         // Just in case there is a leftover config from a previous test run
         let _ = fs::remove_file(&path);
@@ -353,6 +358,25 @@ mod tests {
             config.clone(),
             Ok(Config {
                 token: String::from("alreadycreated"),
+                projects: HashMap::new(),
+                path: generate_path().unwrap(),
+                next_id: None,
+                last_version_check: Some(time::today_string(&config.unwrap())),
+                timezone: Some(String::from("Africa/Asmera")),
+            })
+        );
+        delete_config(&path);
+
+        // get_or_create (move legacy)
+        Config::new("created in $HOME").unwrap().create().unwrap();
+        let legacy_path = check_legacy_path().unwrap();
+        let proper_path = generate_path().unwrap();
+        fs::rename(proper_path, &legacy_path).unwrap();
+        let config = get_or_create(None);
+        assert_eq!(
+            config.clone(),
+            Ok(Config {
+                token: String::from("created in $HOME"),
                 projects: HashMap::new(),
                 path: generate_path().unwrap(),
                 next_id: None,

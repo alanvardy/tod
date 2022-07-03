@@ -156,6 +156,14 @@ pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
     };
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
+    if ! std::path::Path::new(&path).exists() {
+        let legacy_path = check_legacy_path()?;
+        if std::path::Path::new(&legacy_path).exists() {
+            println!("INFO: Moving the config file from \"{}\" to \"{}\".\n", legacy_path, path);
+            fs::rename(legacy_path, &path).map_err(|e| e.to_string())?;
+        }
+    }
+
     match fs::File::open(&path) {
         Ok(_) => Config::load(path)?
             .check_for_timezone()?
@@ -168,14 +176,23 @@ pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
 }
 
 pub fn generate_path() -> Result<String, String> {
-    let filename = if cfg!(test) { "test" } else { ".tod.cfg" };
+    let filename = if cfg!(test) { "test" } else { "tod.cfg" };
 
+    let config_directory = dirs::config_dir()
+        .ok_or_else(|| String::from("Could not find config directory"))?
+        .to_str()
+        .ok_or_else(|| String::from("Could not convert config directory to string"))?
+        .to_owned();
+    Ok(format!("{}/{}", config_directory, filename))
+} 
+
+pub fn check_legacy_path() -> Result<String, String> {
     let home_directory = dirs::home_dir()
         .ok_or_else(|| String::from("Could not find home directory"))?
         .to_str()
         .ok_or_else(|| String::from("Could not convert directory to string"))?
         .to_owned();
-    Ok(format!("{}/{}", home_directory, filename))
+    Ok(format!("{}/{}", home_directory, ".tod.cfg"))
 }
 
 pub fn get_input(desc: &str) -> Result<String, String> {

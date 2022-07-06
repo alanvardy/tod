@@ -6,12 +6,13 @@ A tiny todoist CLI program. Takes simple input and dumps it in your inbox or ano
 
 ![Tod](tod.gif)
 
-Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `~/.tod.cfg`. 
+Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `~/.tod.cfg`.
 
 ### Install from Crates.io
 
 [Install Rust](https://www.rust-lang.org/tools/install)
-```
+
+```bash
 # Linux and MacOS
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
@@ -48,10 +49,10 @@ You can then find the binary in `/target/release/`
 
 Start with the help flag to get the latest commands
 
-```
+```bash
 > tod -h
 
-Tod 0.2.11
+Tod 0.2.13
 Alan Vardy <alan@vardy.cc>
 A tiny unofficial Todoist client
 
@@ -100,7 +101,7 @@ OPTIONS:
             Assign priorities to tasks. Can specify project option, defaults to inbox.
 ```
 
-- You will be asked for an API key on first login, which is stored in `~/.tod.cfg`
+- You will be asked for an API key on first login, which is stored in `$XDG_CONFIG_HOME/tod.cfg` (i.e. `~/.config/tod.cfg`).
 - Add your most commonly used projects, the project ID is the last serials of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
 - You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
 - Items are ranked by points and the first is returned:
@@ -149,7 +150,7 @@ Some points around my general strategy:
 - Batch process like things as infrequently as possible to lower context switching, i.e. clear your email inbox once per day, spam once per week.
 - Remember that the objective is to **get the important things done with less friction**, not just get more things done.
 - Further to the above point, make sure to leave yourself margin. It is in the spaces between the periouds work that we recover and get our best ideas.
-- Less projects is better than more projects
+- Less projects are better than more projects
 - Use projects as "modes" where you only work in one at a time
 - Don't put a date on it unless it needs to be done that day
 - Don't put a time on it unless it is an appointment with yourself or others

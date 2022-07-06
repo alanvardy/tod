@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2022-07-06 v0.2.13
+
+- Move config from `~/.tod.cfg` to `$XDG_CONFIG_HOME/tod.cfg` (i.e. `~/.config/tod.cfg`). Thank you @hyblm!
+- If config is in old location it will be moved to the new one
+- Update dependencies
+
 ## 2022-04-30 v0.2.12
 
 - List all tasks by using -p (projects) without other flags

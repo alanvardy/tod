@@ -124,7 +124,7 @@ fn main() {
                 .long("config")
                 .required(false)
                 .value_name("CONFIGURATION PATH")
-                .help("Absolute path of configuration. Defaults to ~/.tod.cfg."),
+                .help("Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg"),
         )
         .get_matches();
 

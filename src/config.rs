@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::{fs, io};
 
-/// App configuration, serialized as json in ~/.tod.cfg
+/// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Config {
     /// The Todoist Api token
@@ -413,7 +413,7 @@ mod tests {
 
     #[test]
     fn custom_config_path() {
-        let path = String::from("./tests/.tod.cfg");
+        let path = String::from("./tests/tod.cfg");
         let loaded_config = Config::load(&path).unwrap();
 
         let mut projects = HashMap::new();
@@ -426,7 +426,7 @@ mod tests {
             timezone: Some(String::from("US/Pacific")),
             last_version_check: Some(String::from("2022-02-26")),
             projects,
-            path: String::from("/home/vardy/dev/tod/.tod.cfg"),
+            path: String::from("/home/vardy/dev/tod/tod.cfg"),
             next_id: Some(3592652665),
         };
         assert_eq!(loaded_config, config);

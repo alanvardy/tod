@@ -93,7 +93,7 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
     Ok(buffer)
 }
 
-// All items for a project
+/// All items for a project
 pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(config, project_name)?;
 

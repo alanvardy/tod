@@ -6,7 +6,7 @@ A tiny todoist CLI program. Takes simple input and dumps it in your inbox or ano
 
 ![Tod](tod.gif)
 
-Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `~/.tod.cfg`.
+Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `$XDG_CONFIG_HOME/tod.cfg`.
 
 ### Install from Crates.io
 

@@ -58,15 +58,22 @@ impl Config {
         Ok(String::from("✓"))
     }
 
-    pub fn load(path: String) -> Result<Config, String> {
+    pub fn load(path: &str) -> Result<Config, String> {
         let mut json = String::new();
 
-        fs::File::open(&path)
+        fs::File::open(path)
             .or(Err("Could not find file"))?
             .read_to_string(&mut json)
             .or(Err("Could not read to string"))?;
 
         serde_json::from_str::<Config>(&json).map_err(|_| String::from("Could not parse JSON"))
+    }
+
+    pub fn set_path(self, path: &str) -> Config {
+        Config {
+            path: String::from(path),
+            ..self
+        }
     }
 
     pub fn add_project(self, name: &str, number: u32) -> Config {
@@ -156,9 +163,11 @@ pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
     };
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
-    if !std::path::Path::new(&path).exists() {
-        let legacy_path = check_legacy_path()?;
-        if std::path::Path::new(&legacy_path).exists() {
+    if !path_exists(&path) {
+        // We used to store config in $HOME/.tod.cfg
+        // This moves it to new path
+        let legacy_path = generate_legacy_path()?;
+        if path_exists(&legacy_path) {
             println!(
                 "INFO: Moving the config file from \"{}\" to \"{}\".\n",
                 legacy_path, path
@@ -168,14 +177,29 @@ pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
     }
 
     match fs::File::open(&path) {
-        Ok(_) => Config::load(path)?
-            .check_for_timezone()?
-            .check_for_latest_version(),
+        Ok(_) => {
+            let config = Config::load(&path)?
+                .check_for_timezone()?
+                .check_for_latest_version()?;
+
+            // When we move the config file we also need to rename the path in JSON
+            if config.path != path {
+                let new_config = config.set_path(&path);
+                new_config.clone().save()?;
+                Ok(new_config)
+            } else {
+                Ok(config)
+            }
+        }
         Err(_) => {
             let token = get_input(desc)?;
             Config::new(&token)?.create()?.check_for_timezone()
         }
     }
+}
+
+fn path_exists(path: &str) -> bool {
+    std::path::Path::new(path).exists()
 }
 
 pub fn generate_path() -> Result<String, String> {
@@ -189,7 +213,7 @@ pub fn generate_path() -> Result<String, String> {
     Ok(format!("{}/{}", config_directory, filename))
 }
 
-pub fn check_legacy_path() -> Result<String, String> {
+pub fn generate_legacy_path() -> Result<String, String> {
     let filename = if cfg!(test) { "test" } else { ".tod.cfg" };
 
     let home_directory = dirs::home_dir()
@@ -326,13 +350,13 @@ mod tests {
         let new_config = Config::new("faketoken").unwrap();
         let created_config = new_config.clone().create().unwrap();
         assert_eq!(new_config, created_config);
-        let loaded_config = Config::load(path.clone()).unwrap();
+        let loaded_config = Config::load(&path).unwrap();
         assert_eq!(created_config, loaded_config);
 
         // save and load
         let different_new_config = Config::new("differenttoken").unwrap();
         different_new_config.clone().save().unwrap();
-        let loaded_config = Config::load(path.clone()).unwrap();
+        let loaded_config = Config::load(&path).unwrap();
         assert_eq!(loaded_config, different_new_config);
         delete_config(&path);
 
@@ -369,7 +393,7 @@ mod tests {
 
         // get_or_create (move legacy)
         Config::new("created in $HOME").unwrap().create().unwrap();
-        let legacy_path = check_legacy_path().unwrap();
+        let legacy_path = generate_legacy_path().unwrap();
         let proper_path = generate_path().unwrap();
         fs::rename(proper_path, &legacy_path).unwrap();
         let config = get_or_create(None);
@@ -390,7 +414,7 @@ mod tests {
     #[test]
     fn custom_config_path() {
         let path = String::from("./tests/.tod.cfg");
-        let loaded_config = Config::load(path.clone()).unwrap();
+        let loaded_config = Config::load(&path).unwrap();
 
         let mut projects = HashMap::new();
         projects.insert(String::from("home"), 2255636821);

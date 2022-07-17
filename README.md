@@ -52,7 +52,7 @@ Start with the help flag to get the latest commands
 ```bash
 > tod -h
 
-Tod 0.2.13
+Tod 0.2.14
 Alan Vardy <alan@vardy.cc>
 A tiny unofficial Todoist client
 
@@ -80,10 +80,11 @@ OPTIONS:
             Get the next task by priority. Requires project option.
 
     -o, --config <CONFIGURATION PATH>
-            Absolute path of configuration. Defaults to ~/.tod.cfg.
+            Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
 
     -p, --project <PROJECT NAME>
-            The project namespace, for filtering other commands, use by itself to list all tasks for the project
+            The project namespace, for filtering other commands, use by itself to list all tasks for
+            the project
 
     -r, --remove <PROJECT NAME>
             Remove a project from config by name

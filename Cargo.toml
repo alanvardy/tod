@@ -22,7 +22,7 @@ dirs = "4.0"
 matches = "0.1.8"
 regex = "1"
 chrono = "0.4.19"
-chrono-tz = "0.6.1"
+chrono-tz = "0.6.2"
 colored = "2.0.0"
 clap = "3.2.14"
 

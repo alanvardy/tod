@@ -1,4 +1,4 @@
-## Tod
+# Tod
 
 [![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod) [![codecov](https://codecov.io/gh/alanvardy/tod/branch/master/graph/badge.svg?token=9FBJK1SU0K)](https://codecov.io/gh/alanvardy/tod) [![Crates.io](https://img.shields.io/crates/v/tod.svg)](https://crates.io/crates/tod)
 
@@ -6,9 +6,13 @@ A tiny todoist CLI program. Takes simple input and dumps it in your inbox or ano
 
 ![Tod](tod.gif)
 
-Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `$XDG_CONFIG_HOME/tod.cfg`.
+Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `$XDG_CONFIG_HOME/tod.cfg`. This defaults to:
 
-### Install from Crates.io
+- `~/.config/tod.cfg` on Linux
+- `~/Library/Application Support/tod.cfg` on Mac
+- No idea about Windows, sorry!
+
+## Install from Crates.io
 
 [Install Rust](https://www.rust-lang.org/tools/install)
 
@@ -23,14 +27,14 @@ Install Tod
 cargo install tod
 ```
 
-### Install from AUR
+## Install from AUR
 
 ```bash
 # Use yay or another AUR helper
 yay tod-bin
 ```
 
-### Install from GitHub
+## Install from GitHub
 
 [Install Rust](https://www.rust-lang.org/tools/install)
 
@@ -45,7 +49,7 @@ cargo build --release
 
 You can then find the binary in `/target/release/`
 
-### Usage
+## Usage
 
 Start with the help flag to get the latest commands
 
@@ -102,7 +106,6 @@ OPTIONS:
             Assign priorities to tasks. Can specify project option, defaults to inbox.
 ```
 
-- You will be asked for an API key on first login, which is stored in `$XDG_CONFIG_HOME/tod.cfg` (i.e. `~/.config/tod.cfg`).
 - Add your most commonly used projects, the project ID is the last serials of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
 - You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
 - Items are ranked by points and the first is returned:
@@ -116,7 +119,7 @@ OPTIONS:
   - Priority 2: 3
   - Priority 3: 4
 
-#### Examples
+### Examples
 
 ```bash
 # Create a new task in inbox using natural language processing
@@ -138,7 +141,7 @@ tod -ep work
 tod -p work
 ```
 
-### Why I made this
+## Why I made this
 
 I am a developer who uses Todoist to reduce stress and cognitive overhead, by delegating things that a machine does well to a machine. This CLI application scratches some very specific itches for me, and I hope that it may be of use to others as well!
 
@@ -155,3 +158,7 @@ Some points around my general strategy:
 - Use projects as "modes" where you only work in one at a time
 - Don't put a date on it unless it needs to be done that day
 - Don't put a time on it unless it is an appointment with yourself or others
+
+## Related projects
+
+- [Alfred Workflow](https://github.com/stacksjb/AlfredTodWorkflow)

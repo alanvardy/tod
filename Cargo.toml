@@ -21,7 +21,7 @@ uuid = { version = "1.1", features = ["serde", "v4"] }
 dirs = "4.0"
 matches = "0.1.8"
 regex = "1"
-chrono = "0.4.21"
+chrono = "0.4.22"
 chrono-tz = "0.6.3"
 colored = "2.0.0"
 clap = "3.2.16"

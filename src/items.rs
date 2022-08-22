@@ -8,7 +8,7 @@ use std::cmp::Reverse;
 use crate::config::Config;
 use crate::{config, items, request, time};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Item {
     pub id: u64,
     pub content: String,
@@ -19,7 +19,7 @@ pub struct Item {
     pub is_deleted: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct DateInfo {
     pub date: String,
     pub is_recurring: bool,

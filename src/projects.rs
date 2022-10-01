@@ -23,8 +23,8 @@ pub fn list(config: Config) -> Result<String, String> {
 }
 
 /// Add a project to the projects HashMap in Config
-pub fn add(config: Config, params: Vec<&str>) -> Result<String, String> {
-    let mut params = params.clone();
+pub fn add(config: Config, params: Vec<String>) -> Result<String, String> {
+    let mut params = params;
     let num = params
         .pop()
         .ok_or(ADD_ERROR)?
@@ -196,8 +196,8 @@ mod tests {
     fn should_list_projects() {
         let config = Config::new("123123")
             .unwrap()
-            .add_project("first", 1)
-            .add_project("second", 2);
+            .add_project(String::from("first"), 1)
+            .add_project(String::from("second"), 2);
 
         let str = if test::helpers::supports_coloured_output() {
             "\u{1b}[32mProjects\u{1b}[0m\n - first\n - second"
@@ -216,7 +216,9 @@ mod tests {
             .with_body(&test::responses::items())
             .create();
 
-        let config = Config::new("12341234").unwrap().add_project("good", 1);
+        let config = Config::new("12341234")
+            .unwrap()
+            .add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
@@ -249,7 +251,9 @@ mod tests {
             .with_body(&test::responses::items())
             .create();
 
-        let config = Config::new("12341234").unwrap().add_project("good", 1);
+        let config = Config::new("12341234")
+            .unwrap()
+            .add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),

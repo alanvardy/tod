@@ -3,7 +3,7 @@
 extern crate matches;
 
 extern crate clap;
-use clap::{Arg, Command};
+use clap::{Arg, ArgAction, Command};
 use colored::*;
 
 mod config;
@@ -25,7 +25,7 @@ struct Arguments<'a> {
     next_task: bool,
     complete_task: bool,
     list_projects: bool,
-    add_project: Option<Vec<&'a str>>,
+    add_project: Option<Vec<String>>,
     remove_project: Option<&'a str>,
     sort_inbox: bool,
     prioritize_tasks: bool,
@@ -43,8 +43,9 @@ fn main() {
                 .short('t')
                 .long("task")
                 .required(false)
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .min_values(1)
+                .value_parser(clap::value_parser!(String))
                 .help(
                     "Create a new task with text. Can specify project option, defaults to inbox.",
                 ),
@@ -83,9 +84,10 @@ fn main() {
                 .short('a')
                 .long("add")
                 .required(false)
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .min_values(2)
                 .max_values(2)
+                .value_parser(clap::value_parser!(String))
                 .value_names(&["PROJECT NAME", "PROJECT ID"])
                 .help("Add a project to config with id"),
         )
@@ -129,24 +131,28 @@ fn main() {
         .get_matches();
 
     let new_task = matches
-        .values_of("new task")
-        .map(|values| values.collect::<Vec<&str>>().join(" "));
+        .get_many("new task")
+        .map(|values| values.cloned().collect::<Vec<String>>().join(" "));
     let add_project = matches
-        .values_of("add project")
-        .map(|values| values.collect::<Vec<&str>>());
+        .get_many("add project")
+        .map(|values| values.cloned().collect::<Vec<String>>());
 
     let arguments = Arguments {
         new_task,
-        project: matches.value_of("project"),
-        next_task: matches.is_present("next task"),
-        complete_task: matches.is_present("complete task"),
-        list_projects: matches.is_present("list projects"),
+        project: matches.get_one::<String>("project").map(|s| s.as_str()),
+        next_task: matches.contains_id("next task"),
+        complete_task: matches.contains_id("complete task"),
+        list_projects: matches.contains_id("list projects"),
         add_project,
-        remove_project: matches.value_of("remove project"),
-        config_path: matches.value_of("configuration path"),
-        sort_inbox: matches.is_present("sort inbox"),
-        prioritize_tasks: matches.is_present("prioritize tasks"),
-        scheduled_items: matches.is_present("scheduled items"),
+        remove_project: matches
+            .get_one::<String>("remove project")
+            .map(|s| s.as_str()),
+        config_path: matches
+            .get_one::<String>("configuration path")
+            .map(|s| s.as_str()),
+        sort_inbox: matches.contains_id("sort inbox"),
+        prioritize_tasks: matches.contains_id("prioritize tasks"),
+        scheduled_items: matches.contains_id("scheduled items"),
     };
 
     match dispatch(arguments) {

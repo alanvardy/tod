@@ -232,7 +232,7 @@ mod tests {
         let project_name = "testy";
         let config = Config::new("12341234")
             .unwrap()
-            .add_project(project_name, 1);
+            .add_project(String::from(project_name), 1);
         let response = move_item(config, item, project_name);
         assert_eq!(response, Ok(String::from("✓")));
     }

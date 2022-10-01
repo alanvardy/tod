@@ -76,9 +76,9 @@ impl Config {
         }
     }
 
-    pub fn add_project(self, name: &str, number: u32) -> Config {
+    pub fn add_project(self, name: String, number: u32) -> Config {
         let mut projects = self.projects;
-        projects.insert(String::from(name), number);
+        projects.insert(name, number);
 
         Config { projects, ..self }
     }
@@ -275,7 +275,7 @@ mod tests {
                 timezone: None,
             }
         );
-        let config = config.add_project("test", 1234);
+        let config = config.add_project(String::from("test"), 1234);
         projects.insert(String::from("test"), 1234);
         assert_eq!(
             config,

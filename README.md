@@ -56,54 +56,37 @@ Start with the help flag to get the latest commands
 ```bash
 > tod -h
 
-Tod 0.2.14
-Alan Vardy <alan@vardy.cc>
 A tiny unofficial Todoist client
 
-USAGE:
-    tod [OPTIONS]
+Usage: tod [OPTIONS]
 
-OPTIONS:
-    -a, --add <PROJECT NAME> <PROJECT ID>
-            Add a project to config with id
-
-    -c, --complete
-            Complete the last task fetched with next
-
-    -e, --scheduled
-            Returns items that are today and have a time. Can specify project option, defaults to
-            inbox.
-
-    -h, --help
-            Print help information
-
-    -l, --list
-            List all the projects in local config
-
-    -n, --next
-            Get the next task by priority. Requires project option.
-
-    -o, --config <CONFIGURATION PATH>
-            Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
-
-    -p, --project <PROJECT NAME>
-            The project namespace, for filtering other commands, use by itself to list all tasks for
-            the project
-
-    -r, --remove <PROJECT NAME>
-            Remove a project from config by name
-
-    -s, --sort
-            Sort inbox by moving tasks into projects
-
-    -t, --task <new task>...
-            Create a new task with text. Can specify project option, defaults to inbox.
-
-    -V, --version
-            Print version information
-
-    -z, --prioritize
-            Assign priorities to tasks. Can specify project option, defaults to inbox.
+Options:
+  -t, --task <new task>...
+          Create a new task with text. Can specify project option, defaults to inbox.
+  -p, --project <PROJECT NAME>
+          The project namespace, for filtering other commands, use by itself to list all tasks for the project
+  -n, --next
+          Get the next task by priority. Requires project option.
+  -c, --complete
+          Complete the last task fetched with next
+  -l, --list
+          List all projects in the local config.
+  -a, --add <PROJECT NAME> <PROJECT ID>
+          Add a project to config with id
+  -r, --remove <PROJECT NAME>
+          Remove a project from config by name
+  -s, --sort
+          Sort inbox by moving tasks into projects
+  -z, --prioritize
+          Assign priorities to tasks. Can specify project option, defaults to inbox.
+  -e, --scheduled
+          Returns items that are today and have a time. Can specify project option, defaults to inbox.
+  -o, --config <CONFIGURATION PATH>
+          Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
+  -h, --help
+          Print help information
+  -V, --version
+          Print version information
 ```
 
 - Add your most commonly used projects, the project ID is the last serials of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.

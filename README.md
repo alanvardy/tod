@@ -2,11 +2,11 @@
 
 [![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod) [![codecov](https://codecov.io/gh/alanvardy/tod/branch/master/graph/badge.svg?token=9FBJK1SU0K)](https://codecov.io/gh/alanvardy/tod) [![Crates.io](https://img.shields.io/crates/v/tod.svg)](https://crates.io/crates/tod)
 
-A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project. Tasks sent to the inbox can take advantage of natural language processing to assign due dates, tags etc.
+A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project. Tasks sent to the inbox can take advantage of natural language processing to assign due dates, tags, etc.
 
 ![Tod](tod.gif)
 
-Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on first run, and your data in json format in `$XDG_CONFIG_HOME/tod.cfg`. This defaults to:
+Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on the first run, and your data in JSON format in `$XDG_CONFIG_HOME/tod.cfg`. This defaults to:
 
 - `~/.config/tod.cfg` on Linux
 - `~/Library/Application Support/tod.cfg` on Mac
@@ -89,12 +89,12 @@ Options:
           Print version information
 ```
 
-- Add your most commonly used projects, the project ID is the last serials of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
+- Add your most commonly used projects, the project ID is the last series of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
 - You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
 - Items are ranked by points and the first is returned:
   - Item is overdue: 150
-  - Date is today with no time: 100
-  - Date is today with time in next or last 15 min: 200
+  - The date is today with no time: 100
+  - The date is today with time in next or last 15 min: 200
   - No date: 80
   - Not recurring: 50
   - Item has no priority: 2

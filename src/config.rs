@@ -426,7 +426,7 @@ mod tests {
             timezone: Some(String::from("US/Pacific")),
             last_version_check: Some(String::from("2022-02-26")),
             projects,
-            path: String::from("/home/vardy/dev/tod/tod.cfg"),
+            path: String::from("/home/vardy/dev/tod/tests/tod.cfg"),
             next_id: Some(3592652665),
         };
         assert_eq!(loaded_config, config);

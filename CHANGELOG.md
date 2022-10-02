@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2022-10-02 v0.2.15
+
 - Update clap to new major version (it had breaking changes)
 - Add a shell script for manual testing that hits API
 
@@ -25,7 +27,7 @@
 
 - Add support for custom configuration path
 - Update dependencies
-- Add dependabot
+- Add Dependabot
 - Add timezone to test cases
 - Update clap and resolve deprecations
 
@@ -36,7 +38,7 @@
 
 ## 2021-11-06 v0.2.9
 
-- Get timezone from user and use that for formatting. (Previously defaulted to Pacific)
+- Get the timezone from the user and use that for formatting. (Previously defaulted to Pacific)
 - Use an Item fixture for test setup
 - Update dependencies
 
@@ -54,13 +56,13 @@
 
 - Update dependencies
 - Use exit code 1 when an error occurs, otherwise 0
-- Use timezone specified by Todoist response
+- Use timezone specified by the Todoist response
 
 ## 2021-10-13 v0.2.5
 
 - Update dependencies
 - Adding releases
-- Added MIT licence
+- Added MIT license
 - GitIgnore binaries
 - Added some philosophical ramblings to README
 
@@ -70,9 +72,9 @@
 
 ## 2021-10-02 v0.2.3
 
-- Check for latest version once per day and prompt to update with `cargo install tod`
+- Check for the latest version once per day and prompt to update with `cargo install tod`
 - Update dependencies
-- Only show the time when a datetime is today
+- Only show the time when a DateTime is today
 - Code cleanup around error handling
 - Code cleanup around handling
 
@@ -82,21 +84,21 @@
 - Additional test coverage
 - Publish checklist
 - Prioritize overdue items when fetching the next item
-- Add ascii icon ↻ for when an item is recurring
+- Add an ASCII icon ↻ for when an item is recurring
 
 ## 2021-09-20 v0.2.1
 
 - Add `--scheduled` feature
 - Refactor of codebase
-- Add pretty assertions and mockito to dev dependencies
+- Add pretty assertions and Mockito to dev dependencies
 - Can now use natural language for creating tasks outside of inbox (sends task to inbox and then moves it to the other project)
 
 ## 2021-09-14 v0.2.0
 
-- Breaking changes to commandline arguments. Switched over to Clap crate for parsing arguments which will help handle additional features.
+- Breaking changes to command line arguments. Switched over to Clap crate for parsing arguments which will help handle additional features.
 - Add `--complete` feature
 - Set priority of no date to 80
-- Set date as Today when it is... today.
+- Set the date as Today when it is... today.
 - Add `--sort` feature
 - Add `--prioritize` feature
 - Don't show items that are not today in the `--next` command
@@ -137,6 +139,6 @@
 
 ## 2020-11-11 v0.1.0
 
-- First commit!
+- The first commit!
 - Add and remove projects
 - Create a task in either inbox or a project

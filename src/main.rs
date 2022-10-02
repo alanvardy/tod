@@ -3,7 +3,8 @@
 extern crate matches;
 
 extern crate clap;
-use clap::{Arg, ArgAction, Command};
+
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use colored::*;
 
 mod config;
@@ -44,7 +45,7 @@ fn main() {
                 .long("task")
                 .required(false)
                 .action(ArgAction::Append)
-                .min_values(1)
+                .num_args(1..)
                 .value_parser(clap::value_parser!(String))
                 .help(
                     "Create a new task with text. Can specify project option, defaults to inbox.",
@@ -59,25 +60,13 @@ fn main() {
                 .help("The project namespace, for filtering other commands, use by itself to list all tasks for the project"),
         )
         .arg(
-            Arg::new("next task")
-                .short('n')
-                .long("next")
-                .required(false)
-                .help("Get the next task by priority. Requires project option."),
-        )
+            flag_arg("next task", 'n', "next", "Get the next task by priority. Requires project option.")
+                    )
         .arg(
-            Arg::new("complete task")
-                .short('c')
-                .long("complete")
-                .required(false)
-                .help("Complete the last task fetched with next"),
-        )
+            flag_arg("complete task", 'c', "complete", "Complete the last task fetched with next")
+                            )
         .arg(
-            Arg::new("list projects")
-                .short('l')
-                .long("list")
-                .required(false)
-                .help("List all the projects in local config"),
+            flag_arg("list projects", 'l', "list", "List all projects in the local config."),
         )
         .arg(
             Arg::new("add project")
@@ -85,8 +74,7 @@ fn main() {
                 .long("add")
                 .required(false)
                 .action(ArgAction::Append)
-                .min_values(2)
-                .max_values(2)
+                .num_args(2)
                 .value_parser(clap::value_parser!(String))
                 .value_names(&["PROJECT NAME", "PROJECT ID"])
                 .help("Add a project to config with id"),
@@ -95,35 +83,25 @@ fn main() {
             Arg::new("remove project")
                 .short('r')
                 .long("remove")
+                .num_args(1)
                 .required(false)
                 .value_name("PROJECT NAME")
                 .help("Remove a project from config by name"),
         )
         .arg(
-            Arg::new("sort inbox")
-                .short('s')
-                .long("sort")
-                .required(false)
-                .help("Sort inbox by moving tasks into projects"),
+            flag_arg("sort inbox", 's', "sort", "Sort inbox by moving tasks into projects")
         )
         .arg(
-            Arg::new("prioritize tasks")
-                .short('z')
-                .long("prioritize")
-                .required(false)
-                .help("Assign priorities to tasks. Can specify project option, defaults to inbox."),
+            flag_arg("prioritize tasks", 'z', "prioritize", "Assign priorities to tasks. Can specify project option, defaults to inbox.")
         )
         .arg(
-            Arg::new("scheduled items")
-                .short('e')
-                .long("scheduled")
-                .required(false)
-                .help("Returns items that are today and have a time. Can specify project option, defaults to inbox."),
+            flag_arg("scheduled items", 'e', "scheduled", "Returns items that are today and have a time. Can specify project option, defaults to inbox.")
         )
         .arg(
             Arg::new("configuration path")
                 .short('o')
                 .long("config")
+                .num_args(1)
                 .required(false)
                 .value_name("CONFIGURATION PATH")
                 .help("Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg"),
@@ -140,9 +118,10 @@ fn main() {
     let arguments = Arguments {
         new_task,
         project: matches.get_one::<String>("project").map(|s| s.as_str()),
-        next_task: matches.contains_id("next task"),
-        complete_task: matches.contains_id("complete task"),
-        list_projects: matches.contains_id("list projects"),
+        next_task: has_flag(matches.clone(), "next task"),
+        complete_task: has_flag(matches.clone(), "complete task"),
+        list_projects: has_flag(matches.clone(), "list projects"),
+        sort_inbox: has_flag(matches.clone(), "sort inbox"),
         add_project,
         remove_project: matches
             .get_one::<String>("remove project")
@@ -150,9 +129,8 @@ fn main() {
         config_path: matches
             .get_one::<String>("configuration path")
             .map(|s| s.as_str()),
-        sort_inbox: matches.contains_id("sort inbox"),
-        prioritize_tasks: matches.contains_id("prioritize tasks"),
-        scheduled_items: matches.contains_id("scheduled items"),
+        prioritize_tasks: has_flag(matches.clone(), "prioritize tasks"),
+        scheduled_items: has_flag(matches.clone(), "scheduled items"),
     };
 
     match dispatch(arguments) {
@@ -347,4 +325,20 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             "Unrecognized input. For more information try --help",
         )),
     }
+}
+
+fn flag_arg(id: &'static str, short: char, long: &'static str, help: &'static str) -> Arg {
+    Arg::new(id)
+        .short(short)
+        .long(long)
+        .value_parser(["yes", "no"])
+        .num_args(0..1)
+        .default_value("no")
+        .default_missing_value("yes")
+        .required(false)
+        .help(help)
+}
+
+fn has_flag(matches: ArgMatches, id: &'static str) -> bool {
+    matches.get_one::<String>(id) == Some(&String::from("yes"))
 }

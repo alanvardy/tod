@@ -2,16 +2,19 @@
 
 ## Unreleased
 
+- Update clap to new major version (it had breaking changes)
+- Add a shell script for manual testing that hits API
+
 ## 2022-07-16 v0.2.14
 
-- Fix bug where config file is moved but the path inside the config file is not altered
+- Fix bug where the config file is moved but the path inside the config file is not altered
 - Update dependencies
 
 ## 2022-07-06 v0.2.13
 
 - UPDATE: DO NOT USE THIS VERSION, use 0.2.14 instead as the config change introduces a bug
 - Move config from `~/.tod.cfg` to `$XDG_CONFIG_HOME/tod.cfg` (i.e. `~/.config/tod.cfg`). Thank you @hyblm!
-- If config is in old location it will be moved to the new one
+- If the config is in the old location it will be moved to the new one
 - Update dependencies
 
 ## 2022-04-30 v0.2.12

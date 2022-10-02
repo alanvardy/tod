@@ -37,25 +37,23 @@ cargo aur
 
 11. [Create a new release](https://github.com/alanvardy/tod/releases/new)
 
-- Make sure to use the label and title in format `v0.2.14`
+- Make sure to use the label and title in format `v0.2.15`
 - Add binary from tod directory
 
 12. Publish to Cargo
 
 ```bash
-cargo build --release
 cargo publish
 ```
 
 13. Push to AUR
 
 ```bash
-cargo aur
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
 mv PKGBUILD ../tod-bin/
 rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m v0.2.14
+git commit -m v0.2.15
 git push aur
 ```

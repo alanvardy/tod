@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2022-10-18 v0.3.0
+
+- Todoist removed their v8 Sync API, this update switches to v9
+
 ## 2022-10-02 v0.2.15
 
 - Update clap to new major version (it had breaking changes)
@@ -14,9 +18,9 @@
 
 ## 2022-07-06 v0.2.13
 
-- UPDATE: DO NOT USE THIS VERSION, use 0.2.14 instead as the config change introduces a bug
+- UPDATE: DO NOT USE THIS VERSION, use 0.2.14 instead, as the config change introduces a bug
 - Move config from `~/.tod.cfg` to `$XDG_CONFIG_HOME/tod.cfg` (i.e. `~/.config/tod.cfg`). Thank you @hyblm!
-- If the config is in the old location it will be moved to the new one
+- If the config is in the old location, it will be moved to the new one
 - Update dependencies
 
 ## 2022-04-30 v0.2.12

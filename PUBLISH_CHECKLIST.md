@@ -46,7 +46,15 @@ cargo aur
 cargo publish
 ```
 
-13. Push to AUR
+13. Make sure we have the latest AUR git history
+
+```bash
+cd ../tod-bin/
+git pull
+cd ../tod/
+```
+
+14. Push to AUR
 
 ```bash
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO

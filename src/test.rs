@@ -12,9 +12,9 @@ pub mod helpers {
 
     pub fn item_fixture() -> Item {
         Item {
-            id: 222,
+            id: String::from("222"),
             content: String::from("Get gifts for the twins"),
-            checked: 0,
+            checked: false,
             description: String::from(""),
             due: Some(DateInfo {
                 date: String::from("2061-11-13"),
@@ -22,7 +22,7 @@ pub mod helpers {
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
             priority: 3,
-            is_deleted: 0,
+            is_deleted: false,
         }
     }
 
@@ -63,9 +63,9 @@ pub mod responses {
                 {{\
                 \"added_by_uid\":44444444,\
                 \"assigned_by_uid\":null,\
-                \"checked\":0,\
+                \"checked\":false,\
                 \"child_order\":-5,\
-                \"collapsed\":0,\
+                \"collapsed\":false,\
                 \"content\":\"Put out recycling\",\
                 \"date_added\":\"2021-06-15T13:01:28Z\",\
                 \"date_completed\":null,\
@@ -76,8 +76,8 @@ pub mod responses {
                 \"lang\":\"en\",\
                 \"string\":\"every other mon at 16:30\",\
                 \"timezone\":null}},\
-                \"id\":999999,\
-                \"in_history\":0,\"is_deleted\":0,\
+                \"id\":\"999999\",\
+                \"is_deleted\":false,\
                 \"labels\":[],\
                 \"note_count\":0,\
                 \"parent_id\":null,\
@@ -99,17 +99,16 @@ pub mod responses {
             "\
         {\"added_by_uid\":635166,\
         \"assigned_by_uid\":null,\
-        \"checked\":0,\
+        \"checked\":false,\
         \"child_order\":2,\
-        \"collapsed\":0,\
+        \"collapsed\":false,\
         \"content\":\"testy test\",\
         \"date_added\":\"2021-09-12T19:11:07Z\",\
         \"date_completed\":null,\
         \"description\":\"\",\
         \"due\":null,\
-        \"id\":5149481867,\
-        \"in_history\":0,\
-        \"is_deleted\":0,\
+        \"id\":\"5149481867\",\
+        \"is_deleted\":false,\
         \"labels\":[],\
         \"legacy_project_id\":333333333,\
         \"parent_id\":null,\
@@ -143,7 +142,7 @@ pub mod responses {
                     \"dl_path\":\"/api/v1/crates/tod/0.2.2/download\",\
                     \"downloads\":15,\
                     \"features\":{{}},\
-                    \"id\":429968,\
+                    \"id\":\"429968\",\
                     \"license\":\"MIT\",\
                     \"links\":{{\
                         \"authors\":\"/api/v1/crates/tod/0.2.2/authors\",\
@@ -153,7 +152,7 @@ pub mod responses {
                     \"num\":\"{}\",\
                     \"published_by\":{{\
                         \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
-                        \"id\":105078,\
+                        \"id\":\"105078\",\
                         \"login\":\"alanvardy\",\
                         \"name\":\"Alan Vardy\",\
                         \"url\":\"https://github.com/alanvardy\"\
@@ -166,7 +165,7 @@ pub mod responses {
                         \"time\":\"2021-09-20T16:16:21.682425+00:00\",\
                         \"user\":{{\
                             \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
-                            \"id\":105078,\
+                            \"id\":\"105078\",\
                             \"login\":\"alanvardy\",\
                             \"name\":\"Alan Vardy\",\
                             \"url\":\"https://github.com/alanvardy\"\
@@ -177,7 +176,7 @@ pub mod responses {
                         \"dl_path\":\"/api/v1/crates/tod/0.2.1/download\",\
                         \"downloads\":18,\
                         \"features\":{{}},\
-                        \"id\":428020,\
+                        \"id\":\"428020\",\
                         \"license\":\"MIT\",\
                         \"links\":{{\
                             \"authors\":\"/api/v1/crates/tod/0.2.1/authors\",\
@@ -187,7 +186,7 @@ pub mod responses {
                     \"num\":\"0.2.1\",\
                     \"published_by\":{{\
                         \"avatar\":\"https://avatars.githubusercontent.com/u/38899847?v=4\",\
-                        \"id\":105078,\
+                        \"id\":\"105078\",\
                         \"login\":\"alanvardy\",\
                         \"name\":\"Alan Vardy\",\
                         \"url\":\"https://github.com/alanvardy\"\

@@ -10,13 +10,13 @@ use crate::{config, items, request, time};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Item {
-    pub id: u64,
+    pub id: String,
     pub content: String,
     pub priority: u8,
-    pub checked: u8,
+    pub checked: bool,
     pub description: String,
     pub due: Option<DateInfo>,
-    pub is_deleted: u8,
+    pub is_deleted: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -249,15 +249,15 @@ pub fn set_priority(config: Config, item: items::Item) {
 
     match priority.as_str() {
         "1" => {
-            let config = config.set_next_id(item.id);
+            let config = config.set_next_id(item.id.clone());
             request::update_item_priority(config, item, 2).expect("could not set priority");
         }
         "2" => {
-            let config = config.set_next_id(item.id);
+            let config = config.set_next_id(item.id.clone());
             request::update_item_priority(config, item, 3).expect("could not set priority");
         }
         "3" => {
-            let config = config.set_next_id(item.id);
+            let config = config.set_next_id(item.id.clone());
             request::update_item_priority(config, item, 4).expect("could not set priority");
         }
         _ => println!("Not a valid input, please enter 1, 2, or 3"),
@@ -515,13 +515,13 @@ mod tests {
     fn sort_by_datetime_works() {
         let config = test::helpers::config_fixture();
         let no_date = Item {
-            id: 222,
+            id: String::from("222"),
             content: String::from("Get gifts for the twins"),
-            checked: 0,
+            checked: false,
             description: String::from(""),
             due: None,
             priority: 3,
-            is_deleted: 0,
+            is_deleted: false,
         };
 
         let date_not_datetime = Item {
@@ -576,13 +576,13 @@ mod tests {
     fn is_overdue_works() {
         let config = test::helpers::config_fixture();
         let item = Item {
-            id: 222,
+            id: String::from("222"),
             content: String::from("Get gifts for the twins"),
-            checked: 0,
+            checked: false,
             description: String::from(""),
             due: None,
             priority: 3,
-            is_deleted: 0,
+            is_deleted: false,
         };
 
         assert!(!item.is_overdue(&config));

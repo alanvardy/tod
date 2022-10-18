@@ -12,9 +12,9 @@ use crate::{items, projects};
 use mockito;
 
 // TODOIST URLS
-const QUICK_ADD_URL: &str = "/sync/v8/quick/add";
-const PROJECT_DATA_URL: &str = "/sync/v8/projects/get_data";
-const SYNC_URL: &str = "/sync/v8/sync";
+const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
+const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
+const SYNC_URL: &str = "/sync/v9/sync";
 
 // CRATES.IO URLS
 const VERSIONS_URL: &str = "/v1/crates/tod/versions";
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn should_add_item_to_inbox() {
-        let _m = mockito::mock("POST", "/sync/v8/quick/add")
+        let _m = mockito::mock("POST", "/sync/v9/quick/add")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::item())
@@ -161,20 +161,20 @@ mod tests {
         assert_eq!(
             add_item_to_inbox(&config, "testy test"),
             Ok(Item {
-                id: 5149481867,
+                id: String::from("5149481867"),
                 priority: 1,
                 content: String::from("testy test"),
-                checked: 0,
+                checked: false,
                 description: String::from(""),
                 due: None,
-                is_deleted: 0,
+                is_deleted: false,
             })
         );
     }
 
     #[test]
     fn should_get_items_for_project() {
-        let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
+        let _m = mockito::mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::items())
@@ -189,9 +189,9 @@ mod tests {
         assert_eq!(
             items_for_project(&config_with_timezone, "123123"),
             Ok(vec![Item {
-                id: 999999,
+                id: String::from("999999"),
                 content: String::from("Put out recycling"),
-                checked: 0,
+                checked: false,
                 description: String::from(""),
                 due: Some(DateInfo {
                     date: String::from(format!(
@@ -202,27 +202,29 @@ mod tests {
                     timezone: None,
                 }),
                 priority: 3,
-                is_deleted: 0,
+                is_deleted: false,
             }])
         );
     }
 
     #[test]
     fn should_complete_an_item() {
-        let _m = mockito::mock("POST", "/sync/v8/sync")
+        let _m = mockito::mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::sync())
             .create();
 
-        let config = Config::new("12341234").unwrap().set_next_id(112233);
+        let config = Config::new("12341234")
+            .unwrap()
+            .set_next_id(String::from("112233"));
         let response = complete_item(config);
         assert_eq!(response, Ok(String::from("✓")));
     }
 
     #[test]
     fn should_move_an_item() {
-        let _m = mockito::mock("POST", "/sync/v8/sync")
+        let _m = mockito::mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::sync())
@@ -239,7 +241,7 @@ mod tests {
 
     #[test]
     fn should_prioritize_an_item() {
-        let _m = mockito::mock("POST", "/sync/v8/sync")
+        let _m = mockito::mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::sync())

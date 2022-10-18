@@ -65,7 +65,7 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
 
     match maybe_item {
         Some(item) => {
-            config.set_next_id(item.id).save()?;
+            config.set_next_id(item.id.clone()).save()?;
             Ok(item.fmt(&config))
         }
         None => Ok(green_string("No items on list")),
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn should_display_scheduled_items() {
-        let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
+        let _m = mockito::mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::items())
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn should_list_all_items() {
-        let _m = mockito::mock("POST", "/sync/v8/projects/get_data")
+        let _m = mockito::mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::items())

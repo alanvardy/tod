@@ -16,7 +16,7 @@ pub struct Config {
     /// Path to config file
     pub path: String,
     /// The ID of the next task
-    pub next_id: Option<u64>,
+    pub next_id: Option<String>,
     pub timezone: Option<String>,
     pub last_version_check: Option<String>,
 }
@@ -90,8 +90,8 @@ impl Config {
         Config { projects, ..self }
     }
 
-    pub fn set_next_id(&self, next_id: u64) -> Config {
-        let next_id: Option<u64> = Some(next_id);
+    pub fn set_next_id(&self, next_id: String) -> Config {
+        let next_id: Option<String> = Some(next_id);
 
         Config {
             next_id,
@@ -100,7 +100,7 @@ impl Config {
     }
 
     pub fn clear_next_id(self) -> Config {
-        let next_id: Option<u64> = None;
+        let next_id: Option<String> = None;
 
         Config { next_id, ..self }
     }
@@ -254,8 +254,8 @@ mod tests {
     fn set_and_clear_next_id_should_work() {
         let config = Config::new("something").unwrap();
         assert_eq!(config.next_id, None);
-        let config = config.set_next_id(123123);
-        assert_eq!(config.next_id, Some(123123));
+        let config = config.set_next_id(String::from("123123"));
+        assert_eq!(config.next_id, Some(String::from("123123")));
         let config = config.clear_next_id();
         assert_eq!(config.next_id, None);
     }
@@ -427,7 +427,7 @@ mod tests {
             last_version_check: Some(String::from("2022-02-26")),
             projects,
             path: String::from("/home/vardy/dev/tod/tests/tod.cfg"),
-            next_id: Some(3592652665),
+            next_id: None,
         };
         assert_eq!(loaded_config, config);
     }

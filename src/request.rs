@@ -1,4 +1,6 @@
 use reqwest::blocking::Client;
+use reqwest::header::AUTHORIZATION;
+use reqwest::header::CONTENT_TYPE;
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
 use serde_json::json;
@@ -15,6 +17,7 @@ use mockito;
 const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
 const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
 const SYNC_URL: &str = "/sync/v9/sync";
+const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
 
 // CRATES.IO URLS
 const VERSIONS_URL: &str = "/v1/crates/tod/versions";
@@ -36,7 +39,7 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"token": config.token, "text": task, "auto_reminder": true});
 
-    let json = post_todoist(url, body)?;
+    let json = post_todoist_sync(url, body)?;
     items::json_to_item(json)
 }
 
@@ -44,7 +47,7 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
 pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({"token": config.token, "project_id": project_id});
-    let json = post_todoist(url, body)?;
+    let json = post_todoist_sync(url, body)?;
     items::json_to_items(json)
 }
 
@@ -54,16 +57,16 @@ pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<Strin
     let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
-    post_todoist(url, body)?;
+    post_todoist_sync(url, body)?;
     Ok(String::from("✓"))
 }
 
-/// Complete the last item returned by "next item"
+/// Update the priority of an item by ID
 pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<String, String> {
-    let body = json!({"token": config.token, "commands": [{"type": "item_update", "uuid": new_uuid(), "args": {"id": item.id, "priority": priority}}]});
-    let url = String::from(SYNC_URL);
+    let body = json!({ "priority": priority });
+    let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
 
-    post_todoist(url, body)?;
+    post_todoist_rest(config.token, url, body)?;
     // Does not pass back an item
     Ok(String::from("✓"))
 }
@@ -73,7 +76,7 @@ pub fn complete_item(config: Config) -> Result<String, String> {
     let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    post_todoist(url, body)?;
+    post_todoist_sync(url, body)?;
 
     if !cfg!(test) {
         config.clear_next_id().save()?;
@@ -83,8 +86,8 @@ pub fn complete_item(config: Config) -> Result<String, String> {
     Ok(String::from("✓"))
 }
 
-/// Post to Todoist
-fn post_todoist(url: String, body: serde_json::Value) -> Result<String, String> {
+/// Post to Todoist via sync API
+fn post_todoist_sync(url: String, body: serde_json::Value) -> Result<String, String> {
     #[cfg(not(test))]
     let todoist_url: &str = "https://api.todoist.com";
 
@@ -95,6 +98,37 @@ fn post_todoist(url: String, body: serde_json::Value) -> Result<String, String> 
 
     let response = Client::new()
         .post(&request_url)
+        .json(&body)
+        .send()
+        .or(Err("Did not get response from server"))?;
+
+    if response.status().is_success() {
+        Ok(response.text().or(Err("Could not read response text"))?)
+    } else {
+        Err(format!("Error: {:#?}", response.text()))
+    }
+}
+
+/// Post to Todoist via REST api
+fn post_todoist_rest(
+    token: String,
+    url: String,
+    body: serde_json::Value,
+) -> Result<String, String> {
+    #[cfg(not(test))]
+    let todoist_url: &str = "https://api.todoist.com";
+
+    #[cfg(test)]
+    let todoist_url: &str = &mockito::server_url();
+
+    let request_url = format!("{}{}", todoist_url, url);
+    let authorization: &str = &format!("Bearer {}", token);
+
+    let response = Client::new()
+        .post(&request_url)
+        .header(CONTENT_TYPE, "application/json")
+        .header(AUTHORIZATION, authorization)
+        .header("X-Request-Id", new_uuid())
         .json(&body)
         .send()
         .or(Err("Did not get response from server"))?;
@@ -241,14 +275,16 @@ mod tests {
 
     #[test]
     fn should_prioritize_an_item() {
-        let _m = mockito::mock("POST", "/sync/v9/sync")
-            .with_status(200)
+        let item = test::helpers::item_fixture();
+        let url: &str = &format!("{}{}", "/rest/v2/tasks/", item.id);
+
+        let _m = mockito::mock("POST", url)
+            .with_status(204)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::sync())
             .create();
 
         let config = Config::new("12341234").unwrap();
-        let item = test::helpers::item_fixture();
         let response = update_item_priority(config, item, 4);
         assert_eq!(response, Ok(String::from("✓")));
     }

@@ -233,9 +233,9 @@ mod tests {
         );
 
         let str = if test::helpers::supports_coloured_output() {
-            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 16:59 ↻"
+            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 15:59 ↻"
         } else {
-            "Schedule for good\n\nPut out recycling\nDue: 16:59 ↻"
+            "Schedule for good\n\nPut out recycling\nDue: 15:59 ↻"
         };
         assert_eq!(
             scheduled_items(&config_with_timezone, "good"),
@@ -261,9 +261,9 @@ mod tests {
         };
 
         let str = if test::helpers::supports_coloured_output() {
-            "\u{1b}[32mTasks for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 16:59 ↻"
+            "\u{1b}[32mTasks for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 15:59 ↻"
         } else {
-            "Tasks for good\n\nPut out recycling\nDue: 16:59 ↻"
+            "Tasks for good\n\nPut out recycling\nDue: 15:59 ↻"
         };
         assert_eq!(
             all_items(&config_with_timezone, "good"),

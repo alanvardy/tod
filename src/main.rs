@@ -76,7 +76,7 @@ fn main() {
                 .action(ArgAction::Append)
                 .num_args(2)
                 .value_parser(clap::value_parser!(String))
-                .value_names(&["PROJECT NAME", "PROJECT ID"])
+                .value_names(["PROJECT NAME", "PROJECT ID"])
                 .help("Add a project to config with id"),
         )
         .arg(

@@ -1,5 +1,5 @@
-use chrono::Date;
 use chrono::DateTime;
+use chrono::NaiveDate;
 use chrono_tz::Tz;
 use colored::*;
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,7 @@ struct Body {
 enum DateTimeInfo {
     NoDateTime,
     Date {
-        date: Date<Tz>,
+        date: NaiveDate,
         is_recurring: bool,
     },
     DateTime {
@@ -185,7 +185,7 @@ impl Item {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date, config),
             Ok(DateTimeInfo::DateTime { datetime, .. }) => {
-                time::is_date_in_past(datetime.date(), config)
+                time::is_date_in_past(datetime.date_naive(), config)
             }
             Err(_) => false,
         }

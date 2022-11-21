@@ -1,6 +1,6 @@
 use crate::config::Config;
 use chrono::offset::{TimeZone, Utc};
-use chrono::{Date, DateTime, NaiveDate};
+use chrono::{DateTime, NaiveDate};
 use chrono_tz::{Tz, TZ_VARIANTS};
 
 pub fn now(config: &Config) -> DateTime<Tz> {
@@ -14,23 +14,23 @@ pub fn today_string(config: &Config) -> String {
 }
 
 /// Return today's date in Utc
-pub fn today_date(config: &Config) -> Date<Tz> {
-    now(config).date()
+pub fn today_date(config: &Config) -> NaiveDate {
+    now(config).date_naive()
 }
 
 pub fn datetime_is_today(datetime: DateTime<Tz>, config: &Config) -> bool {
-    date_is_today(datetime.date(), config)
+    date_is_today(datetime.date_naive(), config)
 }
 
-pub fn date_is_today(date: Date<Tz>, config: &Config) -> bool {
+pub fn date_is_today(date: NaiveDate, config: &Config) -> bool {
     date.format("%Y-%m-%d").to_string() == today_string(config)
 }
 
-pub fn is_date_in_past(date: Date<Tz>, config: &Config) -> bool {
+pub fn is_date_in_past(date: NaiveDate, config: &Config) -> bool {
     date.signed_duration_since(today_date(config)).num_days() < 0
 }
 
-pub fn format_date(date: &Date<Tz>, config: &Config) -> String {
+pub fn format_date(date: &NaiveDate, config: &Config) -> String {
     if date_is_today(*date, config) {
         String::from("Today")
     } else {
@@ -71,22 +71,18 @@ pub fn timezone_from_str(timezone_string: &Option<String>) -> Tz {
 }
 
 /// Parse Date
-pub fn date_from_str(str: &str, timezone: Tz) -> Result<Date<Tz>, String> {
+pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, String> {
     let date = match str.len() {
-        10 => {
-            let date =
-                NaiveDate::parse_from_str(str, "%Y-%m-%d").or(Err("could not parse Date"))?;
-            timezone.from_local_date(&date).unwrap()
-        }
+        10 => NaiveDate::parse_from_str(str, "%Y-%m-%d").or(Err("could not parse Date"))?,
         19 => timezone
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%S")
             .or(Err("could not parse DateTime"))?
-            .date(),
+            .date_naive(),
 
         20 => timezone
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%SZ")
             .or(Err("could not parse DateTime"))?
-            .date(),
+            .date_naive(),
         _ => return Err(format!("cannot parse NaiveDate, unknown length: {}", str)),
     };
 

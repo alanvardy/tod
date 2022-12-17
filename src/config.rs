@@ -39,6 +39,7 @@ impl Config {
         let mut file = fs::File::create(&self.path).or(Err("Could not create file"))?;
         file.write_all(json.as_bytes())
             .or(Err("Could not write to file"))?;
+        println!("Config successfully created in {}", &self.path);
         Ok(self)
     }
 

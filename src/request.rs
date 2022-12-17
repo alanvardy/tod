@@ -97,7 +97,7 @@ fn post_todoist_sync(url: String, body: serde_json::Value) -> Result<String, Str
     let request_url = format!("{}{}", todoist_url, url);
 
     let response = Client::new()
-        .post(&request_url)
+        .post(request_url)
         .json(&body)
         .send()
         .or(Err("Did not get response from server"))?;
@@ -125,7 +125,7 @@ fn post_todoist_rest(
     let authorization: &str = &format!("Bearer {}", token);
 
     let response = Client::new()
-        .post(&request_url)
+        .post(request_url)
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization)
         .header("X-Request-Id", new_uuid())
@@ -151,7 +151,7 @@ pub fn get_latest_version() -> Result<String, String> {
     let request_url = format!("{}{}", cargo_url, VERSIONS_URL);
 
     let response = Client::new()
-        .get(&request_url)
+        .get(request_url)
         .header(USER_AGENT, "Tod")
         .send()
         .or(Err("Did not get response from server"))?;

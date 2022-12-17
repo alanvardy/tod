@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a message when the config file is created
+- Differentiate between no flags and wrong flags when unrecognized input
+
 ## 2022-10-18 v0.3.0
 
 - Todoist removed their v8 Sync API, this update switches to v9
@@ -9,11 +12,12 @@
 ## 2022-10-02 v0.2.15
 
 - Update clap to new major version (it had breaking changes)
-- Add a shell script for manual testing that hits API
+- Add a shell script for manual testing that hits the Todoist API
 
 ## 2022-07-16 v0.2.14
 
-- Fix bug where the config file is moved but the path inside the config file is not altered
+Fix a bug where the config file is moved but the path inside the config file is not altered
+
 - Update dependencies
 
 ## 2022-07-06 v0.2.13
@@ -60,7 +64,7 @@
 
 - Update dependencies
 - Use exit code 1 when an error occurs, otherwise 0
-- Use timezone specified by the Todoist response
+- Use the timezone specified by the Todoist response
 
 ## 2021-10-13 v0.2.5
 
@@ -95,7 +99,7 @@
 - Add `--scheduled` feature
 - Refactor of codebase
 - Add pretty assertions and Mockito to dev dependencies
-- Can now use natural language for creating tasks outside of inbox (sends task to inbox and then moves it to the other project)
+- Can now use natural language for creating tasks outside of inbox (sends a task to inbox and then moves it to the other project)
 
 ## 2021-09-14 v0.2.0
 

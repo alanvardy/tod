@@ -7,7 +7,7 @@ const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add pr
 
 /// List the projects in config
 pub fn list(config: Config) -> Result<String, String> {
-    let mut projects: Vec<String> = config.projects.iter().map(|(k, _v)| k.to_owned()).collect();
+    let mut projects: Vec<String> = config.projects.keys().map(|k| k.to_owned()).collect();
     if projects.is_empty() {
         return Ok(String::from("No projects found"));
     }

@@ -321,8 +321,23 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             scheduled_items: false,
             config_path: _,
         } => projects::all_items(&config, project_name),
+        Arguments {
+            new_task: None,
+            project: None,
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            scheduled_items: false,
+            config_path: _,
+        } => Err(String::from(
+            "Tod cannot be run without parameters. To see available parameters use --help",
+        )),
         _ => Err(String::from(
-            "Unrecognized input. For more information try --help",
+            "Invalid parameters. For more information try --help",
         )),
     }
 }

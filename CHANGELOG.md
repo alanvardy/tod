@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 2022-10-18 v0.3.1
+
+- Fix for deprecation of token passed in the request body (using Bearer Token header now), previous versions of Tod do not work anymore.
 - Add a message when the config file is created
 - Differentiate between no flags and wrong flags when unrecognized input
 

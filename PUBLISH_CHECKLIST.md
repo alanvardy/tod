@@ -37,7 +37,7 @@ cargo aur
 
 11. [Create a new release](https://github.com/alanvardy/tod/releases/new)
 
-- Make sure to use the label and title in format `v0.3.0`
+- Make sure to use the label and title in format `v0.3.1`
 - Add binary from tod directory
 
 12. Publish to Cargo

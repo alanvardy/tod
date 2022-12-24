@@ -37,27 +37,27 @@ struct Version {
 /// Add a new item to the inbox with natural language support
 pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
-    let body = json!({"token": config.token, "text": task, "auto_reminder": true});
+    let body = json!({"text": task, "auto_reminder": true});
 
-    let json = post_todoist_sync(url, body)?;
+    let json = post_todoist_sync(config.token.clone(), url, body)?;
     items::json_to_item(json)
 }
 
 /// Get a vector of all items for a project
 pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
-    let body = json!({"token": config.token, "project_id": project_id});
-    let json = post_todoist_sync(url, body)?;
+    let body = json!({ "project_id": project_id });
+    let json = post_todoist_sync(config.token.clone(), url, body)?;
     items::json_to_items(json)
 }
 
 /// Move an item to a different project
 pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name)?;
-    let body = json!({"token": config.token, "commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
+    let body = json!({"commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
-    post_todoist_sync(url, body)?;
+    post_todoist_sync(config.token, url, body)?;
     Ok(String::from("✓"))
 }
 
@@ -73,10 +73,10 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
 
 /// Complete the last item returned by "next item"
 pub fn complete_item(config: Config) -> Result<String, String> {
-    let body = json!({"token": config.token, "commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
+    let body = json!({"commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    post_todoist_sync(url, body)?;
+    post_todoist_sync(config.token.clone(), url, body)?;
 
     if !cfg!(test) {
         config.clear_next_id().save()?;
@@ -87,7 +87,11 @@ pub fn complete_item(config: Config) -> Result<String, String> {
 }
 
 /// Post to Todoist via sync API
-fn post_todoist_sync(url: String, body: serde_json::Value) -> Result<String, String> {
+fn post_todoist_sync(
+    token: String,
+    url: String,
+    body: serde_json::Value,
+) -> Result<String, String> {
     #[cfg(not(test))]
     let todoist_url: &str = "https://api.todoist.com";
 
@@ -98,6 +102,8 @@ fn post_todoist_sync(url: String, body: serde_json::Value) -> Result<String, Str
 
     let response = Client::new()
         .post(request_url)
+        .header(CONTENT_TYPE, "application/json")
+        .header(AUTHORIZATION, format!("Bearer {}", token))
         .json(&body)
         .send()
         .or(Err("Did not get response from server"))?;

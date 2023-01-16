@@ -24,7 +24,7 @@ regex = "1"
 chrono = "0.4.23"
 chrono-tz = "0.8.1"
 colored = "2.0.0"
-clap = "4.0.30"
+clap = "4.1.1"
 
 [dev-dependencies]
 mockito = "0.31.1"

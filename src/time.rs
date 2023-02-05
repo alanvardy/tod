@@ -57,7 +57,7 @@ pub fn datetime_from_str(str: &str, timezone: Tz) -> Result<DateTime<Tz>, String
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%SZ")
             .expect("could not parse DateTime")
             .with_timezone(&Tz::UTC),
-        _ => return Err(format!("cannot parse DateTime: {}", str)),
+        _ => return Err(format!("cannot parse DateTime: {str}")),
     };
 
     Ok(datetime)
@@ -83,7 +83,7 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, String> {
             .datetime_from_str(str, "%Y-%m-%dT%H:%M:%SZ")
             .or(Err("could not parse DateTime"))?
             .date_naive(),
-        _ => return Err(format!("cannot parse NaiveDate, unknown length: {}", str)),
+        _ => return Err(format!("cannot parse NaiveDate, unknown length: {str}")),
     };
 
     Ok(date)
@@ -92,7 +92,7 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, String> {
 pub fn list_timezones() {
     println!("Timezones:");
     for (num, tz) in TZ_VARIANTS.iter().enumerate() {
-        println!("{}: {}", num, tz);
+        println!("{num}: {tz}");
     }
 }
 

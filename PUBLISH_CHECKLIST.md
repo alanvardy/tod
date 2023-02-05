@@ -62,6 +62,6 @@ mv PKGBUILD ../tod-bin/
 rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m v0.3.0
+git commit -m v0.3.1
 git push aur
 ```

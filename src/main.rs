@@ -135,7 +135,7 @@ fn main() {
 
     match dispatch(arguments) {
         Ok(text) => {
-            println!("{}", text);
+            println!("{text}");
             std::process::exit(0);
         }
         Err(e) => {

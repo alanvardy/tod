@@ -46,8 +46,7 @@ pub fn project_id(config: &Config, project_name: &str) -> Result<String, String>
         .projects
         .get(project_name)
         .ok_or(format!(
-            "Project {} not found, please add it to config",
-            project_name
+            "Project {project_name} not found, please add it to config"
         ))?
         .to_string();
 
@@ -84,7 +83,7 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
     }
 
     let mut buffer = String::new();
-    buffer.push_str(&green_string(&format!("Schedule for {}", project_name)));
+    buffer.push_str(&green_string(&format!("Schedule for {project_name}")));
 
     for item in items::sort_by_datetime(filtered_items, config) {
         buffer.push('\n');
@@ -100,7 +99,7 @@ pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> 
     let items = request::items_for_project(config, &project_id)?;
 
     let mut buffer = String::new();
-    buffer.push_str(&green_string(&format!("Tasks for {}", project_name)));
+    buffer.push_str(&green_string(&format!("Tasks for {project_name}")));
 
     for item in items::sort_by_datetime(items, config) {
         buffer.push('\n');
@@ -138,14 +137,14 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
         .collect::<Vec<Item>>();
 
     if unprioritized_items.is_empty() {
-        Ok(format!("No tasks to prioritize in {}", project_name)
+        Ok(format!("No tasks to prioritize in {project_name}")
             .green()
             .to_string())
     } else {
         for item in unprioritized_items.iter() {
             items::set_priority(config.clone(), item.to_owned());
         }
-        Ok(format!("Successfully prioritized {}", project_name)
+        Ok(format!("Successfully prioritized {project_name}")
             .green()
             .to_string())
     }

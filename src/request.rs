@@ -98,12 +98,12 @@ fn post_todoist_sync(
     #[cfg(test)]
     let todoist_url: &str = &mockito::server_url();
 
-    let request_url = format!("{}{}", todoist_url, url);
+    let request_url = format!("{todoist_url}{url}");
 
     let response = Client::new()
         .post(request_url)
         .header(CONTENT_TYPE, "application/json")
-        .header(AUTHORIZATION, format!("Bearer {}", token))
+        .header(AUTHORIZATION, format!("Bearer {token}"))
         .json(&body)
         .send()
         .or(Err("Did not get response from server"))?;
@@ -127,8 +127,8 @@ fn post_todoist_rest(
     #[cfg(test)]
     let todoist_url: &str = &mockito::server_url();
 
-    let request_url = format!("{}{}", todoist_url, url);
-    let authorization: &str = &format!("Bearer {}", token);
+    let request_url = format!("{todoist_url}{url}");
+    let authorization: &str = &format!("Bearer {token}");
 
     let response = Client::new()
         .post(request_url)
@@ -154,7 +154,7 @@ pub fn get_latest_version() -> Result<String, String> {
     #[cfg(test)]
     let cargo_url: &str = &mockito::server_url();
 
-    let request_url = format!("{}{}", cargo_url, VERSIONS_URL);
+    let request_url = format!("{cargo_url}{VERSIONS_URL}");
 
     let response = Client::new()
         .get(request_url)

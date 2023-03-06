@@ -30,6 +30,7 @@ struct Arguments<'a> {
     remove_project: Option<&'a str>,
     sort_inbox: bool,
     prioritize_tasks: bool,
+    edit_tasks: bool,
     scheduled_items: bool,
 }
 
@@ -95,6 +96,9 @@ fn main() {
             flag_arg("prioritize tasks", 'z', "prioritize", "Assign priorities to tasks. Can specify project option, defaults to inbox.")
         )
         .arg(
+            flag_arg("edit tasks", 'd', "edit", "Edit tasks. Can specify project option, defaults to inbox.")
+        )
+        .arg(
             flag_arg("scheduled items", 'e', "scheduled", "Returns items that are today and have a time. Can specify project option, defaults to inbox.")
         )
         .arg(
@@ -130,6 +134,7 @@ fn main() {
             .get_one::<String>("configuration path")
             .map(|s| s.as_str()),
         prioritize_tasks: has_flag(matches.clone(), "prioritize tasks"),
+        edit_tasks: has_flag(matches.clone(), "edit tasks"),
         scheduled_items: has_flag(matches.clone(), "scheduled items"),
     };
 
@@ -159,6 +164,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::add_item_to_project(config, &task, project),
@@ -172,6 +178,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::add_item_to_project(config, &task, "inbox"),
@@ -185,6 +192,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::next_item(config, project),
@@ -198,6 +206,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => match request::complete_item(config) {
@@ -214,6 +223,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::list(config),
@@ -227,6 +237,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::add(config, params),
@@ -240,6 +251,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: Some(project_name),
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::remove(config, project_name),
@@ -253,6 +265,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: true,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::sort_inbox(config),
@@ -266,6 +279,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: true,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::prioritize_items(&config, "inbox"),
@@ -279,6 +293,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: true,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::prioritize_items(&config, project_name),
@@ -292,6 +307,35 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: true,
+            scheduled_items: false,
+            config_path: _,
+        } => projects::edit_items(&config, "inbox"),
+        Arguments {
+            new_task: None,
+            project: Some(project_name),
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            edit_tasks: true,
+            scheduled_items: false,
+            config_path: _,
+        } => projects::edit_items(&config, project_name),
+        Arguments {
+            new_task: None,
+            project: None,
+            next_task: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: true,
             config_path: _,
         } => projects::scheduled_items(&config, "inbox"),
@@ -305,6 +349,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: true,
             config_path: _,
         } => projects::scheduled_items(&config, project_name),
@@ -318,6 +363,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::all_items(&config, project_name),
@@ -331,6 +377,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            edit_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => Err(String::from(

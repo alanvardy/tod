@@ -150,6 +150,27 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
     }
 }
 
+/// Prioritize all unprioritized items in a project
+pub fn edit_items(config: &Config, project_name: &str) -> Result<String, String> {
+    let inbox_id = projects::project_id(config, project_name)?;
+
+    let items = request::items_for_project(config, &inbox_id)?;
+
+    if items.is_empty() {
+        Ok(format!("No tasks to edit in {project_name}")
+            .green()
+            .to_string())
+    } else {
+        for item in items.iter() {
+            // items::set_priority(config.clone(), item.to_owned());
+            items::edit_item(config.clone(), item.to_owned());
+        }
+        Ok(format!("Successfully edited items in {project_name}")
+            .green()
+            .to_string())
+    }
+}
+
 pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
     println!("{}", item.fmt(&config));
 

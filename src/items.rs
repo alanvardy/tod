@@ -264,6 +264,15 @@ pub fn set_priority(config: Config, item: items::Item) {
     }
 }
 
+pub fn edit_item(config: Config, item: items::Item) {
+    println!("{}", item.fmt(&config));
+
+    let new_name =
+        config::get_input("Enter a new name for this item").expect("could not get new name");
+
+    request::update_item_name(config, item, new_name).expect("could not update item name");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

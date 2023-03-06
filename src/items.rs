@@ -270,6 +270,11 @@ pub fn edit_item(config: Config, item: items::Item) {
     let new_name =
         config::get_input("Enter a new name for this item").expect("could not get new name");
 
+    if new_name.is_empty() {
+        println!("No new name entered, keeping current name");
+        return;
+    }
+
     request::update_item_name(config, item, new_name).expect("could not update item name");
 }
 

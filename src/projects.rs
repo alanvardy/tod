@@ -162,7 +162,6 @@ pub fn edit_items(config: &Config, project_name: &str) -> Result<String, String>
             .to_string())
     } else {
         for item in items.iter() {
-            // items::set_priority(config.clone(), item.to_owned());
             items::edit_item(config.clone(), item.to_owned());
         }
         Ok(format!("Successfully edited items in {project_name}")

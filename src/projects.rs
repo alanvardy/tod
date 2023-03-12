@@ -150,7 +150,7 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
     }
 }
 
-/// Prioritize all unprioritized items in a project
+/// Edit items in a project
 pub fn edit_items(config: &Config, project_name: &str) -> Result<String, String> {
     let inbox_id = projects::project_id(config, project_name)?;
 

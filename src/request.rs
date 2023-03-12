@@ -71,7 +71,7 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
     Ok(String::from("✓"))
 }
 
-/// Update the priority of an item by ID
+/// Update the name of an item by ID
 pub fn update_item_name(config: Config, item: Item, new_name: String) -> Result<String, String> {
     let body = json!({ "content": new_name });
     let url = format!("{}{}", REST_V2_TASKS_URL, item.id);

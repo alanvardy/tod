@@ -191,6 +191,9 @@ mod tests {
     use mockito;
     use pretty_assertions::assert_eq;
 
+    /// Need to adjust this value forward or back an hourwhen timezone changes
+    const TIME: &str = "16:59";
+
     #[test]
     fn should_list_projects() {
         let config = Config::new("123123")
@@ -231,15 +234,13 @@ mod tests {
             ))
         );
 
-        let str = if test::helpers::supports_coloured_output() {
-            "\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 15:59 ↻"
+        let string = if test::helpers::supports_coloured_output() {
+            format!("\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: {TIME} ↻")
         } else {
-            "Schedule for good\n\nPut out recycling\nDue: 15:59 ↻"
+            format!("Schedule for good\n\nPut out recycling\nDue: {TIME} ↻")
         };
-        assert_eq!(
-            scheduled_items(&config_with_timezone, "good"),
-            Ok(String::from(str))
-        );
+        let result = scheduled_items(&config_with_timezone, "good");
+        assert_eq!(result, Ok(string));
     }
 
     #[test]
@@ -259,14 +260,11 @@ mod tests {
             ..config
         };
 
-        let str = if test::helpers::supports_coloured_output() {
-            "\u{1b}[32mTasks for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: 15:59 ↻"
+        let string = if test::helpers::supports_coloured_output() {
+            format!("\u{1b}[32mTasks for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: {TIME} ↻")
         } else {
-            "Tasks for good\n\nPut out recycling\nDue: 15:59 ↻"
+            format!("Tasks for good\n\nPut out recycling\nDue: {TIME} ↻")
         };
-        assert_eq!(
-            all_items(&config_with_timezone, "good"),
-            Ok(String::from(str))
-        );
+        assert_eq!(all_items(&config_with_timezone, "good"), Ok(string));
     }
 }

@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Resolve new clippy warnings
+- Resolve new Clippy warnings
+- Use a constant for time in tests
 
 ## 2022-10-18 v0.3.1
 

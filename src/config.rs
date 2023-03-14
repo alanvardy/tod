@@ -19,10 +19,11 @@ pub struct Config {
     pub next_id: Option<String>,
     pub timezone: Option<String>,
     pub last_version_check: Option<String>,
+    pub mock_url: Option<String>,
 }
 
 impl Config {
-    pub fn new(token: &str) -> Result<Config, String> {
+    pub fn new(token: &str, mock_url: Option<String>) -> Result<Config, String> {
         let projects: HashMap<String, u32> = HashMap::new();
         Ok(Config {
             path: generate_path()?,
@@ -30,6 +31,7 @@ impl Config {
             next_id: None,
             last_version_check: None,
             timezone: None,
+            mock_url,
             projects,
         })
     }
@@ -114,7 +116,7 @@ impl Config {
         };
 
         if last_version != Some(time::today_string(&self)) {
-            match request::get_latest_version() {
+            match request::get_latest_version(self) {
                 Ok(version) if version.as_str() != VERSION => {
                     println!(
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
@@ -157,10 +159,10 @@ impl Config {
     }
 }
 
-pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
+pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
     let path: String = match config_path {
         None => generate_path()?,
-        Some(path) => String::from(path).trim().to_owned(),
+        Some(path) => path.trim().to_owned(),
     };
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
@@ -191,7 +193,7 @@ pub fn get_or_create(config_path: Option<&str>) -> Result<Config, String> {
         }
         Err(_) => {
             let token = get_input(desc)?;
-            Config::new(&token)?.create()?.check_for_timezone()
+            Config::new(&token, None)?.create()?.check_for_timezone()
         }
     }
 }
@@ -244,13 +246,13 @@ mod tests {
 
     #[test]
     fn new_should_generate_config() {
-        let config = Config::new("something").unwrap();
+        let config = Config::new("something", None).unwrap();
         assert_eq!(config.token, String::from("something"));
     }
 
     #[test]
     fn set_and_clear_next_id_should_work() {
-        let config = Config::new("something").unwrap();
+        let config = Config::new("something", None).unwrap();
         assert_eq!(config.next_id, None);
         let config = config.set_next_id(String::from("123123"));
         assert_eq!(config.next_id, Some(String::from("123123")));
@@ -260,7 +262,7 @@ mod tests {
 
     #[test]
     fn add_project_should_work() {
-        let config = Config::new("something").unwrap();
+        let config = Config::new("something", None).unwrap();
         let mut projects: HashMap<String, u32> = HashMap::new();
         assert_eq!(
             config,
@@ -271,6 +273,7 @@ mod tests {
                 last_version_check: None,
                 projects: projects.clone(),
                 timezone: None,
+                mock_url: None,
             }
         );
         let config = config.add_project(String::from("test"), 1234);
@@ -284,6 +287,7 @@ mod tests {
                 last_version_check: None,
                 projects,
                 timezone: None,
+                mock_url: None,
             }
         );
     }
@@ -300,6 +304,7 @@ mod tests {
             last_version_check: None,
             projects: projects.clone(),
             timezone: Some(String::from("Asia/Pyongyang")),
+            mock_url: None,
         };
 
         assert_eq!(
@@ -311,6 +316,7 @@ mod tests {
                 last_version_check: None,
                 projects: projects.clone(),
                 timezone: Some(String::from("Asia/Pyongyang")),
+                mock_url: None,
             }
         );
         let config_with_one_project = config_with_two_projects.remove_project("test");
@@ -325,6 +331,7 @@ mod tests {
                 last_version_check: None,
                 projects,
                 timezone: Some(String::from("Asia/Pyongyang")),
+                mock_url: None,
             }
         );
     }
@@ -332,6 +339,9 @@ mod tests {
     #[test]
     fn config_tests() {
         // These need to be run sequentially as they write to the filesystem.
+
+        let server = mockito::Server::new();
+        let mock_url = Some(server.url());
 
         // Save and load
         // Build path
@@ -345,14 +355,14 @@ mod tests {
         let _ = fs::remove_file(&path);
 
         // create and load
-        let new_config = Config::new("faketoken").unwrap();
+        let new_config = Config::new("faketoken", None).unwrap();
         let created_config = new_config.clone().create().unwrap();
         assert_eq!(new_config, created_config);
         let loaded_config = Config::load(&path).unwrap();
         assert_eq!(created_config, loaded_config);
 
         // save and load
-        let different_new_config = Config::new("differenttoken").unwrap();
+        let different_new_config = Config::new("differenttoken", mock_url.clone()).unwrap();
         different_new_config.clone().save().unwrap();
         let loaded_config = Config::load(&path).unwrap();
         assert_eq!(loaded_config, different_new_config);
@@ -369,13 +379,19 @@ mod tests {
                 next_id: None,
                 last_version_check: None,
                 timezone: Some(String::from("Africa/Asmera")),
+                mock_url: None,
             })
         );
         delete_config(&path);
 
         // get_or_create (load)
-        Config::new("alreadycreated").unwrap().create().unwrap();
+        Config::new("alreadycreated", mock_url.clone())
+            .unwrap()
+            .create()
+            .unwrap();
+
         let config = get_or_create(None);
+
         assert_eq!(
             config.clone(),
             Ok(Config {
@@ -385,12 +401,16 @@ mod tests {
                 next_id: None,
                 last_version_check: Some(time::today_string(&config.unwrap())),
                 timezone: Some(String::from("Africa/Asmera")),
+                mock_url: mock_url.clone(),
             })
         );
         delete_config(&path);
 
         // get_or_create (move legacy)
-        Config::new("created in $HOME").unwrap().create().unwrap();
+        Config::new("created in $HOME", mock_url.clone())
+            .unwrap()
+            .create()
+            .unwrap();
         let legacy_path = generate_legacy_path().unwrap();
         let proper_path = generate_path().unwrap();
         fs::rename(proper_path, &legacy_path).unwrap();
@@ -404,6 +424,7 @@ mod tests {
                 next_id: None,
                 last_version_check: Some(time::today_string(&config.unwrap())),
                 timezone: Some(String::from("Africa/Asmera")),
+                mock_url: mock_url,
             })
         );
         delete_config(&path);
@@ -426,6 +447,7 @@ mod tests {
             projects,
             path: String::from("/home/vardy/dev/tod/tests/tod.cfg"),
             next_id: None,
+            mock_url: None,
         };
         assert_eq!(loaded_config, config);
     }

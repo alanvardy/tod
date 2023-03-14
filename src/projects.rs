@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn should_list_projects() {
-        let config = Config::new("123123")
+        let config = Config::new("123123", None)
             .unwrap()
             .add_project(String::from("first"), 1)
             .add_project(String::from("second"), 2);
@@ -212,18 +212,21 @@ mod tests {
 
     #[test]
     fn should_display_scheduled_items() {
-        let _m = mockito::mock("POST", "/sync/v9/projects/get_data")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::items())
             .create();
 
-        let config = Config::new("12341234")
+        let config = Config::new("12341234", Some(server.url()))
             .unwrap()
             .add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
+            mock_url: Some(server.url()),
             ..config
         };
 
@@ -245,18 +248,21 @@ mod tests {
 
     #[test]
     fn should_list_all_items() {
-        let _m = mockito::mock("POST", "/sync/v9/projects/get_data")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::items())
             .create();
 
-        let config = Config::new("12341234")
+        let config = Config::new("12341234", Some(server.url()))
             .unwrap()
             .add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
+            mock_url: Some(server.url()),
             ..config
         };
 
@@ -266,5 +272,6 @@ mod tests {
             format!("Tasks for good\n\nPut out recycling\nDue: {TIME} ↻")
         };
         assert_eq!(all_items(&config_with_timezone, "good"), Ok(string));
+        mock.assert();
     }
 }

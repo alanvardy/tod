@@ -146,7 +146,8 @@ fn main() {
 }
 
 fn dispatch(arguments: Arguments) -> Result<String, String> {
-    let config: config::Config = config::get_or_create(arguments.config_path)?;
+    let config_path = arguments.config_path.map(|s| s.to_string());
+    let config: config::Config = config::get_or_create(config_path)?;
 
     match arguments {
         Arguments {

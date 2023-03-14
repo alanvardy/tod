@@ -39,7 +39,7 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"text": task, "auto_reminder": true});
 
-    let json = post_todoist_sync(config.token.clone(), url, body)?;
+    let json = post_todoist_sync(config.clone(), url, body)?;
     items::json_to_item(json)
 }
 
@@ -47,7 +47,7 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
 pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project_id });
-    let json = post_todoist_sync(config.token.clone(), url, body)?;
+    let json = post_todoist_sync(config.clone(), url, body)?;
     items::json_to_items(json)
 }
 
@@ -57,7 +57,7 @@ pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<Strin
     let body = json!({"commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
-    post_todoist_sync(config.token, url, body)?;
+    post_todoist_sync(config, url, body)?;
     Ok(String::from("✓"))
 }
 
@@ -66,7 +66,7 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
 
-    post_todoist_rest(config.token, url, body)?;
+    post_todoist_rest(config, url, body)?;
     // Does not pass back an item
     Ok(String::from("✓"))
 }
@@ -76,7 +76,7 @@ pub fn complete_item(config: Config) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    post_todoist_sync(config.token.clone(), url, body)?;
+    post_todoist_sync(config.clone(), url, body)?;
 
     if !cfg!(test) {
         config.clear_next_id().save()?;
@@ -88,17 +88,20 @@ pub fn complete_item(config: Config) -> Result<String, String> {
 
 /// Post to Todoist via sync API
 fn post_todoist_sync(
-    token: String,
+    config: Config,
     url: String,
     body: serde_json::Value,
 ) -> Result<String, String> {
     #[cfg(not(test))]
-    let todoist_url: &str = "https://api.todoist.com";
+    let todoist_url: String = "https://api.todoist.com".to_string();
+    #[cfg(not(test))]
+    let _placeholder = config.clone().mock_url;
 
     #[cfg(test)]
-    let todoist_url: &str = &mockito::server_url();
+    let todoist_url: String = config.clone().mock_url.expect("Mock URL not set");
 
     let request_url = format!("{todoist_url}{url}");
+    let token = config.token;
 
     let response = Client::new()
         .post(request_url)
@@ -117,15 +120,17 @@ fn post_todoist_sync(
 
 /// Post to Todoist via REST api
 fn post_todoist_rest(
-    token: String,
+    config: Config,
     url: String,
     body: serde_json::Value,
 ) -> Result<String, String> {
     #[cfg(not(test))]
-    let todoist_url: &str = "https://api.todoist.com";
+    let todoist_url: String = "https://api.todoist.com".to_string();
 
     #[cfg(test)]
-    let todoist_url: &str = &mockito::server_url();
+    let todoist_url: String = config.mock_url.expect("Mock URL not set");
+
+    let token = config.token;
 
     let request_url = format!("{todoist_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
@@ -147,12 +152,13 @@ fn post_todoist_rest(
 }
 
 /// Get latest version number from Cargo.io
-pub fn get_latest_version() -> Result<String, String> {
+pub fn get_latest_version(config: Config) -> Result<String, String> {
     #[cfg(not(test))]
-    let cargo_url: &str = "https://crates.io/api";
+    let cargo_url: String = "https://crates.io/api".to_string();
+    let _token = config.token;
 
     #[cfg(test)]
-    let cargo_url: &str = &mockito::server_url();
+    let cargo_url: String = config.mock_url.expect("Mock URL not set");
 
     let request_url = format!("{cargo_url}{VERSIONS_URL}");
 
@@ -190,13 +196,15 @@ mod tests {
 
     #[test]
     fn should_add_item_to_inbox() {
-        let _m = mockito::mock("POST", "/sync/v9/quick/add")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/quick/add")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::item())
             .create();
 
-        let config = Config::new("12341234").unwrap();
+        let config = Config::new("12341234", Some(server.url())).unwrap();
 
         assert_eq!(
             add_item_to_inbox(&config, "testy test"),
@@ -210,17 +218,21 @@ mod tests {
                 is_deleted: false,
             })
         );
+        mock.assert();
     }
 
     #[test]
     fn should_get_items_for_project() {
-        let _m = mockito::mock("POST", "/sync/v9/projects/get_data")
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::items())
             .create();
 
-        let config = Config::new("12341234").unwrap();
+        let config = Config::new("12341234", Some(server.url())).unwrap();
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
             ..config
@@ -245,26 +257,35 @@ mod tests {
                 is_deleted: false,
             }])
         );
+
+        mock.assert();
     }
 
     #[test]
     fn should_complete_an_item() {
-        let _m = mockito::mock("POST", "/sync/v9/sync")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::sync())
             .create();
 
-        let config = Config::new("12341234")
+        let config = Config::new("12341234", Some(server.url()))
             .unwrap()
             .set_next_id(String::from("112233"));
+
         let response = complete_item(config);
+        mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
 
     #[test]
     fn should_move_an_item() {
-        let _m = mockito::mock("POST", "/sync/v9/sync")
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::sync())
@@ -272,10 +293,17 @@ mod tests {
 
         let item = test::helpers::item_fixture();
         let project_name = "testy";
-        let config = Config::new("12341234")
+        let config = Config::new("12341234", Some(server.url()))
             .unwrap()
             .add_project(String::from(project_name), 1);
+
+        let config = Config {
+            mock_url: Some(server.url()),
+            ..config
+        };
         let response = move_item(config, item, project_name);
+        mock.assert();
+
         assert_eq!(response, Ok(String::from("✓")));
     }
 
@@ -283,28 +311,40 @@ mod tests {
     fn should_prioritize_an_item() {
         let item = test::helpers::item_fixture();
         let url: &str = &format!("{}{}", "/rest/v2/tasks/", item.id);
+        let mut server = mockito::Server::new();
 
-        let _m = mockito::mock("POST", url)
+        let mock = server
+            .mock("POST", url)
             .with_status(204)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::sync())
             .create();
 
-        let config = Config::new("12341234").unwrap();
+        let config = Config::new("12341234", Some(server.url())).unwrap();
+
         let response = update_item_priority(config, item, 4);
+        mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
 
     #[test]
 
     fn latest_version_works() {
-        let _m = mockito::mock("GET", "/v1/crates/tod/versions")
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/v1/crates/tod/versions")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(&test::responses::versions())
             .create();
 
-        let response = get_latest_version();
+        let config = Config {
+            mock_url: Some(server.url()),
+            ..Config::new("12341234", Some(server.url())).unwrap()
+        };
+
+        let response = get_latest_version(config);
+        mock.assert();
 
         assert_eq!(response, Ok(String::from(VERSION)));
     }

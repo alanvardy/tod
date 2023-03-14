@@ -34,6 +34,7 @@ pub mod helpers {
             next_id: None,
             last_version_check: None,
             timezone: Some(String::from("US/Pacific")),
+            mock_url: None,
         }
     }
 }

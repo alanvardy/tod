@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-03-19 v0.3.2
+
 - Resolve new Clippy warnings
 - Use a constant for time in tests
 - Add spinners to API requests

@@ -4,6 +4,7 @@
 
 - Resolve new Clippy warnings
 - Use a constant for time in tests
+- Add spinners to API requests
 
 ## 2022-10-18 v0.3.1
 

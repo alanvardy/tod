@@ -4,6 +4,7 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
 use serde_json::json;
+use spinners::{Spinner, Spinners};
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -23,6 +24,9 @@ const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
 const VERSIONS_URL: &str = "/v1/crates/tod/versions";
 
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
+
+const SPINNER: Spinners = Spinners::Dots4;
+const MESSAGE: &str = "Querying API";
 
 #[derive(Deserialize)]
 struct CargoResponse {
@@ -103,6 +107,7 @@ fn post_todoist_sync(
     let request_url = format!("{todoist_url}{url}");
     let token = config.token;
 
+    let mut sp = Spinner::new(SPINNER, MESSAGE.into());
     let response = Client::new()
         .post(request_url)
         .header(CONTENT_TYPE, "application/json")
@@ -110,6 +115,9 @@ fn post_todoist_sync(
         .json(&body)
         .send()
         .or(Err("Did not get response from server"))?;
+
+    sp.stop();
+    print!("\x1b[2K\r");
 
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)
@@ -135,6 +143,7 @@ fn post_todoist_rest(
     let request_url = format!("{todoist_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
 
+    let mut sp = Spinner::new(SPINNER, MESSAGE.into());
     let response = Client::new()
         .post(request_url)
         .header(CONTENT_TYPE, "application/json")
@@ -143,6 +152,9 @@ fn post_todoist_rest(
         .json(&body)
         .send()
         .or(Err("Did not get response from server"))?;
+
+    sp.stop();
+    print!("\x1b[2K\r");
 
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)

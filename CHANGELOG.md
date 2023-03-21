@@ -2,10 +2,12 @@
 
 ## Unreleased
 
+- Add ability to disable spinners in config with `"spinners": false`
+
 ## 2023-03-19 v0.3.2
 
 - Resolve new Clippy warnings
-- Use a constant for time in tests
+- Use a constant for the time in tests
 - Add spinners to API requests
 
 ## 2022-10-18 v0.3.1

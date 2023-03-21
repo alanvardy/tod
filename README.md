@@ -124,6 +124,10 @@ tod -ep work
 tod -p work
 ```
 
+## Disabling spinners
+
+Find the line in your `tod.cfg` that reads `"spinners": null` and change the value to false.
+
 ## Why I made this
 
 I am a developer who uses Todoist to reduce stress and cognitive overhead, by delegating things that a machine does well to a machine. This CLI application scratches some very specific itches for me, and I hope that it may be of use to others as well!

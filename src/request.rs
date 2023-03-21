@@ -107,17 +107,28 @@ fn post_todoist_sync(
     let request_url = format!("{todoist_url}{url}");
     let token = config.token;
 
-    let mut sp = Spinner::new(SPINNER, MESSAGE.into());
-    let response = Client::new()
-        .post(request_url)
-        .header(CONTENT_TYPE, "application/json")
-        .header(AUTHORIZATION, format!("Bearer {token}"))
-        .json(&body)
-        .send()
-        .or(Err("Did not get response from server"))?;
+    let response = if let Some(false) = config.spinners {
+        Client::new()
+            .post(request_url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, format!("Bearer {token}"))
+            .json(&body)
+            .send()
+            .or(Err("Did not get response from server"))?
+    } else {
+        let mut sp = Spinner::new(SPINNER, MESSAGE.into());
+        let response = Client::new()
+            .post(request_url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, format!("Bearer {token}"))
+            .json(&body)
+            .send()
+            .or(Err("Did not get response from server"))?;
 
-    sp.stop();
-    print!("\x1b[2K\r");
+        sp.stop();
+        print!("\x1b[2K\r");
+        response
+    };
 
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)
@@ -143,18 +154,30 @@ fn post_todoist_rest(
     let request_url = format!("{todoist_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
 
-    let mut sp = Spinner::new(SPINNER, MESSAGE.into());
-    let response = Client::new()
-        .post(request_url)
-        .header(CONTENT_TYPE, "application/json")
-        .header(AUTHORIZATION, authorization)
-        .header("X-Request-Id", new_uuid())
-        .json(&body)
-        .send()
-        .or(Err("Did not get response from server"))?;
+    let response = if let Some(false) = config.spinners {
+        Client::new()
+            .post(request_url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, authorization)
+            .header("X-Request-Id", new_uuid())
+            .json(&body)
+            .send()
+            .or(Err("Did not get response from server"))?
+    } else {
+        let mut sp = Spinner::new(SPINNER, MESSAGE.into());
+        let response = Client::new()
+            .post(request_url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, authorization)
+            .header("X-Request-Id", new_uuid())
+            .json(&body)
+            .send()
+            .or(Err("Did not get response from server"))?;
 
-    sp.stop();
-    print!("\x1b[2K\r");
+        sp.stop();
+        print!("\x1b[2K\r");
+        response
+    };
 
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)

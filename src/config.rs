@@ -20,6 +20,8 @@ pub struct Config {
     pub timezone: Option<String>,
     pub last_version_check: Option<String>,
     pub mock_url: Option<String>,
+    // Whether spinners are enabled
+    pub spinners: Option<bool>,
 }
 
 impl Config {
@@ -31,6 +33,7 @@ impl Config {
             next_id: None,
             last_version_check: None,
             timezone: None,
+            spinners: Some(true),
             mock_url,
             projects,
         })
@@ -69,7 +72,7 @@ impl Config {
             .read_to_string(&mut json)
             .or(Err("Could not read to string"))?;
 
-        serde_json::from_str::<Config>(&json).map_err(|_| String::from("Could not parse JSON"))
+        serde_json::from_str::<Config>(&json).map_err(|_| format!("Could not parse JSON:\n{json}"))
     }
 
     pub fn set_path(self, path: &str) -> Config {
@@ -272,6 +275,7 @@ mod tests {
                 next_id: None,
                 last_version_check: None,
                 projects: projects.clone(),
+                spinners: Some(true),
                 timezone: None,
                 mock_url: None,
             }
@@ -285,6 +289,7 @@ mod tests {
                 path: generate_path().unwrap(),
                 next_id: None,
                 last_version_check: None,
+                spinners: Some(true),
                 projects,
                 timezone: None,
                 mock_url: None,
@@ -301,6 +306,7 @@ mod tests {
             token: String::from("something"),
             path: generate_path().unwrap(),
             next_id: None,
+            spinners: Some(true),
             last_version_check: None,
             projects: projects.clone(),
             timezone: Some(String::from("Asia/Pyongyang")),
@@ -313,6 +319,7 @@ mod tests {
                 token: String::from("something"),
                 path: generate_path().unwrap(),
                 next_id: None,
+                spinners: Some(true),
                 last_version_check: None,
                 projects: projects.clone(),
                 timezone: Some(String::from("Asia/Pyongyang")),
@@ -330,6 +337,7 @@ mod tests {
                 next_id: None,
                 last_version_check: None,
                 projects,
+                spinners: Some(true),
                 timezone: Some(String::from("Asia/Pyongyang")),
                 mock_url: None,
             }
@@ -377,6 +385,7 @@ mod tests {
                 projects: HashMap::new(),
                 path: generate_path().unwrap(),
                 next_id: None,
+                spinners: Some(true),
                 last_version_check: None,
                 timezone: Some(String::from("Africa/Asmera")),
                 mock_url: None,
@@ -399,6 +408,7 @@ mod tests {
                 projects: HashMap::new(),
                 path: generate_path().unwrap(),
                 next_id: None,
+                spinners: Some(true),
                 last_version_check: Some(time::today_string(&config.unwrap())),
                 timezone: Some(String::from("Africa/Asmera")),
                 mock_url: mock_url.clone(),
@@ -422,6 +432,7 @@ mod tests {
                 projects: HashMap::new(),
                 path: generate_path().unwrap(),
                 next_id: None,
+                spinners: Some(true),
                 last_version_check: Some(time::today_string(&config.unwrap())),
                 timezone: Some(String::from("Africa/Asmera")),
                 mock_url: mock_url,
@@ -445,6 +456,7 @@ mod tests {
             timezone: Some(String::from("US/Pacific")),
             last_version_check: Some(String::from("2022-02-26")),
             projects,
+            spinners: Some(false),
             path: String::from("/home/vardy/dev/tod/tests/tod.cfg"),
             next_id: None,
             mock_url: None,

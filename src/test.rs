@@ -32,6 +32,7 @@ pub mod helpers {
             projects: HashMap::new(),
             path: config::generate_path().unwrap(),
             next_id: None,
+            spinners: Some(true),
             last_version_check: None,
             timezone: Some(String::from("US/Pacific")),
             mock_url: None,

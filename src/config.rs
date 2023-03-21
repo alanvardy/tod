@@ -454,10 +454,10 @@ mod tests {
         let config = Config {
             token: String::from("23984719029"),
             timezone: Some(String::from("US/Pacific")),
-            last_version_check: Some(String::from("2022-02-26")),
+            last_version_check: Some(String::from("2023-03-21")),
             projects,
             spinners: Some(false),
-            path: String::from("/home/vardy/dev/tod/tests/tod.cfg"),
+            path: String::from("tests/tod.cfg"),
             next_id: None,
             mock_url: None,
         };

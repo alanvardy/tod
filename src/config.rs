@@ -125,7 +125,7 @@ impl Config {
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
                         version,
                         VERSION,
-                        "cargo install tod".bright_cyan()
+                        "cargo install tod --force".bright_cyan()
                     );
                     new_config.clone().save().unwrap();
                 }

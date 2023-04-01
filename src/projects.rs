@@ -153,10 +153,20 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
 pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
     println!("{}", item.fmt(&config));
 
-    let project_name = config::get_input("Enter destination project name or (c)omplete:")?;
+    let mut options = config
+        .projects
+        .keys()
+        .map(|k| k.to_owned())
+        .collect::<Vec<String>>();
+
+    options.push("complete".to_string());
+    options.reverse();
+
+    let project_name =
+        config::select_input("Enter destination project name or complete:", options)?;
 
     match project_name.as_str() {
-        "complete" | "c" => {
+        "complete" => {
             request::complete_item(config.set_next_id(item.id))?;
             Ok(green_string("✓"))
         }

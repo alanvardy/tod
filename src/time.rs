@@ -1,7 +1,7 @@
 use crate::config::Config;
 use chrono::offset::{TimeZone, Utc};
 use chrono::{DateTime, NaiveDate};
-use chrono_tz::{Tz, TZ_VARIANTS};
+use chrono_tz::Tz;
 
 pub fn now(config: &Config) -> DateTime<Tz> {
     let tz = timezone_from_str(&config.timezone);
@@ -87,15 +87,4 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, String> {
     };
 
     Ok(date)
-}
-
-pub fn list_timezones() {
-    println!("Timezones:");
-    for (num, tz) in TZ_VARIANTS.iter().enumerate() {
-        println!("{num}: {tz}");
-    }
-}
-
-pub fn get_timezone(num: usize) -> String {
-    TZ_VARIANTS[num].to_string()
 }

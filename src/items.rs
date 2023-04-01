@@ -244,8 +244,10 @@ pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item>
 pub fn set_priority(config: Config, item: items::Item) {
     println!("{}", item.fmt(&config));
 
-    let priority = config::get_input("Choose a priority from 1 (lowest) to 3 (highest):")
-        .expect("Please enter a number from 1 to 3");
+    let options = vec!["1", "2", "3"].iter().map(|s| s.to_string()).collect();
+    let priority =
+        config::select_input("Choose a priority from 1 (lowest) to 3 (highest):", options)
+            .expect("Please enter a number from 1 to 3");
 
     match priority.as_str() {
         "1" => {

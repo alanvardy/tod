@@ -1,10 +1,12 @@
 use crate::{request, time, VERSION};
+use chrono_tz::TZ_VARIANTS;
 use colored::*;
+use inquire::{Select, Text};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
+use std::fs;
 use std::io::{Read, Write};
-use std::{fs, io};
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -143,13 +145,16 @@ impl Config {
 
     fn check_for_timezone(self: Config) -> Result<Config, String> {
         if self.timezone.is_none() {
-            time::list_timezones();
-            let desc = "Please enter the number of your timezone";
-            let num: usize = get_input(desc)?
-                .parse::<usize>()
-                .map_err(|_| String::from("Could not parse string into number"))?;
+            let desc = "Please select your timezone";
+            let options = TZ_VARIANTS
+                .to_vec()
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<String>>();
+
+            let tz = select_input(desc, options)?;
             let config = Config {
-                timezone: Some(time::get_timezone(num)),
+                timezone: Some(tz),
                 ..self
             };
 
@@ -229,16 +234,19 @@ pub fn generate_legacy_path() -> Result<String, String> {
 
 pub fn get_input(desc: &str) -> Result<String, String> {
     if cfg!(test) {
-        return Ok(String::from("5"));
+        return Ok(String::from("Africa/Asmera"));
     }
 
-    let mut input = String::new();
-    println!("{desc}");
-    io::stdin()
-        .read_line(&mut input)
-        .or(Err("error: unable to read user input"))?;
+    Text::new(desc).prompt().map_err(|e| e.to_string())
+}
+pub fn select_input(desc: &str, options: Vec<String>) -> Result<String, String> {
+    if cfg!(test) {
+        return Ok(String::from("Africa/Asmera"));
+    }
 
-    Ok(String::from(input.trim()))
+    Select::new(desc, options)
+        .prompt()
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -381,7 +389,7 @@ mod tests {
         assert_eq!(
             config.clone(),
             Ok(Config {
-                token: String::from("5"),
+                token: String::from("Africa/Asmera"),
                 projects: HashMap::new(),
                 path: generate_path().unwrap(),
                 next_id: None,

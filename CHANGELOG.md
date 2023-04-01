@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improve input prompts with inquire library
+
 ## 2023-03-21 v0.3.3
 
 - Add the ability to disable spinners in the config file with `"spinners": false`

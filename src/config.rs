@@ -462,7 +462,7 @@ mod tests {
         let config = Config {
             token: String::from("23984719029"),
             timezone: Some(String::from("US/Pacific")),
-            last_version_check: Some(String::from("2023-03-21")),
+            last_version_check: Some(String::from("2023-04-01")),
             projects,
             spinners: Some(false),
             path: String::from("tests/tod.cfg"),

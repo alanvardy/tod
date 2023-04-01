@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn should_display_scheduled_items() {
         let mut server = mockito::Server::new();
-        let mock = server
+        let _mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")

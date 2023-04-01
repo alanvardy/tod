@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-- Improve input prompts with inquire library
+## 2023-04-01 v0.3.4
+
+- Improve input prompts with the inquire library
+- Update dependencies
 
 ## 2023-03-21 v0.3.3
 
@@ -31,8 +34,7 @@
 
 ## 2022-07-16 v0.2.14
 
-Fix a bug where the config file is moved but the path inside the config file is not altered
-
+- Fix a bug where the config file is moved but the path inside the config file is not altered
 - Update dependencies
 
 ## 2022-07-06 v0.2.13

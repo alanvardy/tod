@@ -237,7 +237,7 @@ fn green_string(str: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test;
+    use crate::{config::generate_path, test};
     use mockito;
     use pretty_assertions::assert_eq;
 
@@ -258,6 +258,43 @@ mod tests {
         };
 
         assert_eq!(list(config), Ok(String::from(str)));
+    }
+
+    #[test]
+    fn should_get_next_item() {
+        let mut server = mockito::Server::new();
+        let _mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::items())
+            .create();
+
+        let config = Config::new("12341234", Some(server.url()))
+            .unwrap()
+            .add_project(String::from("good"), 1);
+
+        let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
+
+        let config_with_timezone = Config {
+            timezone: Some(String::from("US/Pacific")),
+            path: format!("{config_dir}/test2"),
+            mock_url: Some(server.url()),
+            ..config.clone()
+        };
+
+        config_with_timezone.clone().create().unwrap();
+
+        let string = if test::helpers::supports_coloured_output() {
+            format!("\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: {TIME} ↻")
+        } else {
+            format!("\nPut out recycling\nDue: {TIME} ↻")
+        };
+
+        assert_eq!(
+            next_item(config_with_timezone, "good"),
+            Ok(String::from(string))
+        );
     }
 
     #[test]

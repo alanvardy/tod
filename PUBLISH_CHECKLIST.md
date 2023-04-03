@@ -17,17 +17,23 @@ This checklist is just here for me to reduce the friction of publishing new vers
 
 Code changes
 
-1. Run `cargo update` to make sure dependencies are up to date
-2. Run `./test.sh && ./manual_test.sh` to make sure that didn't break anything
-3. Revert change to the test `tod.cfg`
-4. Change version in Cargo.toml and in this document (do a global find and replace)
-5. Update CHANGELOG.md with version number
-6. Update README.md with help text `cargo run -- -h`
-7. Add any new examples to README.md
-8. Open PR for version and wait for it to pass
-9. Commit and merge PR
+1. Update dependencies and make sure nothing broke
 
-10. Build release
+```bash
+cargo update && \
+./test.sh && \
+./manual_test.sh && \
+git checkout -- tests/tod.cfg
+```
+
+2. Change version in Cargo.toml and in this document (do a global find and replace)
+3. Update CHANGELOG.md with version number
+4. Update README.md with help text `cargo run -- -h`
+5. Add any new examples to README.md
+6. Open PR for version and wait for it to pass
+7. Commit and merge PR
+
+8. Build release
 
 ```bash
 git checkout main
@@ -35,18 +41,18 @@ git pull
 cargo aur
 ```
 
-11. [Create a new release](https://github.com/alanvardy/tod/releases/new)
+9. [Create a new release](https://github.com/alanvardy/tod/releases/new)
 
-- Make sure to use the label and title in format `v0.3.4`
+- Make sure to use the label and title in format `v0.3.5`
 - Add binary from tod directory
 
-12. Publish to Cargo
+10. Publish to Cargo
 
 ```bash
 cargo publish
 ```
 
-13. Make sure we have the latest AUR git history
+11. Make sure we have the latest AUR git history
 
 ```bash
 cd ../tod-bin/
@@ -54,7 +60,7 @@ git pull
 cd ../tod/
 ```
 
-14. Push to AUR
+12. Push to AUR
 
 ```bash
 makepkg --printsrcinfo > ../tod-bin/.SRCINFO
@@ -62,6 +68,6 @@ mv PKGBUILD ../tod-bin/
 rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m v0.3.4
+git commit -m v0.3.5
 git push aur
 ```

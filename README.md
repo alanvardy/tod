@@ -67,6 +67,8 @@ Options:
           The project namespace, for filtering other commands, use by itself to list all tasks for the project
   -n, --next
           Get the next task by priority. Requires project option.
+  -x, --nextinteractive
+          Fetches tasks one at a time by priority, and completes with an interactive prompt. Requires project option.
   -c, --complete
           Complete the last task fetched with next
   -l, --list
@@ -84,9 +86,9 @@ Options:
   -o, --config <CONFIGURATION PATH>
           Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
   -h, --help
-          Print help information
+          Print help
   -V, --version
-          Print version information
+          Print version
 ```
 
 - Add your most commonly used projects, the project ID is the last series of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
@@ -113,6 +115,9 @@ tod -p myproject -t write more rust \\ with a description
 
 # Get the next task for a project
 tod -np myproject
+
+# Go through tasks with an interactive prompt, completing them in order of importance one at a time.
+tod -xp myproject
 
 # Complete the last "next task" and get another
 tod -c && tod -np myproject

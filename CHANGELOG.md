@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add flag to get the next item one at a time with an interactive prompt
+
 ## 2023-04-01 v0.3.4
 
 - Improve input prompts with the inquire library

@@ -55,19 +55,59 @@ pub fn project_id(config: &Config, project_name: &str) -> Result<String, String>
 
 /// Get the next item by priority and save its id to config
 pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
-    let project_id = projects::project_id(&config, project_name)?;
-    let items = request::items_for_project(&config, &project_id)?;
-    let filtered_items = items::filter_not_in_future(items, &config)?;
-    let maybe_item = items::sort_by_value(filtered_items, &config)
-        .first()
-        .map(|item| item.to_owned());
-
-    match maybe_item {
-        Some(item) => {
+    match fetch_next_item(config.clone(), project_name) {
+        Ok(Some(item)) => {
             config.set_next_id(item.id.clone()).save()?;
             Ok(item.fmt(&config))
         }
-        None => Ok(green_string("No items on list")),
+        Ok(None) => Ok(green_string("No items on list")),
+        Err(e) => Err(e),
+    }
+}
+
+fn fetch_next_item(config: Config, project_name: &str) -> Result<Option<Item>, String> {
+    let project_id = projects::project_id(&config, project_name)?;
+    let items = request::items_for_project(&config, &project_id)?;
+    let filtered_items = items::filter_not_in_future(items, &config)?;
+    let items = items::sort_by_value(filtered_items, &config);
+
+    Ok(items.first().map(|item| item.to_owned()))
+}
+
+/// Get next items and give an interactive prompt for completing them
+pub fn next_item_interactive(config: Config, project_name: &str) -> Result<String, String> {
+    let mut config = config;
+    loop {
+        match fetch_next_item(config.clone(), project_name) {
+            Ok(Some(item)) => {
+                config.set_next_id(item.id.clone()).save()?;
+                config = Config::load(&config.path)?;
+                match handle_item(config.clone(), item) {
+                    Some(Ok(_)) => (),
+                    Some(Err(e)) => return Err(e),
+                    None => return Ok(green_string("Exited")),
+                }
+            }
+            Ok(None) => return Ok(green_string("Done")),
+            Err(e) => return Err(e),
+        }
+    }
+}
+fn handle_item(config: Config, item: Item) -> Option<Result<String, String>> {
+    let options = vec!["complete", "quit"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    println!("{}", item.fmt(&config));
+    match config::select_input("Select an option", options) {
+        Ok(string) => {
+            if string == *"complete" {
+                Some(request::complete_item(config))
+            } else {
+                None
+            }
+        }
+        Err(e) => Some(Err(e)),
     }
 }
 

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add the flag `x` to get the next item one at a time with an interactive prompt
+- Add additional test coverage
 
 ## 2023-04-01 v0.3.4
 

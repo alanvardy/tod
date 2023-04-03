@@ -43,7 +43,7 @@ cargo aur
 
 9. [Create a new release](https://github.com/alanvardy/tod/releases/new)
 
-- Make sure to use the label and title in format `v0.3.5`
+- Make sure to use the label and title in format `v0.3.6`
 - Add binary from tod directory
 
 10. Publish to Cargo
@@ -68,6 +68,6 @@ mv PKGBUILD ../tod-bin/
 rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m v0.3.5
+git commit -m v0.3.6
 git push aur
 ```

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2023-04-03 v0.3.6
+
+- Re-releasing due to an HTTP error on publish that could not be redone with the same version number.
+
 ## 2023-04-03 v0.3.5
 
 - Add the flag `x` to get the next item one at a time with an interactive prompt

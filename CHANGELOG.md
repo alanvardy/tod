@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prompt for section when moving an item to a project with sections
+
 ## 2023-04-03 v0.3.6
 
 - Re-releasing due to an HTTP error on publish that could not be redone with the same version number.

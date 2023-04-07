@@ -9,7 +9,8 @@ use uuid::Uuid;
 
 use crate::config::Config;
 use crate::items::Item;
-use crate::{items, projects};
+use crate::sections::Section;
+use crate::{items, projects, sections};
 
 #[cfg(test)]
 use mockito;
@@ -19,6 +20,7 @@ const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
 const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
 const SYNC_URL: &str = "/sync/v9/sync";
 const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
+const SECTIONS_URL: &str = "/rest/v2/sections";
 
 // CRATES.IO URLS
 const VERSIONS_URL: &str = "/v1/crates/tod/versions";
@@ -55,10 +57,32 @@ pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>,
     items::json_to_items(json)
 }
 
+pub fn sections_for_project(config: &Config, project_id: &str) -> Result<Vec<Section>, String> {
+    let url = format!("{SECTIONS_URL}?project_id={project_id}");
+    let json = get_todoist_rest(config.clone(), url)?;
+    sections::json_to_sections(json)
+}
+
 /// Move an item to a different project
-pub fn move_item(config: Config, item: Item, project_name: &str) -> Result<String, String> {
+pub fn move_item_to_project(
+    config: Config,
+    item: Item,
+    project_name: &str,
+) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name)?;
     let body = json!({"commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
+    let url = String::from(SYNC_URL);
+
+    post_todoist_sync(config, url, body)?;
+    Ok(String::from("✓"))
+}
+
+pub fn move_item_to_section(
+    config: Config,
+    item: Item,
+    section_id: &str,
+) -> Result<String, String> {
+    let body = json!({"commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "section_id": section_id}}]});
     let url = String::from(SYNC_URL);
 
     post_todoist_sync(config, url, body)?;
@@ -171,6 +195,48 @@ fn post_todoist_rest(
             .header(AUTHORIZATION, authorization)
             .header("X-Request-Id", new_uuid())
             .json(&body)
+            .send()
+            .or(Err("Did not get response from server"))?;
+
+        sp.stop();
+        print!("\x1b[2K\r");
+        response
+    };
+
+    if response.status().is_success() {
+        Ok(response.text().or(Err("Could not read response text"))?)
+    } else {
+        Err(format!("Error: {:#?}", response.text()))
+    }
+}
+
+// Combine get and post into one function
+/// Get Todoist via REST api
+fn get_todoist_rest(config: Config, url: String) -> Result<String, String> {
+    #[cfg(not(test))]
+    let todoist_url: String = "https://api.todoist.com".to_string();
+
+    #[cfg(test)]
+    let todoist_url: String = config.mock_url.expect("Mock URL not set");
+
+    let token = dbg!(config.token);
+
+    let request_url = dbg!(format!("{todoist_url}{url}"));
+    let authorization: &str = &format!("Bearer {token}");
+
+    let response = if let Some(false) = config.spinners {
+        Client::new()
+            .get(request_url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, authorization)
+            .send()
+            .or(Err("Did not get response from server"))?
+    } else {
+        let mut sp = Spinner::new(SPINNER, MESSAGE.into());
+        let response = Client::new()
+            .get(request_url)
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, authorization)
             .send()
             .or(Err("Did not get response from server"))?;
 
@@ -336,7 +402,7 @@ mod tests {
             mock_url: Some(server.url()),
             ..config
         };
-        let response = move_item(config, item, project_name);
+        let response = move_item_to_project(config, item, project_name);
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));

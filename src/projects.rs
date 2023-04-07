@@ -211,8 +211,20 @@ pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String
             Ok(green_string("✓"))
         }
         _ => {
-            request::move_item(config, item, &project_name)?;
-            Ok(green_string("✓"))
+            let project_id = projects::project_id(&config, &project_name)?;
+            let sections = request::sections_for_project(&config, &project_id)?;
+            let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
+            if section_names.is_empty() {
+                request::move_item_to_project(config, item, &project_name)
+            } else {
+                let section_name = config::select_input("Select section", section_names)?;
+                let section_id = &sections
+                    .iter()
+                    .find(|x| x.name == section_name.as_str())
+                    .expect("Section does not exist")
+                    .id;
+                request::move_item_to_section(config, item, section_id)
+            }
         }
     }
 }
@@ -224,7 +236,7 @@ pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<
     match project {
         "inbox" | "i" => Ok(green_string("✓")),
         project => {
-            request::move_item(config, item, project)?;
+            request::move_item_to_project(config, item, project)?;
             Ok(green_string("✓"))
         }
     }
@@ -237,7 +249,7 @@ fn green_string(str: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::generate_path, test};
+    use crate::test;
     use mockito;
     use pretty_assertions::assert_eq;
 

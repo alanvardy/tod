@@ -11,6 +11,7 @@ mod config;
 mod items;
 mod projects;
 mod request;
+mod sections;
 mod test;
 mod time;
 

@@ -20,10 +20,7 @@ Code changes
 1. Update dependencies and make sure nothing broke
 
 ```bash
-cargo update && \
-./test.sh && \
-./manual_test.sh && \
-git checkout -- tests/tod.cfg
+./update_test.sh
 ```
 
 2. Change version in Cargo.toml and in this document (do a global find and replace)
@@ -43,7 +40,7 @@ cargo aur
 
 9. [Create a new release](https://github.com/alanvardy/tod/releases/new)
 
-- Make sure to use the label and title in format `v0.3.6`
+- Make sure to use the label and title in format `v0.3.7`
 - Add binary from tod directory
 
 10. Publish to Cargo
@@ -68,6 +65,6 @@ mv PKGBUILD ../tod-bin/
 rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m v0.3.6
+git commit -m v0.3.7
 git push aur
 ```

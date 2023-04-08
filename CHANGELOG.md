@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-04-08 v0.3.7
+
 - Prompt for section when moving an item to a project with sections
 
 ## 2023-04-03 v0.3.6

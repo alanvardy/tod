@@ -17,12 +17,7 @@ This checklist is just here for me to reduce the friction of publishing new vers
 
 Code changes
 
-1. Update dependencies and make sure nothing broke
-
-```bash
-./update_test.sh
-```
-
+1. Update dependencies and make sure nothing broke with `update_test.sh`
 2. Change version in Cargo.toml and in this document (do a global find and replace)
 3. Update CHANGELOG.md with version number
 4. Update README.md with help text `cargo run -- -h`
@@ -43,28 +38,6 @@ cargo aur
 - Make sure to use the label and title in format `v0.3.7`
 - Add binary from tod directory
 
-10. Publish to Cargo
+10. Publish to Cargo with `cargo publish`
+11. Push to AUR with `push_aur.sh`
 
-```bash
-cargo publish
-```
-
-11. Make sure we have the latest AUR git history
-
-```bash
-cd ../tod-bin/
-git pull
-cd ../tod/
-```
-
-12. Push to AUR
-
-```bash
-makepkg --printsrcinfo > ../tod-bin/.SRCINFO
-mv PKGBUILD ../tod-bin/
-rm *.tar.gz
-cd ../tod-bin/
-git add .
-git commit -m v0.3.7
-git push aur
-```

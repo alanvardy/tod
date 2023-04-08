@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2023-04-08 v0.3.8
+
+- Left some dbg! statements in the code like a doofus
+
 ## 2023-04-08 v0.3.7
 
 - Prompt for section when moving an item to a project with sections

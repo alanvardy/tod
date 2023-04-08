@@ -1,3 +1,5 @@
+use std::env;
+
 use reqwest::blocking::Client;
 use reqwest::header::AUTHORIZATION;
 use reqwest::header::CONTENT_TYPE;
@@ -126,33 +128,21 @@ fn post_todoist_sync(
     let _placeholder = config.clone().mock_url;
 
     #[cfg(test)]
-    let todoist_url: String = config.clone().mock_url.expect("Mock URL not set");
+    let todoist_url: String = config.mock_url.clone().expect("Mock URL not set");
 
     let request_url = format!("{todoist_url}{url}");
-    let token = config.token;
+    let token = config.token.clone();
 
-    let response = if let Some(false) = config.spinners {
-        Client::new()
-            .post(request_url)
-            .header(CONTENT_TYPE, "application/json")
-            .header(AUTHORIZATION, format!("Bearer {token}"))
-            .json(&body)
-            .send()
-            .or(Err("Did not get response from server"))?
-    } else {
-        let mut sp = Spinner::new(SPINNER, MESSAGE.into());
-        let response = Client::new()
-            .post(request_url)
-            .header(CONTENT_TYPE, "application/json")
-            .header(AUTHORIZATION, format!("Bearer {token}"))
-            .json(&body)
-            .send()
-            .or(Err("Did not get response from server"))?;
+    let spinner = maybe_start_spinner(config);
+    let response = Client::new()
+        .post(request_url)
+        .header(CONTENT_TYPE, "application/json")
+        .header(AUTHORIZATION, format!("Bearer {token}"))
+        .json(&body)
+        .send()
+        .or(Err("Did not get response from server"))?;
 
-        sp.stop();
-        print!("\x1b[2K\r");
-        response
-    };
+    maybe_stop_spinner(spinner);
 
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)
@@ -171,37 +161,24 @@ fn post_todoist_rest(
     let todoist_url: String = "https://api.todoist.com".to_string();
 
     #[cfg(test)]
-    let todoist_url: String = config.mock_url.expect("Mock URL not set");
+    let todoist_url: String = config.mock_url.clone().expect("Mock URL not set");
 
-    let token = config.token;
+    let token = config.token.clone();
 
     let request_url = format!("{todoist_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
+    let spinner = maybe_start_spinner(config);
 
-    let response = if let Some(false) = config.spinners {
-        Client::new()
-            .post(request_url)
-            .header(CONTENT_TYPE, "application/json")
-            .header(AUTHORIZATION, authorization)
-            .header("X-Request-Id", new_uuid())
-            .json(&body)
-            .send()
-            .or(Err("Did not get response from server"))?
-    } else {
-        let mut sp = Spinner::new(SPINNER, MESSAGE.into());
-        let response = Client::new()
-            .post(request_url)
-            .header(CONTENT_TYPE, "application/json")
-            .header(AUTHORIZATION, authorization)
-            .header("X-Request-Id", new_uuid())
-            .json(&body)
-            .send()
-            .or(Err("Did not get response from server"))?;
+    let response = Client::new()
+        .post(request_url)
+        .header(CONTENT_TYPE, "application/json")
+        .header(AUTHORIZATION, authorization)
+        .header("X-Request-Id", new_uuid())
+        .json(&body)
+        .send()
+        .or(Err("Did not get response from server"))?;
 
-        sp.stop();
-        print!("\x1b[2K\r");
-        response
-    };
+    maybe_stop_spinner(spinner);
 
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)
@@ -217,33 +194,21 @@ fn get_todoist_rest(config: Config, url: String) -> Result<String, String> {
     let todoist_url: String = "https://api.todoist.com".to_string();
 
     #[cfg(test)]
-    let todoist_url: String = config.mock_url.expect("Mock URL not set");
+    let todoist_url: String = config.mock_url.clone().expect("Mock URL not set");
 
-    let token = dbg!(config.token);
+    let token = config.token.clone();
 
-    let request_url = dbg!(format!("{todoist_url}{url}"));
+    let request_url = format!("{todoist_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
+    let spinner = maybe_start_spinner(config);
+    let response = Client::new()
+        .get(request_url)
+        .header(CONTENT_TYPE, "application/json")
+        .header(AUTHORIZATION, authorization)
+        .send()
+        .or(Err("Did not get response from server"))?;
 
-    let response = if let Some(false) = config.spinners {
-        Client::new()
-            .get(request_url)
-            .header(CONTENT_TYPE, "application/json")
-            .header(AUTHORIZATION, authorization)
-            .send()
-            .or(Err("Did not get response from server"))?
-    } else {
-        let mut sp = Spinner::new(SPINNER, MESSAGE.into());
-        let response = Client::new()
-            .get(request_url)
-            .header(CONTENT_TYPE, "application/json")
-            .header(AUTHORIZATION, authorization)
-            .send()
-            .or(Err("Did not get response from server"))?;
-
-        sp.stop();
-        print!("\x1b[2K\r");
-        response
-    };
+    maybe_stop_spinner(spinner);
 
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)
@@ -288,6 +253,25 @@ fn new_uuid() -> String {
     }
 }
 
+fn maybe_start_spinner(config: Config) -> Option<Spinner> {
+    match env::var("DISABLE_SPINNER") {
+        Ok(_) => None,
+        _ => {
+            if let Some(true) = config.spinners {
+                let sp = Spinner::new(SPINNER, MESSAGE.into());
+                Some(sp)
+            } else {
+                None
+            }
+        }
+    }
+}
+fn maybe_stop_spinner(spinner: Option<Spinner>) {
+    if let Some(mut sp) = spinner {
+        sp.stop();
+        print!("\x1b[2K\r");
+    };
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -190,6 +190,32 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
     }
 }
 
+/// Put dates on all items without dates
+pub fn date_items(config: &Config, project_name: &str) -> Result<String, String> {
+    let project_id = projects::project_id(config, project_name)?;
+
+    let items = request::items_for_project(config, &project_id)?;
+
+    let undated_items: Vec<Item> = items
+        .into_iter()
+        .filter(|item| item.due.is_none())
+        .collect::<Vec<Item>>();
+
+    if undated_items.is_empty() {
+        Ok(format!("No tasks to date in {project_name}")
+            .green()
+            .to_string())
+    } else {
+        for item in undated_items.iter() {
+            println!("{}", item.fmt(config));
+            let due_string = config::get_input("Input a date in natural language")?;
+            request::update_item_due(config.clone(), item.to_owned(), due_string)?;
+        }
+        Ok(format!("Successfully prioritized {project_name}")
+            .green()
+            .to_string())
+    }
+}
 pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
     println!("{}", item.fmt(&config));
 

@@ -32,6 +32,7 @@ struct Arguments<'a> {
     remove_project: Option<&'a str>,
     sort_inbox: bool,
     prioritize_tasks: bool,
+    date_tasks: bool,
     scheduled_items: bool,
 }
 
@@ -68,6 +69,7 @@ fn main() {
         .arg(
             flag_arg("complete task", 'c', "complete", "Complete the last task fetched with next")
                             )
+
         .arg(
             flag_arg("list projects", 'l', "list", "List all projects in the local config."),
         )
@@ -96,6 +98,10 @@ fn main() {
         )
         .arg(
             flag_arg("prioritize tasks", 'z', "prioritize", "Assign priorities to tasks. Can specify project option, defaults to inbox.")
+        )
+
+        .arg(
+            flag_arg("date tasks", 'd', "date tasks", "Assign dates to tasks without dates. Can specify project option, defaults to inbox.")
         )
         .arg(
             flag_arg("scheduled items", 'e', "scheduled", "Returns items that are today and have a time. Can specify project option, defaults to inbox.")
@@ -134,6 +140,8 @@ fn main() {
             .get_one::<String>("configuration path")
             .map(|s| s.as_str()),
         prioritize_tasks: has_flag(matches.clone(), "prioritize tasks"),
+
+        date_tasks: has_flag(matches.clone(), "date tasks"),
         scheduled_items: has_flag(matches.clone(), "scheduled items"),
     };
 
@@ -166,6 +174,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             sort_inbox: false,
             prioritize_tasks: false,
             scheduled_items: false,
+            date_tasks: false,
             config_path: _,
         } => projects::add_item_to_project(config, &task, project),
         Arguments {
@@ -179,6 +188,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::add_item_to_project(config, &task, "inbox"),
@@ -193,6 +203,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::next_item(config, project),
@@ -208,6 +219,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::next_item_interactive(config, project),
@@ -222,6 +234,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => match request::complete_item(config) {
@@ -239,6 +252,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::list(config),
@@ -253,6 +267,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::add(config, params),
@@ -267,6 +282,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: Some(project_name),
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::remove(config, project_name),
@@ -281,6 +297,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: true,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::sort_inbox(config),
@@ -295,6 +312,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: true,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::prioritize_items(&config, "inbox"),
@@ -309,6 +327,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: true,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::prioritize_items(&config, project_name),
@@ -323,6 +342,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: true,
             config_path: _,
         } => projects::scheduled_items(&config, "inbox"),
@@ -337,9 +357,26 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: true,
             config_path: _,
         } => projects::scheduled_items(&config, project_name),
+
+        Arguments {
+            new_task: None,
+            project: None,
+            next_task: false,
+            next_task_interactive: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            date_tasks: true,
+            scheduled_items: false,
+            config_path: _,
+        } => projects::date_items(&config, "inbox"),
         Arguments {
             new_task: None,
             project: Some(project_name),
@@ -351,6 +388,22 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: true,
+            scheduled_items: false,
+            config_path: _,
+        } => projects::date_items(&config, project_name),
+        Arguments {
+            new_task: None,
+            project: Some(project_name),
+            next_task: false,
+            next_task_interactive: false,
+            complete_task: false,
+            list_projects: false,
+            add_project: None,
+            remove_project: None,
+            sort_inbox: false,
+            prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => projects::all_items(&config, project_name),
@@ -365,6 +418,7 @@ fn dispatch(arguments: Arguments) -> Result<String, String> {
             remove_project: None,
             sort_inbox: false,
             prioritize_tasks: false,
+            date_tasks: false,
             scheduled_items: false,
             config_path: _,
         } => Err(String::from(

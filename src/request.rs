@@ -101,6 +101,15 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
     Ok(String::from("✓"))
 }
 
+/// Update due date for item using natural language
+pub fn update_item_due(config: Config, item: Item, due_string: String) -> Result<String, String> {
+    let body = json!({ "due_string": due_string });
+    let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
+
+    post_todoist_rest(config, url, body)?;
+    // Does not pass back an item
+    Ok(String::from("✓"))
+}
 /// Complete the last item returned by "next item"
 pub fn complete_item(config: Config) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
@@ -408,6 +417,26 @@ mod tests {
         let config = Config::new("12341234", Some(server.url())).unwrap();
 
         let response = update_item_priority(config, item, 4);
+        mock.assert();
+        assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[test]
+    fn should_update_date_on_an_item() {
+        let item = test::helpers::item_fixture();
+        let url: &str = &format!("{}{}", "/rest/v2/tasks/", item.id);
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", url)
+            .with_status(204)
+            .with_header("content-type", "application/json")
+            .with_body(&test::responses::sync())
+            .create();
+
+        let config = Config::new("12341234", Some(server.url())).unwrap();
+
+        let response = update_item_due(config, item, "today".to_string());
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

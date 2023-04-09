@@ -6,6 +6,6 @@ mv PKGBUILD ../tod-bin/
 rm *.tar.gz
 cd ../tod-bin/
 git add .
-git commit -m new version
+git commit -m "new version"
 git push aur
 cd ../tod

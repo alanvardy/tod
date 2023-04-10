@@ -1,5 +1,6 @@
+#!/bin/sh
 # Does not cover complete function
-
+# Run it manually to ensure that we didn't break clap
 echo "== TESTING -t TEST DELETE ME PLEASE ==" && \
 cargo run -- -t TEST DELETE ME PLEASE && \
 echo "== TESTING -t TEST ==" && \

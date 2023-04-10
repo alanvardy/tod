@@ -1,3 +1,4 @@
+#!/bin/sh
 cd ../tod-bin/
 git pull
 cd ../tod/

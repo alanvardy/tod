@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-04-09 v0.3.9
+
 - Added ability to date tasks without due dates with `-d`
 
 ## 2023-04-08 v0.3.8

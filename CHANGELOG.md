@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Includes overdue tasks in dating tasks
+## 2023-04-12 v0.3.10
+
+- Include overdue tasks in date tasks functionality
 
 ## 2023-04-09 v0.3.9
 

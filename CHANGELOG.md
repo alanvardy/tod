@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Includes overdue tasks in dating tasks
+
 ## 2023-04-09 v0.3.9
 
 - Added ability to date tasks without due dates with `-d`

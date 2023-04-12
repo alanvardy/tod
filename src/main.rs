@@ -101,7 +101,7 @@ fn main() {
         )
 
         .arg(
-            flag_arg("date tasks", 'd', "date tasks", "Assign dates to tasks without dates. Can specify project option, defaults to inbox.")
+            flag_arg("date tasks", 'd', "date tasks", "Assign dates to tasks without dates or overdue. Can specify project option, defaults to inbox.")
         )
         .arg(
             flag_arg("scheduled items", 'e', "scheduled", "Returns items that are today and have a time. Can specify project option, defaults to inbox.")

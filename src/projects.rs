@@ -198,7 +198,7 @@ pub fn date_items(config: &Config, project_name: &str) -> Result<String, String>
 
     let undated_items: Vec<Item> = items
         .into_iter()
-        .filter(|item| item.due.is_none())
+        .filter(|item| item.has_no_date() || item.is_overdue(config))
         .collect::<Vec<Item>>();
 
     if undated_items.is_empty() {

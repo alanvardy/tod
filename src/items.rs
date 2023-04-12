@@ -164,7 +164,7 @@ impl Item {
         }
     }
 
-    fn has_no_date(&self) -> bool {
+    pub fn has_no_date(&self) -> bool {
         self.due.is_none()
     }
 
@@ -180,7 +180,7 @@ impl Item {
         }
     }
 
-    fn is_overdue(&self, config: &Config) -> bool {
+    pub fn is_overdue(&self, config: &Config) -> bool {
         match self.clone().datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date, config),

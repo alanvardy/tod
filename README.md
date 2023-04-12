@@ -82,7 +82,7 @@ Options:
   -z, --prioritize
           Assign priorities to tasks. Can specify project option, defaults to inbox.
   -d, --date tasks
-          Assign dates to tasks without dates. Can specify project option, defaults to inbox.
+          Assign dates to tasks without dates or overdue. Can specify project option, defaults to inbox.
   -e, --scheduled
           Returns items that are today and have a time. Can specify project option, defaults to inbox.
   -o, --config <CONFIGURATION PATH>

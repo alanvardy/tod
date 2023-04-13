@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Update tod.gif to demonstrate current feel of app
+- Check for TODO and dbg! on CI
+
 ## 2023-04-12 v0.3.10
 
 - Include overdue tasks in date tasks functionality

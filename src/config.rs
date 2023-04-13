@@ -43,7 +43,7 @@ impl Config {
 
     pub fn create(self) -> Result<Config, String> {
         let json = json!(self).to_string();
-        let mut file = fs::File::create(dbg!(&self.path)).or(Err("Could not create file"))?;
+        let mut file = fs::File::create(&self.path).or(Err("Could not create file"))?;
         file.write_all(json.as_bytes())
             .or(Err("Could not write to file"))?;
         println!("Config successfully created in {}", &self.path);

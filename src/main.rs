@@ -1,7 +1,6 @@
 #[cfg(test)]
 #[macro_use]
 extern crate matches;
-
 extern crate clap;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};

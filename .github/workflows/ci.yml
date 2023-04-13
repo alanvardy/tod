@@ -34,6 +34,40 @@ jobs:
         with:
           command: check
 
+  todos:
+    name: todos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-index-
+      - name: cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-check-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-registry-check-
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: ./lint_string.sh "TODO "
+      - run: ./lint_string.sh "TODO:"
+      - run: ./lint_string.sh "FIXME "
+      - run: ./lint_string.sh "FIXME:"
+      - run: ./lint_string.sh "todo "
+      - run: ./lint_string.sh "todo:"
+      - run: ./lint_string.sh "fixme "
+      - run: ./lint_string.sh "fixme:"
+      - run: ./lint_string.sh "dbg!"
+
   test:
     name: test
     runs-on: ubuntu-latest

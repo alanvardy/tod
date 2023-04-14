@@ -141,6 +141,25 @@ pub mod responses {
     }",
         )
     }
+    pub fn sections() -> String {
+        String::from(
+            "[
+              {
+              \"id\": \"1234\",
+              \"project_id\": \"5678\",
+              \"order\": 1,
+              \"name\": \"Bread\"
+              },
+              {
+              \"id\": \"9012\",
+              \"project_id\": \"3456\",
+              \"order\": 2,
+              \"name\": \"Meat\"
+              }
+            ]
+            ",
+        )
+    }
 
     pub fn versions() -> String {
         format!(

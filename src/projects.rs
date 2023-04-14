@@ -283,6 +283,23 @@ mod tests {
     const TIME: &str = "16:59";
 
     #[test]
+    fn should_add_and_remove_projects() {
+        let config = Config::new("123123", None).unwrap();
+        let config = Config {
+            path: "tests/project_test_config".to_string(),
+            ..config
+        };
+
+        config.clone().create().unwrap();
+
+        let params = vec![String::from("cool_project"), String::from("1")];
+        let result = add(config.clone(), params);
+        assert_eq!(result, Ok("✓".to_string()));
+
+        let result = remove(config, "cool_project");
+        assert_eq!(Ok("✓".to_string()), result);
+    }
+    #[test]
     fn should_list_projects() {
         let config = Config::new("123123", None)
             .unwrap()

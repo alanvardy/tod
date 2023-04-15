@@ -208,10 +208,16 @@ pub fn date_items(config: &Config, project_name: &str) -> Result<String, String>
     } else {
         for item in undated_items.iter() {
             println!("{}", item.fmt(config));
-            let due_string = config::get_input("Input a date in natural language")?;
-            request::update_item_due(config.clone(), item.to_owned(), due_string)?;
+            let due_string = config::get_input("Input a date in natural language or complete")?;
+            match due_string.as_str() {
+                "complete" | "c" => {
+                    let config = config.set_next_id(item.id.clone());
+                    request::complete_item(config)?
+                }
+                _ => request::update_item_due(config.clone(), item.to_owned(), due_string)?,
+            };
         }
-        Ok(format!("Successfully prioritized {project_name}")
+        Ok(format!("Successfully dated {project_name}")
             .green()
             .to_string())
     }

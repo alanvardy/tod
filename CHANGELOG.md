@@ -4,6 +4,7 @@
 
 - Update tod.gif to demonstrate current feel of app
 - Check for TODO and dbg! on CI
+- Allow completing tasks as one of the options when dating them
 
 ## 2023-04-12 v0.3.10
 

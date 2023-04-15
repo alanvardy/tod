@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-04-15 v0.3.11
+
 - Update tod.gif to demonstrate current feel of app
 - Check for TODO and dbg! on CI
 - Allow completing tasks as one of the options when dating them

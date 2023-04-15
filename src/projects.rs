@@ -208,7 +208,7 @@ pub fn date_items(config: &Config, project_name: &str) -> Result<String, String>
     } else {
         for item in undated_items.iter() {
             println!("{}", item.fmt(config));
-            let due_string = config::get_input("Input a date in natural language or complete")?;
+            let due_string = config::get_input("Input a date in natural language or (c)omplete")?;
             match due_string.as_str() {
                 "complete" | "c" => {
                     let config = config.set_next_id(item.id.clone());

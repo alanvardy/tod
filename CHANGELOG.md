@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Break the whole API and move over to GitHub CLI inspired commands i.e. `tod task create` instead of `tod -tp`.
+
 ## 2023-04-15 v0.3.11
 
 - Update tod.gif to demonstrate current feel of app

@@ -23,17 +23,10 @@ pub fn list(config: Config) -> Result<String, String> {
 }
 
 /// Add a project to the projects HashMap in Config
-pub fn add(config: Config, params: Vec<String>) -> Result<String, String> {
-    let mut params = params;
-    let num = params
-        .pop()
-        .ok_or(ADD_ERROR)?
-        .parse::<u32>()
-        .or(Err(ADD_ERROR))?;
+pub fn add(config: Config, name: String, id: String) -> Result<String, String> {
+    let id = id.parse::<u32>().or(Err(ADD_ERROR))?;
 
-    let name = params.pop().ok_or(ADD_ERROR)?;
-
-    config.add_project(name, num).save()
+    config.add_project(name, id).save()
 }
 
 /// Remove a project from the projects HashMap in Config
@@ -148,20 +141,24 @@ pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> 
     Ok(buffer)
 }
 
-/// Empty the inbox by sending items to other projects one at a time
-pub fn sort_inbox(config: Config) -> Result<String, String> {
-    let inbox_id = projects::project_id(&config, "inbox")?;
+/// Empty a project by sending items to other projects one at a time
+pub fn empty(config: Config, project_name: &str) -> Result<String, String> {
+    let id = projects::project_id(&config, project_name)?;
 
-    let items = request::items_for_project(&config, &inbox_id)?;
+    let items = request::items_for_project(&config, &id)?;
 
     if items.is_empty() {
-        Ok(green_string("No tasks to sort in inbox"))
+        Ok(green_string(&format!(
+            "No tasks to empty from {project_name}"
+        )))
     } else {
         projects::list(config.clone())?;
         for item in items.iter() {
             move_item_to_project(config.clone(), item.to_owned())?;
         }
-        Ok(green_string("Successfully sorted inbox"))
+        Ok(green_string(&format!(
+            "Successfully emptied {project_name}"
+        )))
     }
 }
 
@@ -191,7 +188,7 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
 }
 
 /// Put dates on all items without dates
-pub fn date_items(config: &Config, project_name: &str) -> Result<String, String> {
+pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(config, project_name)?;
 
     let items = request::items_for_project(config, &project_id)?;
@@ -262,8 +259,12 @@ pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String
 }
 
 /// Add item to project with natural language processing
-pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<String, String> {
-    let item = request::add_item_to_inbox(&config, task)?;
+pub fn add_item_to_project(
+    config: Config,
+    content: String,
+    project: &str,
+) -> Result<String, String> {
+    let item = request::add_item_to_inbox(&config, &content)?;
 
     match project {
         "inbox" | "i" => Ok(green_string("✓")),
@@ -274,7 +275,7 @@ pub fn add_item_to_project(config: Config, task: &str, project: &str) -> Result<
     }
 }
 
-fn green_string(str: &str) -> String {
+pub fn green_string(str: &str) -> String {
     String::from(str).green().to_string()
 }
 
@@ -285,7 +286,7 @@ mod tests {
     use mockito;
     use pretty_assertions::assert_eq;
 
-    /// Need to adjust this value forward or back an hourwhen timezone changes
+    /// Need to adjust this value forward or back an hour when timezone changes
     const TIME: &str = "16:59";
 
     #[test]
@@ -298,8 +299,7 @@ mod tests {
 
         config.clone().create().unwrap();
 
-        let params = vec![String::from("cool_project"), String::from("1")];
-        let result = add(config.clone(), params);
+        let result = add(config.clone(), "cool_project".to_string(), "1".to_string());
         assert_eq!(result, Ok("✓".to_string()));
 
         let result = remove(config, "cool_project");

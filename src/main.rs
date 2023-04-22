@@ -5,6 +5,7 @@ extern crate clap;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use colored::*;
+use config::Config;
 
 mod config;
 mod items;
@@ -19,132 +20,41 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
 
-struct Arguments<'a> {
-    new_task: Option<String>,
-    config_path: Option<&'a str>,
-    project: Option<&'a str>,
-    next_task: bool,
-    next_task_interactive: bool,
-    complete_task: bool,
-    list_projects: bool,
-    add_project: Option<Vec<String>>,
-    remove_project: Option<&'a str>,
-    sort_inbox: bool,
-    prioritize_tasks: bool,
-    date_tasks: bool,
-    scheduled_items: bool,
-}
-
+#[cfg(not(tarpaulin_include))]
 fn main() {
-    let app = Command::new(APP)
-        .version(VERSION)
-        .author(AUTHOR)
-        .about(ABOUT);
-    let matches = app
-        .arg(
-            Arg::new("new task")
-                .short('t')
-                .long("task")
-                .required(false)
-                .action(ArgAction::Append)
-                .num_args(1..)
-                .value_parser(clap::value_parser!(String))
-                .help(
-                    "Create a new task with text. Can specify project option, defaults to inbox.",
-                ),
-        )
-        .arg(
-            Arg::new("project")
-                .short('p')
-                .long("project")
-                .required(false)
-                .value_name("PROJECT NAME")
-                .help("The project namespace, for filtering other commands, use by itself to list all tasks for the project"),
-        )
-        .arg(
-            flag_arg("next task", 'n', "next", "Get the next task by priority. Requires project option.")                    )      
-        .arg(
-            flag_arg("next task (interactive)", 'x', "nextinteractive", "Fetches tasks one at a time by priority, and completes with an interactive prompt. Requires project option.") )
-        .arg(
-            flag_arg("complete task", 'c', "complete", "Complete the last task fetched with next")
-                            )
+    let matches = cmd().get_matches();
 
-        .arg(
-            flag_arg("list projects", 'l', "list", "List all projects in the local config."),
-        )
-        .arg(
-            Arg::new("add project")
-                .short('a')
-                .long("add")
-                .required(false)
-                .action(ArgAction::Append)
-                .num_args(2)
-                .value_parser(clap::value_parser!(String))
-                .value_names(["PROJECT NAME", "PROJECT ID"])
-                .help("Add a project to config with id"),
-        )
-        .arg(
-            Arg::new("remove project")
-                .short('r')
-                .long("remove")
-                .num_args(1)
-                .required(false)
-                .value_name("PROJECT NAME")
-                .help("Remove a project from config by name"),
-        )
-        .arg(
-            flag_arg("sort inbox", 's', "sort", "Sort inbox by moving tasks into projects")
-        )
-        .arg(
-            flag_arg("prioritize tasks", 'z', "prioritize", "Assign priorities to tasks. Can specify project option, defaults to inbox.")
-        )
-
-        .arg(
-            flag_arg("date tasks", 'd', "date tasks", "Assign dates to tasks without dates or overdue. Can specify project option, defaults to inbox.")
-        )
-        .arg(
-            flag_arg("scheduled items", 'e', "scheduled", "Returns items that are today and have a time. Can specify project option, defaults to inbox.")
-        )
-        .arg(
-            Arg::new("configuration path")
-                .short('o')
-                .long("config")
-                .num_args(1)
-                .required(false)
-                .value_name("CONFIGURATION PATH")
-                .help("Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg"),
-        )
-        .get_matches();
-
-    let new_task = matches
-        .get_many("new task")
-        .map(|values| values.cloned().collect::<Vec<String>>().join(" "));
-    let add_project = matches
-        .get_many("add project")
-        .map(|values| values.cloned().collect::<Vec<String>>());
-
-    let arguments = Arguments {
-        new_task,
-        project: matches.get_one::<String>("project").map(|s| s.as_str()),
-        next_task: has_flag(matches.clone(), "next task"),
-        next_task_interactive: has_flag(matches.clone(), "next task (interactive)"),
-        complete_task: has_flag(matches.clone(), "complete task"),
-        list_projects: has_flag(matches.clone(), "list projects"),
-        sort_inbox: has_flag(matches.clone(), "sort inbox"),
-        add_project,
-        remove_project: matches
-            .get_one::<String>("remove project")
-            .map(|s| s.as_str()),
-        config_path: matches
-            .get_one::<String>("configuration path")
-            .map(|s| s.as_str()),
-        prioritize_tasks: has_flag(matches.clone(), "prioritize tasks"),
-
-        date_tasks: has_flag(matches.clone(), "date tasks"),
-        scheduled_items: has_flag(matches.clone(), "scheduled items"),
+    let result = match matches.subcommand() {
+        None => {
+            let new_task = matches
+                .get_many("quickadd")
+                .map(|values| values.cloned().collect::<Vec<String>>().join(" "));
+            match new_task {
+                None => Err(cmd().render_long_help().to_string()),
+                Some(text) => quickadd(&matches, text),
+            }
+        }
+        Some(("task", task_matches)) => match task_matches.subcommand() {
+            Some(("create", m)) => task_create(m),
+            Some(("list", m)) => task_list(m),
+            Some(("next", m)) => task_next(m),
+            Some(("complete", m)) => task_complete(m),
+            _ => unreachable!(),
+        },
+        Some(("project", project_matches)) => match project_matches.subcommand() {
+            Some(("list", m)) => project_list(m),
+            Some(("add", m)) => project_add(m),
+            Some(("remove", m)) => project_remove(m),
+            Some(("process", m)) => project_process(m),
+            Some(("empty", m)) => project_empty(m),
+            Some(("schedule", m)) => project_schedule(m),
+            Some(("prioritize", m)) => project_prioritize(m),
+            _ => unreachable!(),
+        },
+        _ => unreachable!(),
     };
 
-    match dispatch(arguments) {
+    match result {
         Ok(text) => {
             println!("{text}");
             std::process::exit(0);
@@ -156,283 +66,204 @@ fn main() {
     }
 }
 
-fn dispatch(arguments: Arguments) -> Result<String, String> {
-    let config_path = arguments.config_path.map(|s| s.to_string());
-    let config: config::Config = config::get_or_create(config_path)?;
+fn cmd() -> Command {
+    Command::new(APP)
+        .version(VERSION)
+        .author(AUTHOR)
+        .about(ABOUT)
+        .arg_required_else_help(true)
+        .propagate_version(true)
+        .arg(config_arg())
+        .arg(
+            Arg::new("quickadd")
+                .short('q')
+                .long("quickadd")
+                .required(false)
+                .action(ArgAction::Append)
+                .num_args(1..)
+                .value_parser(clap::value_parser!(String))
+                .help(
+                    "Create a new task with natural language processing.",
+                ),
+        )
+        .subcommands([
+            Command::new("task")
+                    .arg_required_else_help(true)
+                    .propagate_version(true)
+                    .subcommand_required(true)
+                    .subcommands([
+                       Command::new("create").about("Create a new task")
+                         .arg(config_arg())
+                         .arg(content_arg())
+                         .arg(project_arg()),
+                       Command::new("list").about("List all tasks in a project")
+                         .arg(config_arg())
+                         .arg(project_arg())
+                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today")),
+                       Command::new("next").about("Get the next task by priority")
+                         .arg(config_arg())
+                         .arg(project_arg()),
+                       Command::new("complete").about("Complete the last task fetched with the next command")
+                         .arg(config_arg())
+                ]),
+            Command::new("project")
+                   .arg_required_else_help(true)
+                   .propagate_version(true)
+                   .subcommand_required(true)
+                   .subcommands([
+                       Command::new("list").about("List all projects in config")
+                         .arg(config_arg()),
+                       Command::new("add").about("Add a project to config (not Todoist)")
+                        .arg(config_arg())
+                        .arg(name_arg())
+                        .arg(id_arg()),
+                       Command::new("remove").about("Remove a project from config (not Todoist)")
+                        .arg(config_arg())
+                        .arg(project_arg()),
+                       Command::new("empty").about("Empty a project by putting tasks in other projects")
+                        .arg(config_arg())
+                        .arg(project_arg()),
+                       Command::new("schedule").about("Assign dates to all tasks individually")
+                        .arg(config_arg())
+                        .arg(project_arg()),
+                       Command::new("prioritize").about("Give every task a priority")
+                        .arg(config_arg())
+                        .arg(project_arg()),
+                       Command::new("process").about("Complete all tasks that are due today or undated in a project individually in priority order")
+                        .arg(config_arg())
+                        .arg(project_arg())
+                ]
+                    )
+        ]
+        )
+}
 
-    match arguments {
-        Arguments {
-            new_task: Some(task),
-            project: Some(project),
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            scheduled_items: false,
-            date_tasks: false,
-            config_path: _,
-        } => projects::add_item_to_project(config, &task, project),
-        Arguments {
-            new_task: Some(task),
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::add_item_to_project(config, &task, "inbox"),
-        Arguments {
-            new_task: None,
-            project: Some(project),
-            next_task: true,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::next_item(config, project),
+fn has_flag(matches: ArgMatches, id: &'static str) -> bool {
+    matches.get_one::<String>(id) == Some(&String::from("yes"))
+}
+fn fetch_config(matches: &ArgMatches) -> Result<Config, String> {
+    let config_path = matches.get_one::<String>("config").map(|s| s.to_owned());
 
-        Arguments {
-            new_task: None,
-            project: Some(project),
-            next_task: false,
-            next_task_interactive: true,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::next_item_interactive(config, project),
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: true,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => match request::complete_item(config) {
-            Ok(_) => Ok(String::from("✓")),
-            Err(err) => Err(err),
-        },
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: true,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::list(config),
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: Some(params),
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::add(config, params),
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: Some(project_name),
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::remove(config, project_name),
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: true,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::sort_inbox(config),
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: true,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::prioritize_items(&config, "inbox"),
-        Arguments {
-            new_task: None,
-            project: Some(project_name),
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: true,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::prioritize_items(&config, project_name),
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: true,
-            config_path: _,
-        } => projects::scheduled_items(&config, "inbox"),
-        Arguments {
-            new_task: None,
-            project: Some(project_name),
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: true,
-            config_path: _,
-        } => projects::scheduled_items(&config, project_name),
+    config::get_or_create(config_path)
+}
 
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: true,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::date_items(&config, "inbox"),
-        Arguments {
-            new_task: None,
-            project: Some(project_name),
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: true,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::date_items(&config, project_name),
-        Arguments {
-            new_task: None,
-            project: Some(project_name),
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => projects::all_items(&config, project_name),
-        Arguments {
-            new_task: None,
-            project: None,
-            next_task: false,
-            next_task_interactive: false,
-            complete_task: false,
-            list_projects: false,
-            add_project: None,
-            remove_project: None,
-            sort_inbox: false,
-            prioritize_tasks: false,
-            date_tasks: false,
-            scheduled_items: false,
-            config_path: _,
-        } => Err(String::from(
-            "Tod cannot be run without parameters. To see available parameters use --help",
-        )),
-        _ => Err(String::from(
-            "Invalid parameters. For more information try --help",
-        )),
+fn fetch_string(matches: &ArgMatches, field: &str, prompt: &str) -> Result<String, String> {
+    let argument_content = matches.get_one::<String>(field).map(|s| s.to_owned());
+    match argument_content {
+        Some(string) => Ok(string),
+        None => config::get_input(prompt),
     }
 }
 
-fn flag_arg(id: &'static str, short: char, long: &'static str, help: &'static str) -> Arg {
+fn fetch_project(matches: &ArgMatches, config: Config) -> Result<String, String> {
+    let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
+    match project_content {
+        Some(string) => Ok(string),
+        None => {
+            let mut options = config
+                .projects
+                .keys()
+                .map(|k| k.to_owned())
+                .collect::<Vec<String>>();
+            options.sort();
+
+            config::select_input("Select project", options)
+        }
+    }
+}
+
+fn task_create(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let content = fetch_string(matches, "content", "Content")?;
+    let project = fetch_project(matches, config.clone())?;
+
+    projects::add_item_to_project(config, content, &project)
+}
+
+fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+
+    request::add_item_to_inbox(&config, &text)?;
+    Ok(projects::green_string("✓"))
+}
+
+fn task_list(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, config.clone())?;
+
+    if has_flag(matches.clone(), "scheduled") {
+        projects::scheduled_items(&config, &project)
+    } else {
+        projects::all_items(&config, &project)
+    }
+}
+
+fn task_next(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, config.clone())?;
+
+    projects::next_item(config, &project)
+}
+
+fn task_complete(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+
+    request::complete_item(config)
+}
+
+fn project_list(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+
+    projects::list(config)
+}
+
+fn project_add(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let name = fetch_string(matches, "name", "Enter project name or alias")?;
+    let id = fetch_string(matches, "id", "Enter ID of project")?;
+
+    projects::add(config, name, id)
+}
+
+fn project_remove(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, config.clone())?;
+
+    projects::remove(config, &project)
+}
+
+fn project_process(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, config.clone())?;
+
+    projects::next_item_interactive(config, &project)
+}
+
+fn project_empty(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, config.clone())?;
+
+    projects::empty(config, &project)
+}
+
+fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, config.clone())?;
+
+    projects::prioritize_items(&config, &project)
+}
+
+fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, config.clone())?;
+
+    projects::schedule(&config, &project)
+}
+
+fn flag_arg(id: &'static str, short: char, help: &'static str) -> Arg {
     Arg::new(id)
         .short(short)
-        .long(long)
+        .long(id)
         .value_parser(["yes", "no"])
         .num_args(0..1)
         .default_value("no")
@@ -441,6 +272,57 @@ fn flag_arg(id: &'static str, short: char, long: &'static str, help: &'static st
         .help(help)
 }
 
-fn has_flag(matches: ArgMatches, id: &'static str) -> bool {
-    matches.get_one::<String>(id) == Some(&String::from("yes"))
+fn config_arg() -> Arg {
+    Arg::new("config")
+        .short('o')
+        .long("config")
+        .num_args(1)
+        .required(false)
+        .value_name("CONFIGURATION PATH")
+        .help("Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg")
+}
+
+fn id_arg() -> Arg {
+    Arg::new("id")
+        .short('i')
+        .long("id")
+        .num_args(1)
+        .required(false)
+        .value_name("ID")
+        .help("Identification key")
+}
+
+fn content_arg() -> Arg {
+    Arg::new("content")
+        .short('c')
+        .long("content")
+        .num_args(1)
+        .required(false)
+        .value_name("TASK TEXT")
+        .help("Content for task")
+}
+
+fn name_arg() -> Arg {
+    Arg::new("name")
+        .short('n')
+        .long("name")
+        .num_args(1)
+        .required(false)
+        .value_name("PROJECT NAME")
+        .help("Name of project")
+}
+
+fn project_arg() -> Arg {
+    Arg::new("project")
+        .short('p')
+        .long("project")
+        .num_args(1)
+        .required(false)
+        .value_name("PROJECT NAME")
+        .help("The project into which the task will be added")
+}
+
+#[test]
+fn verify_cmd() {
+    cmd().debug_assert();
 }

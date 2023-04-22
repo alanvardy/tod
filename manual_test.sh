@@ -1,52 +1,41 @@
 #!/bin/sh
-# Does not cover complete function
+# Does not cover the complete function
 # Run it manually to ensure that we didn't break clap
-echo "== TESTING -t TEST DELETE ME PLEASE ==" && \
-cargo run -- -t TEST DELETE ME PLEASE && \
-echo "== TESTING -t TEST ==" && \
-cargo run -- -t TEST && \
-echo "== TESTING -t \"TEST\" ==" && \
-cargo run -- -t "TEST" && \
-echo "== TESTING -p physical -t TEST ==" && \
-cargo run -- -p physical  -t TEST && \
-echo "== TESTING -p physical  ==" && \
-cargo run -- -p physical  && \
-echo "== TESTING --project physical  ==" && \
-cargo run -- --project physical  && \
-echo "== TESTING -l ==" && \
-cargo run -- -l && \
-echo "== TESTING --list ==" && \
-cargo run -- --list && \
-echo "== TESTING -a test 123123 ==" && \
-cargo run -- -a test 123123 && \
-echo "== TESTING -r test ==" && \
-cargo run -- -r test && \
-echo "== TESTING --add test 123123 ==" && \
-cargo run -- --add test 123123 && \
-echo "== TESTING --remove test ==" && \
-cargo run -- --remove test && \
-echo "== TESTING -s ==" && \
-cargo run -- -s && \
-echo "== TESTING --sort ==" && \
-cargo run -- --sort && \
-echo "== TESTING -e ==" && \
-cargo run -- -e && \
-echo "== TESTING --scheduled ==" && \
-cargo run -- --scheduled && \
-echo "== TESTING --help ==" && \
-cargo run -- --help && \
-echo "== TESTING --prioritize ==" && \
-cargo run -- --prioritize && \
-echo "== TESTING -z ==" && \
-cargo run -- -z && \
-echo "== TESTING -l -o tests/tod.cfg  ==" && \
-cargo run -- -l -o tests/tod.cfg && \
-echo "== TESTING -n -p physical  ==" && \
-cargo run -- -n -p physical  && \
-echo "== TESTING -d -p physical  ==" && \
-cargo run -- -d -p physical  && \
-echo ""
-echo "== ======= =="
-echo "== SUCCESS =="
-echo "== ======= =="
 
+commands=(
+"cargo run -- -h"
+"cargo run -- task -h"
+"cargo run -- -q this is a test"
+"cargo run -- --quickadd this is a test"
+"cargo run -- task create -c \"test\""
+"cargo run -- task create --content \"test\""
+"cargo run -- task create -p digital -c \"test\""
+"cargo run -- task create --project digital --content \"test\""
+"cargo run -- task list"
+"cargo run -- task list -s"
+"cargo run -- task list --scheduled"
+"cargo run -- project -h"
+"cargo run -- project list"
+"cargo run -- project add --name test --id 2"
+"cargo run -- project remove --project test"
+"cargo run -- project add -n test -i 2"
+"cargo run -- project remove -p test"
+"cargo run -- project empty --project inbox"
+"cargo run -- project empty -p inbox"
+"cargo run -- project schedule --project digital"
+"cargo run -- project schedule -p physical"
+"cargo run -- project prioritize --project digital"
+"cargo run -- project prioritize -p physical"
+"cargo run -- project process -p inbox"
+"cargo run -- project process --project inbox"
+)
+
+for cmd in "${commands[@]}"
+do
+  echo "Executing command: $cmd"
+  eval "$cmd"
+  if [ $? -ne 0 ]; then
+    echo "Command failed: $cmd"
+    exit 1
+  fi
+done

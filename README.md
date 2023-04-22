@@ -27,7 +27,7 @@ Install Tod
 cargo install tod
 ```
 
-## Install from AUR
+## Install from AUR (for Arch-based Linux distributions)
 
 ```bash
 # Use yay or another AUR helper
@@ -58,39 +58,34 @@ Start with the help flag to get the latest commands
 
 A tiny unofficial Todoist client
 
-Usage: tod [OPTIONS]
+Usage: tod [OPTIONS] [COMMAND]
+
+Commands:
+  task     
+  project  
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
-  -t, --task <new task>...
-          Create a new task with text. Can specify project option, defaults to inbox.
-  -p, --project <PROJECT NAME>
-          The project namespace, for filtering other commands, use by itself to list all tasks for the project
-  -n, --next
-          Get the next task by priority. Requires project option.
-  -x, --nextinteractive
-          Fetches tasks one at a time by priority, and completes with an interactive prompt. Requires project option.
-  -c, --complete
-          Complete the last task fetched with next
-  -l, --list
-          List all projects in the local config.
-  -a, --add <PROJECT NAME> <PROJECT ID>
-          Add a project to config with id
-  -r, --remove <PROJECT NAME>
-          Remove a project from config by name
-  -s, --sort
-          Sort inbox by moving tasks into projects
-  -z, --prioritize
-          Assign priorities to tasks. Can specify project option, defaults to inbox.
-  -d, --date tasks
-          Assign dates to tasks without dates or overdue. Can specify project option, defaults to inbox.
-  -e, --scheduled
-          Returns items that are today and have a time. Can specify project option, defaults to inbox.
-  -o, --config <CONFIGURATION PATH>
-          Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
-  -h, --help
-          Print help
-  -V, --version
-          Print version
+  -o, --config <CONFIGURATION PATH>  Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
+  -q, --quickadd <quickadd>...       Create a new task with natural language processing.
+  -h, --help                         Print help
+  -V, --version                      Print version
+
+> tod task -h
+
+Usage: tod task <COMMAND>
+
+Commands:
+  create    Create a new task
+  list      List all tasks in a project
+  next      Get the next task by priority
+  complete  Complete the last task fetched with the next command
+  help      Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+
 ```
 
 - Add your most commonly used projects, the project ID is the last series of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
@@ -109,26 +104,29 @@ Options:
 ### Examples
 
 ```bash
-# Create a new task in inbox using natural language processing
-tod -t Buy milk from the grocery store tomorrow p1
+# Quickly create a task
+tod -q Buy more milk today
+
+# Create a new task (you will be prompted for content and project)
+tod task create
 
 # Create a task in a project
-tod -p myproject -t write more rust \\ with a description
+tod task create --content "Write more rust" --project code
 
 # Get the next task for a project
-tod -np myproject
+tod task next
 
 # Go through tasks with an interactive prompt, completing them in order of importance one at a time.
-tod -xp myproject
+tod project process
 
 # Complete the last "next task" and get another
-tod -c && tod -np myproject
+tod task complete && tod task next
 
 # Get your work schedule
-tod -ep work
+tod tasks list --scheduled --project work
 
 # Get all tasks for work
-tod -p work
+tod tasks list --project work
 ```
 
 ## Disabling spinners
@@ -141,17 +139,14 @@ I am a developer who uses Todoist to reduce stress and cognitive overhead, by de
 
 Some points around my general strategy:
 
-- Do one thing at a time, multi-tasking is an illusion (see `--next`)
-- Capture all tasks immediately with the inbox and add detail later (see `--task`)
-- Use prioritize and sort to batch process the inbox infrequently (see `--prioritize` and `--sort`)
+- Do one thing at a time, multi-tasking is an illusion (see `tod project process`)
+- Capture all tasks immediately with the inbox and add detail later (see `tod project empty`, `schedule`, and `prioritize`)
 - Make all your tasks "actions", concrete tasks that can be acted on. Add phone numbers, hyperlinks etc to your tasks
 - Batch process like things as infrequently as possible to lower context switching, i.e. clear your email inbox once per day, spam once per week.
 - Remember that the objective is to **get the important things done with less friction**, not just get more things done.
 - Further to the above point, make sure to leave yourself margin. It is in the spaces between the periouds work that we recover and get our best ideas.
 - Less projects are better than more projects
 - Use projects as "modes" where you only work in one at a time
-- Don't put a date on it unless it needs to be done that day
-- Don't put a time on it unless it is an appointment with yourself or others
 
 ## Related projects
 

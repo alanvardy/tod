@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Break the whole API and move over to GitHub CLI inspired commands i.e. `tod task create` instead of `tod -tp`.
+## 2023-05-06 v0.4.0
+
+- Break the whole API and move over to GitHub CLI inspired commands i.e. `tod task create` instead of `tod -tp`. This opens the path to adding many new features and eases the maintenance burden.
 
 ## 2023-04-15 v0.3.11
 

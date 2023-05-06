@@ -31,6 +31,11 @@ struct Body {
     items: Vec<Item>,
 }
 
+pub enum FormatType {
+    List,
+    Single,
+}
+
 enum DateTimeInfo {
     NoDateTime,
     Date {
@@ -44,7 +49,7 @@ enum DateTimeInfo {
 }
 
 impl Item {
-    pub fn fmt(&self, config: &Config) -> String {
+    pub fn fmt(&self, config: &Config, format: FormatType) -> String {
         let content = match self.priority {
             2 => self.content.blue(),
             3 => self.content.yellow(),
@@ -52,17 +57,21 @@ impl Item {
             _ => self.content.normal(),
         };
 
-        let description = match &*self.description {
-            "" => String::from(""),
-            _ => format!("\n{}", self.description),
+        let buffer = match format {
+            FormatType::List => String::from("  "),
+            FormatType::Single => String::from(""),
         };
 
+        let description = match &*self.description {
+            "" => String::from(""),
+            _ => format!("\n{buffer}{}", self.description),
+        };
         let due = match &self.datetimeinfo(config) {
             Ok(DateTimeInfo::Date { date, is_recurring }) => {
                 let recurring_icon = if *is_recurring { " ↻" } else { "" };
                 let date_string = time::format_date(date, config);
 
-                format!("\nDue: {date_string}{recurring_icon}")
+                format!("\n{buffer}Due: {date_string}{recurring_icon}")
             }
             Ok(DateTimeInfo::DateTime {
                 datetime,
@@ -71,13 +80,17 @@ impl Item {
                 let recurring_icon = if *is_recurring { " ↻" } else { "" };
                 let datetime_string = time::format_datetime(datetime, config);
 
-                format!("\nDue: {datetime_string}{recurring_icon}")
+                format!("\n{buffer}Due: {datetime_string}{recurring_icon}")
             }
             Ok(DateTimeInfo::NoDateTime) => String::from(""),
             Err(string) => string.clone(),
         };
 
-        format!("\n{content}{description}{due}")
+        let prefix = match format {
+            FormatType::List => String::from("- "),
+            FormatType::Single => String::from(""),
+        };
+        format!("{prefix}{content}{description}{due}")
     }
 
     /// Determines the numeric value of an item for sorting
@@ -242,7 +255,7 @@ pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item>
 }
 
 pub fn set_priority(config: Config, item: items::Item) {
-    println!("{}", item.fmt(&config));
+    println!("{}", item.fmt(&config, FormatType::Single));
 
     let options = vec!["1", "2", "3"].iter().map(|s| s.to_string()).collect();
     let priority =
@@ -331,12 +344,12 @@ mod tests {
         };
 
         let output = if test::helpers::supports_coloured_output() {
-            "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: 2021-08-13"
+            "\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: 2021-08-13"
         } else {
-            "\nGet gifts for the twins\nDue: 2021-08-13"
+            "Get gifts for the twins\nDue: 2021-08-13"
         };
 
-        assert_eq!(format!("{}", item.fmt(&config)), output);
+        assert_eq!(format!("{}", item.fmt(&config, FormatType::Single)), output);
     }
 
     #[test]
@@ -352,11 +365,11 @@ mod tests {
         };
 
         let output = if test::helpers::supports_coloured_output() {
-            "\n\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: Today"
+            "\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: Today"
         } else {
-            "\nGet gifts for the twins\nDue: Today"
+            "Get gifts for the twins\nDue: Today"
         };
-        assert_eq!(format!("{}", item.fmt(&config)), output);
+        assert_eq!(format!("{}", item.fmt(&config, FormatType::Single)), output);
     }
 
     #[test]

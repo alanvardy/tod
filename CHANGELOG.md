@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Speed up CI by improving caching
+
 ## 2023-05-06 v0.4.0
 
 - Break the whole API and move over to GitHub CLI inspired commands i.e. `tod task create` instead of `tod -tp`. This opens the path to adding many new features and eases the maintenance burden.

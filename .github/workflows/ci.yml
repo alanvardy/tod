@@ -11,20 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
-          path: ~/.cargo/git
-          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-index-
-      - name: cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-check-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-registry-check-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -39,20 +34,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
-          path: ~/.cargo/git
-          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-index-
-      - name: cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-check-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-registry-check-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-todos-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -73,20 +63,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
-          path: ~/.cargo/git
-          key: cargo-index-test-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-index-test-
-      - name: cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-test-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-registry-test-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -101,26 +86,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
-          path: ~/.cargo/git
-          key: cargo-index-coverage-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-index-coverage-
-      - name: cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-registry-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      - run: cargo install cargo-tarpaulin
+      - run: cargo install cargo-tarpaulin || true
       - run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1
@@ -130,20 +110,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
-          path: ~/.cargo/git
-          key: cargo-index-fmt-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-index-fmt-
-      - name: cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-registry-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-fmt-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -160,26 +135,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: cache cargo index
-        uses: actions/cache@v1
+      - uses: actions/cache@v3
         with:
-          path: ~/.cargo/git
-          key: cargo-index-clippy-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-index-clippy-
-      - name: cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-registry-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      - run: rustup component add clippy
+          components: clippy
       - uses: actions-rs/cargo@v1
         with:
           command: clippy

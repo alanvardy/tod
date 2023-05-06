@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::items::Item;
+use crate::items::{FormatType, Item};
 use crate::{config, items, projects, request};
 use colored::*;
 
@@ -51,7 +51,7 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
     match fetch_next_item(config.clone(), project_name) {
         Ok(Some(item)) => {
             config.set_next_id(item.id.clone()).save()?;
-            Ok(item.fmt(&config))
+            Ok(item.fmt(&config, FormatType::Single))
         }
         Ok(None) => Ok(green_string("No items on list")),
         Err(e) => Err(e),
@@ -91,7 +91,7 @@ fn handle_item(config: Config, item: Item) -> Option<Result<String, String>> {
         .iter()
         .map(|s| s.to_string())
         .collect();
-    println!("{}", item.fmt(&config));
+    println!("{}", item.fmt(&config, FormatType::Single));
     match config::select_input("Select an option", options) {
         Ok(string) => {
             if string == *"complete" {
@@ -120,7 +120,7 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
 
     for item in items::sort_by_datetime(filtered_items, config) {
         buffer.push('\n');
-        buffer.push_str(&item.fmt(config));
+        buffer.push_str(&item.fmt(config, FormatType::List));
     }
     Ok(buffer)
 }
@@ -136,7 +136,7 @@ pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> 
 
     for item in items::sort_by_datetime(items, config) {
         buffer.push('\n');
-        buffer.push_str(&item.fmt(config));
+        buffer.push_str(&item.fmt(config, FormatType::List));
     }
     Ok(buffer)
 }
@@ -204,7 +204,7 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
             .to_string())
     } else {
         for item in undated_items.iter() {
-            println!("{}", item.fmt(config));
+            println!("{}", item.fmt(config, FormatType::Single));
             let due_string = config::get_input("Input a date in natural language or (c)omplete")?;
             match due_string.as_str() {
                 "complete" | "c" => {
@@ -220,7 +220,7 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
     }
 }
 pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
-    println!("{}", item.fmt(&config));
+    println!("{}", item.fmt(&config, FormatType::Single));
 
     let mut options = config
         .projects
@@ -347,9 +347,9 @@ mod tests {
         config_with_timezone.clone().create().unwrap();
 
         let string = if test::helpers::supports_coloured_output() {
-            format!("\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: {TIME} ↻")
+            format!("\u{1b}[33mPut out recycling\u{1b}[0m\nDue: {TIME} ↻")
         } else {
-            format!("\nPut out recycling\nDue: {TIME} ↻")
+            format!("Put out recycling\nDue: {TIME} ↻")
         };
 
         assert_eq!(
@@ -386,9 +386,9 @@ mod tests {
         );
 
         let string = if test::helpers::supports_coloured_output() {
-            format!("\u{1b}[32mSchedule for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: {TIME} ↻")
+            format!("\u{1b}[32mSchedule for good\u{1b}[0m\n- \u{1b}[33mPut out recycling\u{1b}[0m\n  Due: {TIME} ↻")
         } else {
-            format!("Schedule for good\n\nPut out recycling\nDue: {TIME} ↻")
+            format!("Schedule for good\n- Put out recycling\n  Due: {TIME} ↻")
         };
         let result = scheduled_items(&config_with_timezone, "good");
         assert_eq!(result, Ok(string));
@@ -415,9 +415,9 @@ mod tests {
         };
 
         let string = if test::helpers::supports_coloured_output() {
-            format!("\u{1b}[32mTasks for good\u{1b}[0m\n\n\u{1b}[33mPut out recycling\u{1b}[0m\nDue: {TIME} ↻")
+            format!("\u{1b}[32mTasks for good\u{1b}[0m\n- \u{1b}[33mPut out recycling\u{1b}[0m\n  Due: {TIME} ↻")
         } else {
-            format!("Tasks for good\n\nPut out recycling\nDue: {TIME} ↻")
+            format!("Tasks for good\n- Put out recycling\n  Due: {TIME} ↻")
         };
         assert_eq!(all_items(&config_with_timezone, "good"), Ok(string));
         mock.assert();

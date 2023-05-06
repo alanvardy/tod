@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Speed up CI by improving caching
+- Improve formatting of tasks both individually and in lists
 
 ## 2023-05-06 v0.4.0
 

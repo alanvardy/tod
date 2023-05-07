@@ -138,15 +138,19 @@ fn cmd() -> Command {
         )
 }
 
+#[cfg(not(tarpaulin_include))]
 fn has_flag(matches: ArgMatches, id: &'static str) -> bool {
     matches.get_one::<String>(id) == Some(&String::from("yes"))
 }
+
+#[cfg(not(tarpaulin_include))]
 fn fetch_config(matches: &ArgMatches) -> Result<Config, String> {
     let config_path = matches.get_one::<String>("config").map(|s| s.to_owned());
 
     config::get_or_create(config_path)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn fetch_string(matches: &ArgMatches, field: &str, prompt: &str) -> Result<String, String> {
     let argument_content = matches.get_one::<String>(field).map(|s| s.to_owned());
     match argument_content {
@@ -155,6 +159,7 @@ fn fetch_string(matches: &ArgMatches, field: &str, prompt: &str) -> Result<Strin
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn fetch_project(matches: &ArgMatches, config: Config) -> Result<String, String> {
     let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
     match project_content {
@@ -172,6 +177,7 @@ fn fetch_project(matches: &ArgMatches, config: Config) -> Result<String, String>
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, "content", "Content")?;
@@ -180,6 +186,7 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     projects::add_item_to_project(config, content, &project)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
@@ -187,6 +194,7 @@ fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
     Ok(projects::green_string("✓"))
 }
 
+#[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, config.clone())?;
@@ -198,6 +206,7 @@ fn task_list(matches: &ArgMatches) -> Result<String, String> {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn task_next(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, config.clone())?;
@@ -205,18 +214,21 @@ fn task_next(matches: &ArgMatches) -> Result<String, String> {
     projects::next_item(config, &project)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn task_complete(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
     request::complete_item(config)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_list(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
     projects::list(config)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_add(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let name = fetch_string(matches, "name", "Enter project name or alias")?;
@@ -225,6 +237,7 @@ fn project_add(matches: &ArgMatches) -> Result<String, String> {
     projects::add(config, name, id)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_remove(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, config.clone())?;
@@ -232,6 +245,7 @@ fn project_remove(matches: &ArgMatches) -> Result<String, String> {
     projects::remove(config, &project)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_process(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, config.clone())?;
@@ -239,6 +253,7 @@ fn project_process(matches: &ArgMatches) -> Result<String, String> {
     projects::next_item_interactive(config, &project)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_empty(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, config.clone())?;
@@ -246,6 +261,7 @@ fn project_empty(matches: &ArgMatches) -> Result<String, String> {
     projects::empty(config, &project)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, config.clone())?;
@@ -253,6 +269,7 @@ fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
     projects::prioritize_items(&config, &project)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, config.clone())?;
@@ -260,6 +277,7 @@ fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     projects::schedule(&config, &project)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn flag_arg(id: &'static str, short: char, help: &'static str) -> Arg {
     Arg::new(id)
         .short(short)
@@ -272,6 +290,7 @@ fn flag_arg(id: &'static str, short: char, help: &'static str) -> Arg {
         .help(help)
 }
 
+#[cfg(not(tarpaulin_include))]
 fn config_arg() -> Arg {
     Arg::new("config")
         .short('o')
@@ -282,6 +301,7 @@ fn config_arg() -> Arg {
         .help("Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg")
 }
 
+#[cfg(not(tarpaulin_include))]
 fn id_arg() -> Arg {
     Arg::new("id")
         .short('i')
@@ -292,6 +312,7 @@ fn id_arg() -> Arg {
         .help("Identification key")
 }
 
+#[cfg(not(tarpaulin_include))]
 fn content_arg() -> Arg {
     Arg::new("content")
         .short('c')
@@ -302,6 +323,7 @@ fn content_arg() -> Arg {
         .help("Content for task")
 }
 
+#[cfg(not(tarpaulin_include))]
 fn name_arg() -> Arg {
     Arg::new("name")
         .short('n')
@@ -312,6 +334,7 @@ fn name_arg() -> Arg {
         .help("Name of project")
 }
 
+#[cfg(not(tarpaulin_include))]
 fn project_arg() -> Arg {
     Arg::new("project")
         .short('p')

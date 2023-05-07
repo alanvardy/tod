@@ -71,6 +71,11 @@ Options:
   -h, --help                         Print help
   -V, --version                      Print version
 
+```
+
+And also use it to dig into subcommands
+
+```bash
 > tod task -h
 
 Usage: tod task <COMMAND>

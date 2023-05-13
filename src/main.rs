@@ -217,8 +217,10 @@ fn task_next(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn task_complete(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-
-    request::complete_item(config)
+    match config.next_id {
+        Some(_) => request::complete_item(config),
+        None => Err("Nothing to complete, next task wasn't queued".to_string()),
+    }
 }
 
 #[cfg(not(tarpaulin_include))]

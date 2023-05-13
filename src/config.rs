@@ -77,6 +77,10 @@ impl Config {
         serde_json::from_str::<Config>(&json).map_err(|_| format!("Could not parse JSON:\n{json}"))
     }
 
+    pub fn reload(&self) -> Result<Self, String> {
+        Config::load(&self.path)
+    }
+
     pub fn set_path(self, path: &str) -> Config {
         Config {
             path: String::from(path),

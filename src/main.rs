@@ -219,7 +219,7 @@ fn task_complete(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     match config.next_id {
         Some(_) => request::complete_item(config),
-        None => Err("Nothing to complete, next task wasn't queued".to_string()),
+        None => Err("There is nothing to complete. Try to mark a task as 'next'.".to_string()),
     }
 }
 

@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::items::{FormatType, Item};
-use crate::request::items_for_project;
 use crate::{config, items, projects, request};
 use colored::*;
 
@@ -69,9 +68,9 @@ fn fetch_next_item(config: Config, project_name: &str) -> Result<Option<Item>, S
 }
 
 /// Get next items and give an interactive prompt for completing them one by one
-pub fn process_items_interactive(config: Config, project_name: &str) -> Result<String, String> {
+pub fn process_items(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name)?;
-    let items = items_for_project(&config, &project_id)?;
+    let items = request::items_for_project(&config, &project_id)?;
     let items = items::filter_not_in_future(items, &config)?;
     for item in items {
         config.set_next_id(item.id.clone()).save()?;

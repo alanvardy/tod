@@ -4,6 +4,7 @@
 
 - Speed up CI by improving caching
 - Improve formatting of tasks both individually and in lists
+- Return an error during complete task if there is no next task in config. Thank you, `@titoOdUA`
 
 ## 2023-05-06 v0.4.0
 
@@ -12,7 +13,7 @@
 ## 2023-04-15 v0.3.11
 
 - Update tod.gif to demonstrate current feel of app
-- Check for TODO and dbg! on CI
+- Check for `TODO` and `dbg!` on CI
 - Allow completing tasks as one of the options when dating them
 
 ## 2023-04-12 v0.3.10
@@ -25,7 +26,7 @@
 
 ## 2023-04-08 v0.3.8
 
-- Left some dbg! statements in the code like a doofus
+- Left some `dbg!` statements in the code like a doofus
 
 ## 2023-04-08 v0.3.7
 
@@ -42,7 +43,7 @@
 
 ## 2023-04-01 v0.3.4
 
-- Improve input prompts with the inquire library
+- Improve input prompts with the `inquire` library
 - Update dependencies
 
 ## 2023-03-21 v0.3.3
@@ -63,22 +64,22 @@
 
 ## 2022-10-18 v0.3.0
 
-- Todoist removed their v8 Sync API, this update switches to v9
+- `Todoist` removed their v8 Sync API, this update switches to v9
 
 ## 2022-10-02 v0.2.15
 
 - Update clap to new major version (it had breaking changes)
-- Add a shell script for manual testing that hits the Todoist API
+- Add a shell script for manual testing that hits the `Todoist` API
 
 ## 2022-07-16 v0.2.14
 
-- Fix a bug where the config file is moved but the path inside the config file is not altered
+- Fix a bug where the config file is moved, but the path inside the config file is not altered
 - Update dependencies
 
 ## 2022-07-06 v0.2.13
 
 - UPDATE: DO NOT USE THIS VERSION, use 0.2.14 instead, as the config change introduces a bug
-- Move config from `~/.tod.cfg` to `$XDG_CONFIG_HOME/tod.cfg` (i.e. `~/.config/tod.cfg`). Thank you @hyblm!
+- Move config from `~/.tod.cfg` to `$XDG_CONFIG_HOME/tod.cfg` (i.e. `~/.config/tod.cfg`). Thank you `@hyblm`!
 - If the config is in the old location, it will be moved to the new one
 - Update dependencies
 
@@ -92,7 +93,7 @@
 - Update dependencies
 - Add Dependabot
 - Add timezone to test cases
-- Update clap and resolve deprecations
+- Update clap and alter deprecated code
 
 ## 2022-01-01 v0.2.10
 
@@ -119,14 +120,14 @@
 
 - Update dependencies
 - Use exit code 1 when an error occurs, otherwise 0
-- Use the timezone specified by the Todoist response
+- Use the timezone specified by the `Todoist` response
 
 ## 2021-10-13 v0.2.5
 
 - Update dependencies
 - Adding releases
 - Added MIT license
-- GitIgnore binaries
+- Git ignore binaries
 - Added some philosophical ramblings to README
 
 ## 2021-10-03 v0.2.4
@@ -153,7 +154,7 @@
 
 - Add `--scheduled` feature
 - Refactor of codebase
-- Add pretty assertions and Mockito to dev dependencies
+- Add pretty assertions and `Mockito` to dev dependencies
 - Can now use natural language for creating tasks outside of inbox (sends a task to inbox and then moves it to the other project)
 
 ## 2021-09-14 v0.2.0
@@ -177,7 +178,7 @@
 ## 2021-09-06 v0.1.1
 
 - Breaking changes to `.tod.cfg` (added new keys)
-- Fetches the next item from your todo list based on
+- Fetches the next item from your to-do list based on
   - Date
   - Time
   - Priority

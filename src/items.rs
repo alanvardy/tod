@@ -254,8 +254,8 @@ pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item>
         .collect()
 }
 
-pub fn set_priority(config: Config, item: items::Item) {
-    println!("{}", item.fmt(&config, FormatType::Single));
+pub fn set_priority(config: &Config, item: items::Item) {
+    println!("{}", item.fmt(config, FormatType::Single));
 
     let options = vec!["1", "2", "3"].iter().map(|s| s.to_string()).collect();
     let priority =
@@ -264,15 +264,15 @@ pub fn set_priority(config: Config, item: items::Item) {
 
     match priority.as_str() {
         "1" => {
-            let config = config.set_next_id(item.id.clone());
+            let config = config.set_next_id(&item.id);
             request::update_item_priority(config, item, 2).expect("could not set priority");
         }
         "2" => {
-            let config = config.set_next_id(item.id.clone());
+            let config = config.set_next_id(&item.id);
             request::update_item_priority(config, item, 3).expect("could not set priority");
         }
         "3" => {
-            let config = config.set_next_id(item.id.clone());
+            let config = config.set_next_id(&item.id);
             request::update_item_priority(config, item, 4).expect("could not set priority");
         }
         _ => println!("Not a valid input, please enter 1, 2, or 3"),
@@ -284,6 +284,13 @@ mod tests {
     use super::*;
     use crate::test;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn set_priority_works() {
+        let config = test::helpers::config_fixture();
+        let item = test::helpers::item_fixture();
+        set_priority(&config, item)
+    }
 
     #[test]
     fn date_value_can_handle_date() {

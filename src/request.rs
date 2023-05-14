@@ -47,7 +47,7 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"text": task, "auto_reminder": true});
 
-    let json = post_todoist_sync(config.clone(), url, body)?;
+    let json = post_todoist_sync(config, url, body)?;
     items::json_to_item(json)
 }
 
@@ -55,23 +55,23 @@ pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
 pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project_id });
-    let json = post_todoist_sync(config.clone(), url, body)?;
+    let json = post_todoist_sync(config, url, body)?;
     items::json_to_items(json)
 }
 
 pub fn sections_for_project(config: &Config, project_id: &str) -> Result<Vec<Section>, String> {
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
-    let json = get_todoist_rest(config.clone(), url)?;
+    let json = get_todoist_rest(config, url)?;
     sections::json_to_sections(json)
 }
 
 /// Move an item to a different project
 pub fn move_item_to_project(
-    config: Config,
+    config: &Config,
     item: Item,
     project_name: &str,
 ) -> Result<String, String> {
-    let project_id = projects::project_id(&config, project_name)?;
+    let project_id = projects::project_id(config, project_name)?;
     let body = json!({"commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
@@ -80,7 +80,7 @@ pub fn move_item_to_project(
 }
 
 pub fn move_item_to_section(
-    config: Config,
+    config: &Config,
     item: Item,
     section_id: &str,
 ) -> Result<String, String> {
@@ -96,13 +96,13 @@ pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
 
-    post_todoist_rest(config, url, body)?;
+    post_todoist_rest(&config, url, body)?;
     // Does not pass back an item
     Ok(String::from("✓"))
 }
 
 /// Update due date for item using natural language
-pub fn update_item_due(config: Config, item: Item, due_string: String) -> Result<String, String> {
+pub fn update_item_due(config: &Config, item: Item, due_string: String) -> Result<String, String> {
     let body = json!({ "due_string": due_string });
     let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
 
@@ -111,14 +111,14 @@ pub fn update_item_due(config: Config, item: Item, due_string: String) -> Result
     Ok(String::from("✓"))
 }
 /// Complete the last item returned by "next item"
-pub fn complete_item(config: Config) -> Result<String, String> {
+pub fn complete_item(config: &Config) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
-    post_todoist_sync(config.clone(), url, body)?;
+    post_todoist_sync(config, url, body)?;
 
     if !cfg!(test) {
-        config.clear_next_id().save()?;
+        config.clone().clear_next_id().save()?;
     }
 
     // Does not pass back an item
@@ -127,20 +127,20 @@ pub fn complete_item(config: Config) -> Result<String, String> {
 
 /// Post to Todoist via sync API
 fn post_todoist_sync(
-    config: Config,
+    config: &Config,
     url: String,
     body: serde_json::Value,
 ) -> Result<String, String> {
     #[cfg(not(test))]
     let todoist_url: String = "https://api.todoist.com".to_string();
     #[cfg(not(test))]
-    let _placeholder = config.clone().mock_url;
+    let _placeholder = &config.mock_url;
 
     #[cfg(test)]
     let todoist_url: String = config.mock_url.clone().expect("Mock URL not set");
 
     let request_url = format!("{todoist_url}{url}");
-    let token = config.token.clone();
+    let token = &config.token;
 
     let spinner = maybe_start_spinner(config);
     let response = Client::new()
@@ -162,7 +162,7 @@ fn post_todoist_sync(
 
 /// Post to Todoist via REST api
 fn post_todoist_rest(
-    config: Config,
+    config: &Config,
     url: String,
     body: serde_json::Value,
 ) -> Result<String, String> {
@@ -172,7 +172,7 @@ fn post_todoist_rest(
     #[cfg(test)]
     let todoist_url: String = config.mock_url.clone().expect("Mock URL not set");
 
-    let token = config.token.clone();
+    let token = &config.token;
 
     let request_url = format!("{todoist_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
@@ -198,7 +198,7 @@ fn post_todoist_rest(
 
 // Combine get and post into one function
 /// Get Todoist via REST api
-fn get_todoist_rest(config: Config, url: String) -> Result<String, String> {
+fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> {
     #[cfg(not(test))]
     let todoist_url: String = "https://api.todoist.com".to_string();
 
@@ -262,7 +262,7 @@ fn new_uuid() -> String {
     }
 }
 
-fn maybe_start_spinner(config: Config) -> Option<Spinner> {
+fn maybe_start_spinner(config: &Config) -> Option<Spinner> {
     match env::var("DISABLE_SPINNER") {
         Ok(_) => None,
         _ => {
@@ -367,9 +367,9 @@ mod tests {
 
         let config = Config::new("12341234", Some(server.url()))
             .unwrap()
-            .set_next_id(String::from("112233"));
+            .set_next_id(&"112233".to_string());
 
-        let response = complete_item(config);
+        let response = complete_item(&config);
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
@@ -395,7 +395,7 @@ mod tests {
             mock_url: Some(server.url()),
             ..config
         };
-        let response = move_item_to_project(config, item, project_name);
+        let response = move_item_to_project(&config, item, project_name);
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));
@@ -436,7 +436,7 @@ mod tests {
 
         let config = Config::new("12341234", Some(server.url())).unwrap();
 
-        let response = update_item_due(config, item, "today".to_string());
+        let response = update_item_due(&config, item, "today".to_string());
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

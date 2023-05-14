@@ -266,6 +266,19 @@ mod tests {
     }
 
     #[test]
+    fn reload_config_should_work() {
+        let config = crate::test::helpers::config_fixture();
+        let mut config = config.create().expect("Failed to create test config");
+        config = config.add_project("testproj".to_string(), 1);
+        assert!(!&config.projects.is_empty());
+
+        let reloaded_config = config.reload().expect("Failed to reload config");
+        assert!(reloaded_config.projects.is_empty());
+
+        delete_config(&reloaded_config.path);
+    }
+
+    #[test]
     fn set_and_clear_next_id_should_work() {
         let config = Config::new("something", None).unwrap();
         assert_eq!(config.next_id, None);

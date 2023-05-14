@@ -267,7 +267,9 @@ mod tests {
 
     #[test]
     fn reload_config_should_work() {
-        let config = crate::test::helpers::config_fixture();
+        let mut config = crate::test::helpers::config_fixture();
+        let path = format!("{}{}", config.path, "reload");
+        config.path = path;
         let mut config = config.create().expect("Failed to create test config");
         config = config.add_project("testproj".to_string(), 1);
         assert!(!&config.projects.is_empty());

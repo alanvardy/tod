@@ -102,8 +102,8 @@ impl Config {
         Config { projects, ..self }
     }
 
-    pub fn set_next_id(&self, next_id: String) -> Config {
-        let next_id: Option<String> = Some(next_id);
+    pub fn set_next_id(&self, next_id: &String) -> Config {
+        let next_id: Option<String> = Some(next_id.to_owned());
 
         Config {
             next_id,
@@ -284,7 +284,7 @@ mod tests {
     fn set_and_clear_next_id_should_work() {
         let config = Config::new("something", None).unwrap();
         assert_eq!(config.next_id, None);
-        let config = config.set_next_id(String::from("123123"));
+        let config = config.set_next_id(&String::from("123123"));
         assert_eq!(config.next_id, Some(String::from("123123")));
         let config = config.clear_next_id();
         assert_eq!(config.next_id, None);

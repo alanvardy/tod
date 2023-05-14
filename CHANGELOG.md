@@ -6,6 +6,7 @@
 - Improve formatting of tasks both individually and in lists
 - Return an error during complete task if there is no next task in config. Thank you, `@titoOdUA`
 - Add ability to skip a task in `tod project process` command
+- Refactor to reduce the use of clone by passing references
 
 ## 2023-05-06 v0.4.0
 

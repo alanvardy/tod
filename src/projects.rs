@@ -6,7 +6,7 @@ use colored::*;
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
 
 /// List the projects in config
-pub fn list(config: Config) -> Result<String, String> {
+pub fn list(config: &Config) -> Result<String, String> {
     let mut projects: Vec<String> = config.projects.keys().map(|k| k.to_owned()).collect();
     if projects.is_empty() {
         return Ok(String::from("No projects found"));
@@ -48,9 +48,9 @@ pub fn project_id(config: &Config, project_name: &str) -> Result<String, String>
 
 /// Get the next item by priority and save its id to config
 pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
-    match fetch_next_item(config.clone(), project_name) {
+    match fetch_next_item(&config, project_name) {
         Ok(Some(item)) => {
-            config.set_next_id(item.id.clone()).save()?;
+            config.set_next_id(&item.id).save()?;
             Ok(item.fmt(&config, FormatType::Single))
         }
         Ok(None) => Ok(green_string("No items on list")),
@@ -58,11 +58,11 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
     }
 }
 
-fn fetch_next_item(config: Config, project_name: &str) -> Result<Option<Item>, String> {
-    let project_id = projects::project_id(&config, project_name)?;
-    let items = request::items_for_project(&config, &project_id)?;
-    let filtered_items = items::filter_not_in_future(items, &config)?;
-    let items = items::sort_by_value(filtered_items, &config);
+fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<Item>, String> {
+    let project_id = projects::project_id(config, project_name)?;
+    let items = request::items_for_project(config, &project_id)?;
+    let filtered_items = items::filter_not_in_future(items, config)?;
+    let items = items::sort_by_value(filtered_items, config);
 
     Ok(items.first().map(|item| item.to_owned()))
 }
@@ -73,25 +73,23 @@ pub fn process_items(config: Config, project_name: &str) -> Result<String, Strin
     let items = request::items_for_project(&config, &project_id)?;
     let items = items::filter_not_in_future(items, &config)?;
     for item in items {
-        config.set_next_id(item.id.clone()).save()?;
-        match handle_item(config.reload()?, item) {
+        config.set_next_id(&item.id).save()?;
+        match handle_item(&config.reload()?, item) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(green_string("Exited")),
         }
     }
     Ok(green_string(&format!(
-        "There are no more tasks in '{}'",
-        project_name
+        "There are no more tasks in '{project_name}'"
     )))
 }
-
-fn handle_item(config: Config, item: Item) -> Option<Result<String, String>> {
+fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
     let options = vec!["complete", "skip", "quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
-    println!("{}", item.fmt(&config, FormatType::Single));
+    println!("{}", item.fmt(config, FormatType::Single));
     match config::select_input("Select an option", options) {
         Ok(string) => {
             if string == "complete" {
@@ -144,19 +142,19 @@ pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> 
 }
 
 /// Empty a project by sending items to other projects one at a time
-pub fn empty(config: Config, project_name: &str) -> Result<String, String> {
-    let id = projects::project_id(&config, project_name)?;
+pub fn empty(config: &Config, project_name: &str) -> Result<String, String> {
+    let id = projects::project_id(config, project_name)?;
 
-    let items = request::items_for_project(&config, &id)?;
+    let items = request::items_for_project(config, &id)?;
 
     if items.is_empty() {
         Ok(green_string(&format!(
             "No tasks to empty from {project_name}"
         )))
     } else {
-        projects::list(config.clone())?;
+        projects::list(config)?;
         for item in items.iter() {
-            move_item_to_project(config.clone(), item.to_owned())?;
+            move_item_to_project(config, item.to_owned())?;
         }
         Ok(green_string(&format!(
             "Successfully emptied {project_name}"
@@ -181,7 +179,7 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
             .to_string())
     } else {
         for item in unprioritized_items.iter() {
-            items::set_priority(config.clone(), item.to_owned());
+            items::set_priority(config, item.to_owned());
         }
         Ok(format!("Successfully prioritized {project_name}")
             .green()
@@ -210,10 +208,10 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
             let due_string = config::get_input("Input a date in natural language or (c)omplete")?;
             match due_string.as_str() {
                 "complete" | "c" => {
-                    let config = config.set_next_id(item.id.clone());
-                    request::complete_item(config)?
+                    let config = config.set_next_id(&item.id);
+                    request::complete_item(&config)?
                 }
-                _ => request::update_item_due(config.clone(), item.to_owned(), due_string)?,
+                _ => request::update_item_due(config, item.to_owned(), due_string)?,
             };
         }
         Ok(format!("Successfully dated {project_name}")
@@ -221,8 +219,8 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
             .to_string())
     }
 }
-pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String> {
-    println!("{}", item.fmt(&config, FormatType::Single));
+pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, String> {
+    println!("{}", item.fmt(config, FormatType::Single));
 
     let mut options = config
         .projects
@@ -238,12 +236,12 @@ pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String
 
     match project_name.as_str() {
         "complete" => {
-            request::complete_item(config.set_next_id(item.id))?;
+            request::complete_item(&config.set_next_id(&item.id))?;
             Ok(green_string("✓"))
         }
         _ => {
-            let project_id = projects::project_id(&config, &project_name)?;
-            let sections = request::sections_for_project(&config, &project_id)?;
+            let project_id = projects::project_id(config, &project_name)?;
+            let sections = request::sections_for_project(config, &project_id)?;
             let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
             if section_names.is_empty() {
                 request::move_item_to_project(config, item, &project_name)
@@ -262,11 +260,11 @@ pub fn move_item_to_project(config: Config, item: Item) -> Result<String, String
 
 /// Add item to project with natural language processing
 pub fn add_item_to_project(
-    config: Config,
+    config: &Config,
     content: String,
     project: &str,
 ) -> Result<String, String> {
-    let item = request::add_item_to_inbox(&config, &content)?;
+    let item = request::add_item_to_inbox(config, &content)?;
 
     match project {
         "inbox" | "i" => Ok(green_string("✓")),
@@ -320,7 +318,7 @@ mod tests {
             "Projects\n - first\n - second"
         };
 
-        assert_eq!(list(config), Ok(String::from(str)));
+        assert_eq!(list(&config), Ok(String::from(str)));
     }
 
     #[test]

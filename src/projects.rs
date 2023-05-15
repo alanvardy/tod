@@ -67,35 +67,35 @@ fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<Item>, 
     Ok(items.first().map(|item| item.to_owned()))
 }
 
-/// Get next items and give an interactive prompt for completing them
-pub fn next_item_interactive(config: Config, project_name: &str) -> Result<String, String> {
-    let mut config = config;
-    loop {
-        match fetch_next_item(&config, project_name) {
-            Ok(Some(item)) => {
-                config.set_next_id(&item.id).save()?;
-                config = Config::load(&config.path)?;
-                match handle_item(&config, item) {
-                    Some(Ok(_)) => (),
-                    Some(Err(e)) => return Err(e),
-                    None => return Ok(green_string("Exited")),
-                }
-            }
-            Ok(None) => return Ok(green_string("Done")),
-            Err(e) => return Err(e),
+/// Get next items and give an interactive prompt for completing them one by one
+pub fn process_items(config: Config, project_name: &str) -> Result<String, String> {
+    let project_id = projects::project_id(&config, project_name)?;
+    let items = request::items_for_project(&config, &project_id)?;
+    let items = items::filter_not_in_future(items, &config)?;
+    for item in items {
+        config.set_next_id(&item.id).save()?;
+        match handle_item(&config.reload()?, item) {
+            Some(Ok(_)) => (),
+            Some(Err(e)) => return Err(e),
+            None => return Ok(green_string("Exited")),
         }
     }
+    Ok(green_string(&format!(
+        "There are no more tasks in '{project_name}'"
+    )))
 }
 fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
-    let options = vec!["complete", "quit"]
+    let options = vec!["complete", "skip", "quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
     println!("{}", item.fmt(config, FormatType::Single));
     match config::select_input("Select an option", options) {
         Ok(string) => {
-            if string == *"complete" {
+            if string == "complete" {
                 Some(request::complete_item(config))
+            } else if string == "skip" {
+                Some(Ok(green_string("item skipped")))
             } else {
                 None
             }

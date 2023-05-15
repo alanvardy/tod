@@ -77,6 +77,10 @@ impl Config {
         serde_json::from_str::<Config>(&json).map_err(|_| format!("Could not parse JSON:\n{json}"))
     }
 
+    pub fn reload(&self) -> Result<Self, String> {
+        Config::load(&self.path)
+    }
+
     pub fn set_path(self, path: &str) -> Config {
         Config {
             path: String::from(path),
@@ -259,6 +263,21 @@ mod tests {
     fn new_should_generate_config() {
         let config = Config::new("something", None).unwrap();
         assert_eq!(config.token, String::from("something"));
+    }
+
+    #[test]
+    fn reload_config_should_work() {
+        let mut config = crate::test::helpers::config_fixture();
+        let path = format!("{}{}", config.path, "reload");
+        config.path = path;
+        let mut config = config.create().expect("Failed to create test config");
+        config = config.add_project("testproj".to_string(), 1);
+        assert!(!&config.projects.is_empty());
+
+        let reloaded_config = config.reload().expect("Failed to reload config");
+        assert!(reloaded_config.projects.is_empty());
+
+        delete_config(&reloaded_config.path);
     }
 
     #[test]

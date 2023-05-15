@@ -252,7 +252,7 @@ fn project_process(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::next_item_interactive(config, &project)
+    projects::process_items(config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]

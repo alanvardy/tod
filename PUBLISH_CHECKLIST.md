@@ -1,14 +1,11 @@
 # Publish Checklist
 
-## Setup tod-bin
+## Setup `tod-bin`
 
-Create tod-bin directory for pushing to AUR
+Create `tod-bin` directory for pushing to AUR
 
 ```bash
-cd ~/dev
-git clone ssh://aur@aur.archlinux.org/tod-bin.git
-cd tod-bin
-git remote add aur ssh://aur@aur.archlinux.org/tod-bin.git
+./setup_aur.sh
 ```
 
 ## Publish to Cargo and AUR
@@ -18,7 +15,7 @@ This checklist is just here for me to reduce the friction of publishing new vers
 Code changes
 
 1. Update dependencies and make sure nothing broke with `./update_test.sh`
-2. Change version in Cargo.toml and in this document (do a global find and replace)
+2. Change version in `Cargo.toml`
 3. Update CHANGELOG.md with version number
 4. Update README.md with help text `cargo run -- -h`
 5. Add any new examples to README.md
@@ -36,7 +33,7 @@ cargo aur
 9. [Create a new release](https://github.com/alanvardy/tod/releases/new)
 
 - Make sure to use the label and title in format `v0.3.8`
-- Add binary from tod directory
+- Add binary from `tod` directory
 
 10. Publish to Cargo with `cargo publish`
 11. Push to AUR with `./push_aur.sh`

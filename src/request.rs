@@ -126,6 +126,7 @@ pub fn complete_item(config: &Config) -> Result<String, String> {
 }
 
 /// Post to Todoist via sync API
+/// We use sync when we want natural languague processing.
 fn post_todoist_sync(
     config: &Config,
     url: String,
@@ -161,6 +162,7 @@ fn post_todoist_sync(
 }
 
 /// Post to Todoist via REST api
+/// We use this when we want more options and don't need natural language processing
 fn post_todoist_rest(
     config: &Config,
     url: String,

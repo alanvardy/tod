@@ -2,21 +2,43 @@ use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono_tz::Tz;
 use colored::*;
+use inquire::Select;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
+use std::fmt::Display;
 
 use crate::config::Config;
-use crate::{config, items, request, time};
+use crate::{items, request, time};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Item {
     pub id: String,
     pub content: String,
-    pub priority: u8,
+    pub priority: Priority,
     pub checked: bool,
     pub description: String,
     pub due: Option<DateInfo>,
     pub is_deleted: bool,
+}
+
+#[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone, Eq, PartialEq)]
+#[repr(u8)]
+pub enum Priority {
+    Default = 1,
+    Low = 2,
+    Normal = 3,
+    High = 4,
+}
+
+impl Display for Priority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Priority::Default => write!(f, "DEFAULT"),
+            Priority::Low => write!(f, "LOW"),
+            Priority::Normal => write!(f, "NORMAL"),
+            Priority::High => write!(f, "HIGH"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -51,10 +73,10 @@ enum DateTimeInfo {
 impl Item {
     pub fn fmt(&self, config: &Config, format: FormatType) -> String {
         let content = match self.priority {
-            2 => self.content.blue(),
-            3 => self.content.yellow(),
-            4 => self.content.red(),
-            _ => self.content.normal(),
+            Priority::Low => self.content.blue(),
+            Priority::Normal => self.content.yellow(),
+            Priority::High => self.content.red(),
+            Priority::Default => self.content.normal(),
         };
 
         let buffer = match format {
@@ -139,11 +161,11 @@ impl Item {
     }
 
     fn priority_value(&self) -> u8 {
-        match self.priority {
-            2 => 1,
-            3 => 3,
-            4 => 4,
-            _ => 2,
+        match &self.priority {
+            Priority::Default => 2,
+            Priority::Low => 1,
+            Priority::Normal => 3,
+            Priority::High => 4,
         }
     }
 
@@ -257,25 +279,30 @@ pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item>
 pub fn set_priority(config: &Config, item: items::Item) {
     println!("{}", item.fmt(config, FormatType::Single));
 
-    let options = vec!["1", "2", "3"].iter().map(|s| s.to_string()).collect();
-    let priority =
-        config::select_input("Choose a priority from 1 (lowest) to 3 (highest):", options)
-            .expect("Please enter a number from 1 to 3");
+    let options = vec![Priority::Low, Priority::Normal, Priority::High];
+    let priority = Select::new(
+        "Choose a priority that should be assigned to task:",
+        options,
+    )
+    .prompt()
+    .map_err(|e| e.to_string())
+    .expect("Failed to create option list of priorities");
 
-    match priority.as_str() {
-        "1" => {
+    match priority {
+        //TODO maybe create some map to easily convert priority to u8
+        Priority::Low => {
             let config = config.set_next_id(&item.id);
             request::update_item_priority(config, item, 2).expect("could not set priority");
         }
-        "2" => {
+        Priority::Normal => {
             let config = config.set_next_id(&item.id);
             request::update_item_priority(config, item, 3).expect("could not set priority");
         }
-        "3" => {
+        Priority::High => {
             let config = config.set_next_id(&item.id);
             request::update_item_priority(config, item, 4).expect("could not set priority");
         }
-        _ => println!("Not a valid input, please enter 1, 2, or 3"),
+        _ => println!("Not a valid input, please pick one of the options"),
     }
 }
 
@@ -542,7 +569,7 @@ mod tests {
             checked: false,
             description: String::from(""),
             due: None,
-            priority: 3,
+            priority: Priority::Normal,
             is_deleted: false,
         };
 
@@ -603,7 +630,7 @@ mod tests {
             checked: false,
             description: String::from(""),
             due: None,
-            priority: 3,
+            priority: Priority::Normal,
             is_deleted: false,
         };
 

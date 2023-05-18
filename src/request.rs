@@ -304,7 +304,7 @@ mod tests {
             add_item_to_inbox(&config, "testy test"),
             Ok(Item {
                 id: String::from("5149481867"),
-                priority: 1,
+                priority: items::Priority::Default,
                 content: String::from("testy test"),
                 checked: false,
                 description: String::from(""),
@@ -347,7 +347,7 @@ mod tests {
                     is_recurring: true,
                     timezone: None,
                 }),
-                priority: 3,
+                priority: items::Priority::Normal,
                 is_deleted: false,
             }])
         );

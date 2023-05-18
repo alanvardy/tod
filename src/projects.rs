@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::items::{FormatType, Item};
+use crate::items::{FormatType, Item, Priority};
 use crate::{config, items, projects, request};
 use colored::*;
 
@@ -170,7 +170,7 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
 
     let unprioritized_items: Vec<Item> = items
         .into_iter()
-        .filter(|item| item.priority == 1)
+        .filter(|item| item.priority == Priority::Default)
         .collect::<Vec<Item>>();
 
     if unprioritized_items.is_empty() {

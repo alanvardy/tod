@@ -352,7 +352,7 @@ mod tests {
                     is_recurring: true,
                     timezone: None,
                 }),
-                priority: items::Priority::Normal,
+                priority: items::Priority::Medium,
                 is_deleted: false,
             }])
         );

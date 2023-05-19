@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Internal refactor of priority code. Thank you, `@titoOdUA`
+
 ## 2023-05-14 v0.4.1
 
 - Speed up CI by improving caching

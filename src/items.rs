@@ -24,7 +24,7 @@ pub struct Item {
 #[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Priority {
-    Default = 1,
+    None = 1,
     Low = 2,
     Normal = 3,
     High = 4,
@@ -33,7 +33,7 @@ pub enum Priority {
 impl Display for Priority {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Priority::Default => write!(f, "DEFAULT"),
+            Priority::None => write!(f, "NONE"),
             Priority::Low => write!(f, "LOW"),
             Priority::Normal => write!(f, "NORMAL"),
             Priority::High => write!(f, "HIGH"),
@@ -76,7 +76,7 @@ impl Item {
             Priority::Low => self.content.blue(),
             Priority::Normal => self.content.yellow(),
             Priority::High => self.content.red(),
-            Priority::Default => self.content.normal(),
+            Priority::None => self.content.normal(),
         };
 
         let buffer = match format {
@@ -162,7 +162,7 @@ impl Item {
 
     fn priority_value(&self) -> u8 {
         match &self.priority {
-            Priority::Default => 2,
+            Priority::None => 2,
             Priority::Low => 1,
             Priority::Normal => 3,
             Priority::High => 4,

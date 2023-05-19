@@ -170,7 +170,7 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
 
     let unprioritized_items: Vec<Item> = items
         .into_iter()
-        .filter(|item| item.priority == Priority::Default)
+        .filter(|item| item.priority == Priority::None)
         .collect::<Vec<Item>>();
 
     if unprioritized_items.is_empty() {

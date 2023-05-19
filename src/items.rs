@@ -26,7 +26,7 @@ pub struct Item {
 pub enum Priority {
     None = 1,
     Low = 2,
-    Normal = 3,
+    Medium = 3,
     High = 4,
 }
 
@@ -35,7 +35,7 @@ impl Display for Priority {
         match self {
             Priority::None => write!(f, "NONE"),
             Priority::Low => write!(f, "LOW"),
-            Priority::Normal => write!(f, "NORMAL"),
+            Priority::Medium => write!(f, "MEDIUM"),
             Priority::High => write!(f, "HIGH"),
         }
     }
@@ -74,7 +74,7 @@ impl Item {
     pub fn fmt(&self, config: &Config, format: FormatType) -> String {
         let content = match self.priority {
             Priority::Low => self.content.blue(),
-            Priority::Normal => self.content.yellow(),
+            Priority::Medium => self.content.yellow(),
             Priority::High => self.content.red(),
             Priority::None => self.content.normal(),
         };
@@ -164,7 +164,7 @@ impl Item {
         match &self.priority {
             Priority::None => 2,
             Priority::Low => 1,
-            Priority::Normal => 3,
+            Priority::Medium => 3,
             Priority::High => 4,
         }
     }
@@ -279,7 +279,7 @@ pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item>
 pub fn set_priority(config: &Config, item: items::Item) {
     println!("{}", item.fmt(config, FormatType::Single));
 
-    let options = vec![Priority::Low, Priority::Normal, Priority::High];
+    let options = vec![Priority::Low, Priority::Medium, Priority::High];
     let priority = Select::new(
         "Choose a priority that should be assigned to task:",
         options,
@@ -294,8 +294,8 @@ pub fn set_priority(config: &Config, item: items::Item) {
             request::update_item_priority(config, item, Priority::Low)
                 .expect("could not set priority");
         }
-        Priority::Normal => {
-            request::update_item_priority(config, item, Priority::Normal)
+        Priority::Medium => {
+            request::update_item_priority(config, item, Priority::Medium)
                 .expect("could not set priority");
         }
         Priority::High => {
@@ -562,7 +562,7 @@ mod tests {
             checked: false,
             description: String::from(""),
             due: None,
-            priority: Priority::Normal,
+            priority: Priority::Medium,
             is_deleted: false,
         };
 
@@ -623,7 +623,7 @@ mod tests {
             checked: false,
             description: String::from(""),
             due: None,
-            priority: Priority::Normal,
+            priority: Priority::Medium,
             is_deleted: false,
         };
 

@@ -21,7 +21,7 @@ pub mod helpers {
                 is_recurring: false,
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
-            priority: crate::items::Priority::Normal,
+            priority: crate::items::Priority::Medium,
             is_deleted: false,
         }
     }

@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::config::Config;
 use crate::items::Item;
+use crate::items::Priority;
 use crate::sections::Section;
 use crate::{items, projects, sections};
 
@@ -92,7 +93,11 @@ pub fn move_item_to_section(
 }
 
 /// Update the priority of an item by ID
-pub fn update_item_priority(config: Config, item: Item, priority: u8) -> Result<String, String> {
+pub fn update_item_priority(
+    config: Config,
+    item: Item,
+    priority: Priority,
+) -> Result<String, String> {
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
 
@@ -418,7 +423,7 @@ mod tests {
 
         let config = Config::new("12341234", Some(server.url())).unwrap();
 
-        let response = update_item_priority(config, item, 4);
+        let response = update_item_priority(config, item, Priority::High);
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

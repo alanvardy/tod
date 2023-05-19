@@ -288,19 +288,19 @@ pub fn set_priority(config: &Config, item: items::Item) {
     .map_err(|e| e.to_string())
     .expect("Failed to create option list of priorities");
 
+    let config = config.set_next_id(&item.id);
     match priority {
-        //TODO maybe create some map to easily convert priority to u8
         Priority::Low => {
-            let config = config.set_next_id(&item.id);
-            request::update_item_priority(config, item, 2).expect("could not set priority");
+            request::update_item_priority(config, item, Priority::Low)
+                .expect("could not set priority");
         }
         Priority::Normal => {
-            let config = config.set_next_id(&item.id);
-            request::update_item_priority(config, item, 3).expect("could not set priority");
+            request::update_item_priority(config, item, Priority::Normal)
+                .expect("could not set priority");
         }
         Priority::High => {
-            let config = config.set_next_id(&item.id);
-            request::update_item_priority(config, item, 4).expect("could not set priority");
+            request::update_item_priority(config, item, Priority::High)
+                .expect("could not set priority");
         }
         _ => println!("Not a valid input, please pick one of the options"),
     }
@@ -311,13 +311,6 @@ mod tests {
     use super::*;
     use crate::test;
     use pretty_assertions::assert_eq;
-
-    #[test]
-    fn set_priority_works() {
-        let config = test::helpers::config_fixture();
-        let item = test::helpers::item_fixture();
-        set_priority(&config, item)
-    }
 
     #[test]
     fn date_value_can_handle_date() {

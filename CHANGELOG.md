@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Internal refactor of priority code. Thank you, `@titoOdUA`
+- Clarify scheduled flag in help
 
 ## 2023-05-14 v0.4.1
 

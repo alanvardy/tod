@@ -99,7 +99,7 @@ fn cmd() -> Command {
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
                          .arg(project_arg())
-                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today")),
+                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today and have a time")),
                        Command::new("next").about("Get the next task by priority")
                          .arg(config_arg())
                          .arg(project_arg()),

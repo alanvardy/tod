@@ -41,6 +41,17 @@ impl Display for Priority {
     }
 }
 
+impl Priority {
+    pub fn to_string_in_sync_format(&self) -> String {
+        match self {
+            Priority::None => "p4".into(),
+            Priority::Low => "p3".into(),
+            Priority::Medium => "p2".into(),
+            Priority::High => "p1".into(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct DateInfo {
     pub date: String,

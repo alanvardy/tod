@@ -288,7 +288,7 @@ fn priority_arg() -> Arg {
         .num_args(1)
         .required(false)
         .value_name("PRIORITY")
-        .help("Priority from 1(lowest) to 3(highest)")
+        .help("Priority from 1(without priority) to 4(highest)")
 }
 
 #[cfg(not(tarpaulin_include))]

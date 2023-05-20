@@ -44,8 +44,9 @@ struct Version {
 }
 
 /// Add a new item to the inbox with natural language support
-pub fn add_item_to_inbox(config: &Config, task: &str) -> Result<Item, String> {
+pub fn add_item_to_inbox(config: &Config, task: &str, priority: Priority) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
+    let task = format!("{} {}", task, priority.to_string_in_sync_format());
     let body = json!({"text": task, "auto_reminder": true});
 
     let json = post_todoist_sync(config, url, body)?;
@@ -308,7 +309,7 @@ mod tests {
         let config = Config::new("12341234", Some(server.url())).unwrap();
 
         assert_eq!(
-            add_item_to_inbox(&config, "testy test"),
+            add_item_to_inbox(&config, "testy test", Priority::None),
             Ok(Item {
                 id: String::from("5149481867"),
                 priority: items::Priority::None,

@@ -263,8 +263,12 @@ pub fn add_item_to_project(
     config: &Config,
     content: String,
     project: &str,
+    priority: String,
 ) -> Result<String, String> {
-    let item = request::add_item_to_inbox(config, &content)?;
+    let priority: Priority = serde_json::from_str(&priority)
+        .ok()
+        .unwrap_or(Priority::None);
+    let item = request::add_item_to_inbox(config, &content, priority)?;
 
     match project {
         "inbox" | "i" => Ok(green_string("✓")),

@@ -94,6 +94,7 @@ fn cmd() -> Command {
                     .subcommands([
                        Command::new("create").about("Create a new task")
                          .arg(config_arg())
+                         .arg(priority_arg())
                          .arg(content_arg())
                          .arg(project_arg()),
                        Command::new("list").about("List all tasks in a project")
@@ -181,16 +182,17 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, "content", "Content")?;
+    let priority = fetch_string(matches, "priority", "Priority")?;
     let project = fetch_project(matches, &config)?;
 
-    projects::add_item_to_project(&config, content, &project)
+    projects::add_item_to_project(&config, content, &project, priority)
 }
 
 #[cfg(not(tarpaulin_include))]
 fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
-    request::add_item_to_inbox(&config, &text)?;
+    request::add_item_to_inbox(&config, &text, items::Priority::None)?;
     Ok(projects::green_string("✓"))
 }
 
@@ -277,6 +279,16 @@ fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
 
     projects::schedule(&config, &project)
+}
+
+#[cfg(not(tarpaulin_include))]
+fn priority_arg() -> Arg {
+    Arg::new("priority")
+        .long("priority")
+        .num_args(1)
+        .required(false)
+        .value_name("PRIORITY")
+        .help("Priority from 1(lowest) to 3(highest)")
 }
 
 #[cfg(not(tarpaulin_include))]

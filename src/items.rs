@@ -1,6 +1,7 @@
 use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono_tz::Tz;
+use clap::ArgMatches;
 use colored::*;
 use inquire::Select;
 use serde::{Deserialize, Serialize};
@@ -48,6 +49,14 @@ impl Priority {
             Priority::Low => "p3".into(),
             Priority::Medium => "p2".into(),
             Priority::High => "p1".into(),
+        }
+    }
+
+    pub fn get_from_matches(matches: &ArgMatches) -> Option<Self> {
+        let priority_arg = &matches.get_one::<String>("priority").map(|s| s.to_owned());
+        match priority_arg {
+            None => None,
+            Some(priority) => serde_json::from_str(&priority).ok(),
         }
     }
 }

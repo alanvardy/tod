@@ -180,9 +180,30 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String
 
 #[cfg(not(tarpaulin_include))]
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
+    use inquire::Select;
+    use items::Priority;
+
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, "content", "Content")?;
-    let priority = fetch_string(matches, "priority", "Priority")?;
+    let priority = match Priority::get_from_matches(&matches) {
+        Some(value) => value,
+        None => {
+            let options = vec![
+                Priority::None,
+                Priority::Low,
+                Priority::Medium,
+                Priority::High,
+            ];
+            Select::new(
+                "Choose a priority that should be assigned to task:",
+                options,
+            )
+            .prompt()
+            .map_err(|e| e.to_string())
+            .expect("Failed to create option list of priorities")
+        }
+    };
+
     let project = fetch_project(matches, &config)?;
 
     projects::add_item_to_project(&config, content, &project, priority)
@@ -288,7 +309,7 @@ fn priority_arg() -> Arg {
         .num_args(1)
         .required(false)
         .value_name("PRIORITY")
-        .help("Priority from 1(without priority) to 4(highest)")
+        .help("Priority from 1 (without priority) to 4 (highest)")
 }
 
 #[cfg(not(tarpaulin_include))]

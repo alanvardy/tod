@@ -151,11 +151,12 @@ impl Config {
     fn check_for_timezone(self: Config) -> Result<Config, String> {
         if self.timezone.is_none() {
             let desc = "Please select your timezone";
-            let options = TZ_VARIANTS
+            let mut options = TZ_VARIANTS
                 .to_vec()
                 .iter()
                 .map(|v| v.to_string())
                 .collect::<Vec<String>>();
+            options.sort();
 
             let tz = select_input(desc, options)?;
             let config = Config {
@@ -248,8 +249,8 @@ pub fn select_input<T: Display>(desc: &str, options: Vec<T>) -> Result<T, String
     if cfg!(test) {
         return Ok(options
             .into_iter()
-            .nth(0)
-            .expect("Recieved an empty options vec"));
+            .next()
+            .expect("Must provide a vector of options"));
     }
     Select::new(desc, options)
         .prompt()
@@ -417,7 +418,7 @@ mod tests {
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: None,
-                timezone: Some(String::from("Africa/Asmera")),
+                timezone: Some(String::from("Africa/Abidjan")),
                 mock_url: None,
             })
         );
@@ -440,7 +441,7 @@ mod tests {
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: Some(time::today_string(&config.unwrap())),
-                timezone: Some(String::from("Africa/Asmera")),
+                timezone: Some(String::from("Africa/Abidjan")),
                 mock_url: mock_url.clone(),
             })
         );
@@ -464,7 +465,7 @@ mod tests {
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: Some(time::today_string(&config.unwrap())),
-                timezone: Some(String::from("Africa/Asmera")),
+                timezone: Some(String::from("Africa/Abidjan")),
                 mock_url,
             })
         );

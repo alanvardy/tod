@@ -56,7 +56,7 @@ impl Priority {
         let priority_arg = &matches.get_one::<String>("priority").map(|s| s.to_owned());
         match priority_arg {
             None => None,
-            Some(priority) => serde_json::from_str(&priority).ok(),
+            Some(priority) => serde_json::from_str(priority).ok(),
         }
     }
 }

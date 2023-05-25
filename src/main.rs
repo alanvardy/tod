@@ -185,7 +185,7 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
 
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, "content", "Content")?;
-    let priority = match Priority::get_from_matches(&matches) {
+    let priority = match Priority::get_from_matches(matches) {
         Some(value) => value,
         None => {
             let options = vec![

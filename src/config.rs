@@ -5,6 +5,7 @@ use inquire::{Select, Text};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::fs;
 use std::io::{Read, Write};
 
@@ -243,11 +244,13 @@ pub fn get_input(desc: &str) -> Result<String, String> {
 
     Text::new(desc).prompt().map_err(|e| e.to_string())
 }
-pub fn select_input(desc: &str, options: Vec<String>) -> Result<String, String> {
+pub fn select_input<T: Display>(desc: &str, options: Vec<T>) -> Result<T, String> {
     if cfg!(test) {
-        return Ok(String::from("Africa/Asmera"));
+        return Ok(options
+            .into_iter()
+            .nth(0)
+            .expect("Recieved an empty options vec"));
     }
-
     Select::new(desc, options)
         .prompt()
         .map_err(|e| e.to_string())

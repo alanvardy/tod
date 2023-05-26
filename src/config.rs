@@ -406,7 +406,7 @@ mod tests {
         // get_or_create (create)
         let config = get_or_create(None);
         assert_eq!(
-            config.clone(),
+            config,
             Ok(Config {
                 token: String::from("Africa/Asmera"),
                 projects: HashMap::new(),
@@ -450,7 +450,7 @@ mod tests {
             .unwrap();
         let legacy_path = generate_legacy_path().unwrap();
         let proper_path = generate_path().unwrap();
-        fs::rename(proper_path, &legacy_path).unwrap();
+        fs::rename(proper_path, legacy_path).unwrap();
         let config = get_or_create(None);
         assert_eq!(
             config.clone(),
@@ -462,7 +462,7 @@ mod tests {
                 spinners: Some(true),
                 last_version_check: Some(time::today_string(&config.unwrap())),
                 timezone: Some(String::from("Africa/Asmera")),
-                mock_url: mock_url,
+                mock_url,
             })
         );
         delete_config(&path);

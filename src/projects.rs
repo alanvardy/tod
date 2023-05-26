@@ -283,7 +283,6 @@ pub fn green_string(str: &str) -> String {
 mod tests {
     use super::*;
     use crate::test;
-    use mockito;
     use pretty_assertions::assert_eq;
 
     /// Need to adjust this value forward or back an hour when timezone changes
@@ -328,7 +327,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::items())
+            .with_body(test::responses::items())
             .create();
 
         let config = Config::new("12341234", Some(server.url()))
@@ -341,7 +340,7 @@ mod tests {
             timezone: Some(String::from("US/Pacific")),
             path: format!("{config_dir}/test2"),
             mock_url: Some(server.url()),
-            ..config.clone()
+            ..config
         };
 
         config_with_timezone.clone().create().unwrap();
@@ -352,10 +351,7 @@ mod tests {
             format!("Put out recycling\nDue: {TIME} ↻")
         };
 
-        assert_eq!(
-            next_item(config_with_timezone, "good"),
-            Ok(String::from(string))
-        );
+        assert_eq!(next_item(config_with_timezone, "good"), Ok(string));
     }
 
     #[test]
@@ -365,7 +361,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::items())
+            .with_body(test::responses::items())
             .create();
 
         let config = Config::new("12341234", Some(server.url()))
@@ -401,7 +397,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::items())
+            .with_body(test::responses::items())
             .create();
 
         let config = Config::new("12341234", Some(server.url()))

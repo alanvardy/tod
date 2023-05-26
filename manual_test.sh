@@ -11,6 +11,7 @@ commands=(
 "cargo run -- task create --content \"test\""
 "cargo run -- task create -p digital -c \"test\""
 "cargo run -- task create --project digital --content \"test\""
+"cargo run -- task create --project digital --content \"test\" --priority 2"
 "cargo run -- task list"
 "cargo run -- task list -s"
 "cargo run -- task list --scheduled"

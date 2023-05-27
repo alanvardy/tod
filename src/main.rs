@@ -49,6 +49,7 @@ fn main() {
             Some(("empty", m)) => project_empty(m),
             Some(("schedule", m)) => project_schedule(m),
             Some(("prioritize", m)) => project_prioritize(m),
+            Some(("import", m)) => project_import(m),
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -130,6 +131,8 @@ fn cmd() -> Command {
                        Command::new("prioritize").about("Give every task a priority")
                         .arg(config_arg())
                         .arg(project_arg()),
+                       Command::new("import").about("Get projects from Todoist and prompt to add to config")
+                        .arg(config_arg()),
                        Command::new("process").about("Complete all tasks that are due today or undated in a project individually in priority order")
                         .arg(config_arg())
                         .arg(project_arg())
@@ -255,11 +258,11 @@ fn project_list(matches: &ArgMatches) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 fn project_add(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
+    let mut config = fetch_config(matches)?;
     let name = fetch_string(matches, "name", "Enter project name or alias")?;
     let id = fetch_string(matches, "id", "Enter ID of project")?;
 
-    projects::add(config, name, id)
+    projects::add(&mut config, name, id)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -276,6 +279,13 @@ fn project_process(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
 
     projects::process_items(config, &project)
+}
+
+#[cfg(not(tarpaulin_include))]
+fn project_import(matches: &ArgMatches) -> Result<String, String> {
+    let mut config = fetch_config(matches)?;
+
+    projects::import(&mut config)
 }
 
 #[cfg(not(tarpaulin_include))]

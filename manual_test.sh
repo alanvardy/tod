@@ -29,6 +29,7 @@ commands=(
 "cargo run -- project prioritize -p physical"
 "cargo run -- project process -p inbox"
 "cargo run -- project process --project inbox"
+"cargo run -- project import"
 )
 
 for cmd in "${commands[@]}"

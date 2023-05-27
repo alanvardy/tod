@@ -161,6 +161,28 @@ pub mod responses {
         )
     }
 
+    pub fn projects() -> String {
+        String::from(
+            "[
+              {
+              \"id\": \"1234\",
+              \"project_id\": \"5678\",
+              \"order\": 1,
+              \"comment_count\": 1,
+              \"is_shared\": false,
+              \"is_favorite\": false,
+              \"is_inbox_project\": false,
+              \"is_team_inbox\": false,
+              \"color\": \"blue\",
+              \"view_style\": \"list\",
+              \"url\": \"http://www.example.com/\",
+              \"name\": \"Doomsday\"
+              }
+            ]
+            ",
+        )
+    }
+
     pub fn versions() -> String {
         format!(
             "{{\"versions\":[{{\

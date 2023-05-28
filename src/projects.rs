@@ -1,9 +1,42 @@
+use std::fmt::Display;
+
 use crate::config::Config;
 use crate::items::{FormatType, Item, Priority};
 use crate::{config, items, projects, request};
 use colored::*;
+use serde::Deserialize;
 
 const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
+
+// Projects are split into sections
+#[derive(PartialEq, Deserialize, Clone, Debug)]
+pub struct Project {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    pub comment_count: u8,
+    pub order: u8,
+    pub is_shared: bool,
+    pub is_favorite: bool,
+    pub is_inbox_project: bool,
+    pub is_team_inbox: bool,
+    pub view_style: String,
+    pub url: String,
+    pub parent_id: Option<String>,
+}
+
+impl Display for Project {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}\n{}", self.name, self.url)
+    }
+}
+pub fn json_to_projects(json: String) -> Result<Vec<Project>, String> {
+    let result: Result<Vec<Project>, _> = serde_json::from_str(&json);
+    match result {
+        Ok(projects) => Ok(projects),
+        Err(err) => Err(format!("Could not parse response for project: {err:?}")),
+    }
+}
 
 /// List the projects in config
 pub fn list(config: &Config) -> Result<String, String> {
@@ -23,10 +56,11 @@ pub fn list(config: &Config) -> Result<String, String> {
 }
 
 /// Add a project to the projects HashMap in Config
-pub fn add(config: Config, name: String, id: String) -> Result<String, String> {
+pub fn add(config: &mut Config, name: String, id: String) -> Result<String, String> {
     let id = id.parse::<u32>().or(Err(ADD_ERROR))?;
 
-    config.add_project(name, id).save()
+    config.add_project(name, id);
+    config.save()
 }
 
 /// Remove a project from the projects HashMap in Config
@@ -67,6 +101,45 @@ fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<Item>, 
     Ok(items.first().map(|item| item.to_owned()))
 }
 
+/// Fetch projects and prompt to add them to config one by one
+pub fn import(config: &mut Config) -> Result<String, String> {
+    let projects = request::projects(config)?;
+    let new_projects = filter_new_projects(config, projects);
+    for project in new_projects {
+        maybe_add_project(config, project)?;
+    }
+    Ok(green_string("No more projects"))
+}
+
+/// Returns the projects that are not already in config
+fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> {
+    let project_ids: Vec<String> = config.projects.values().map(|v| v.to_string()).collect();
+    let new_projects: Vec<Project> = projects
+        .into_iter()
+        .filter(|p| !project_ids.contains(&p.id))
+        .collect();
+
+    new_projects
+}
+
+/// Prompt the user if they want to add project to config and maybe add
+fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, String> {
+    let options = vec!["add", "skip"];
+    println!("{}", project);
+    match config::select_input("Select an option", options.clone()) {
+        Ok(string) => {
+            if string == "add" {
+                add(config, project.name, project.id)
+            } else if string == "skip" {
+                Ok(String::from("Skipped"))
+            } else {
+                Err(String::from("Invalid option"))
+            }
+        }
+        Err(e) => Err(e)?,
+    }
+}
+
 /// Get next items and give an interactive prompt for completing them one by one
 pub fn process_items(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name)?;
@@ -84,6 +157,7 @@ pub fn process_items(config: Config, project_name: &str) -> Result<String, Strin
         "There are no more tasks in '{project_name}'"
     )))
 }
+
 fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
     let options = vec!["complete", "skip", "quit"]
         .iter()
@@ -291,15 +365,11 @@ mod tests {
 
     #[test]
     fn should_add_and_remove_projects() {
-        let config = Config::new("123123", None).unwrap();
-        let config = Config {
-            path: "tests/project_test_config".to_string(),
-            ..config
-        };
+        let config = Config::new("123123", None).unwrap().create().unwrap();
 
-        config.clone().create().unwrap();
+        let mut config = config;
 
-        let result = add(config.clone(), "cool_project".to_string(), "1".to_string());
+        let result = add(&mut config, "cool_project".to_string(), "1".to_string());
         assert_eq!(result, Ok("✓".to_string()));
 
         let result = remove(config, "cool_project");
@@ -307,10 +377,10 @@ mod tests {
     }
     #[test]
     fn should_list_projects() {
-        let config = Config::new("123123", None)
-            .unwrap()
-            .add_project(String::from("first"), 1)
-            .add_project(String::from("second"), 2);
+        let mut config = Config::new("123123", None).unwrap();
+
+        config.add_project(String::from("first"), 1);
+        config.add_project(String::from("second"), 2);
 
         let str = if test::helpers::supports_coloured_output() {
             "\u{1b}[32mProjects\u{1b}[0m\n - first\n - second"
@@ -331,9 +401,9 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let config = Config::new("12341234", Some(server.url()))
-            .unwrap()
-            .add_project(String::from("good"), 1);
+        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+
+        config.add_project(String::from("good"), 1);
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
 
@@ -365,9 +435,8 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let config = Config::new("12341234", Some(server.url()))
-            .unwrap()
-            .add_project(String::from("good"), 1);
+        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+        config.add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
@@ -401,9 +470,8 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let config = Config::new("12341234", Some(server.url()))
-            .unwrap()
-            .add_project(String::from("good"), 1);
+        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+        config.add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
@@ -418,5 +486,33 @@ mod tests {
         };
         assert_eq!(all_items(&config_with_timezone, "good"), Ok(string));
         mock.assert();
+    }
+
+    #[test]
+    fn should_import_projects() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/rest/v2/projects")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::projects())
+            .create();
+
+        let mut config = Config::new("12341234", Some(server.url()))
+            .unwrap()
+            .create()
+            .unwrap();
+
+        let string = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mNo more projects\u{1b}[0m".to_string()
+        } else {
+            "No more projects".to_string()
+        };
+        assert_eq!(import(&mut config), Ok(string));
+        mock.assert();
+
+        let config = config.reload().unwrap();
+        let config_keys: Vec<String> = config.projects.keys().map(|k| k.to_string()).collect();
+        assert!(config_keys.contains(&"Doomsday".to_string()))
     }
 }

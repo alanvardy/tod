@@ -13,7 +13,7 @@ pub fn json_to_sections(json: String) -> Result<Vec<Section>, String> {
     let result: Result<Vec<Section>, _> = serde_json::from_str(&json);
     match result {
         Ok(sections) => Ok(sections),
-        Err(err) => Err(format!("Could not parse response for item: {err:?}")),
+        Err(err) => Err(format!("Could not parse response for section: {err:?}")),
     }
 }
 

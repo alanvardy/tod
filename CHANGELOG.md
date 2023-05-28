@@ -2,9 +2,14 @@
 
 ## Unreleased
 
+## 2023-05-28 v0.4.2
+
 - Internal refactor of priority code. Thank you, `@titoOdUA`
 - Clarify scheduled flag in help
 - Add priority flag to `tod task create`
+- Add `tod project import`
+- Remove support for legacy path
+- Create random config file for each test
 
 ## 2023-05-14 v0.4.1
 

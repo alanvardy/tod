@@ -12,11 +12,9 @@ use uuid::Uuid;
 use crate::config::Config;
 use crate::items::Item;
 use crate::items::Priority;
+use crate::projects::Project;
 use crate::sections::Section;
 use crate::{items, projects, sections};
-
-#[cfg(test)]
-use mockito;
 
 // TODOIST URLS
 const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
@@ -24,6 +22,7 @@ const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
 const SYNC_URL: &str = "/sync/v9/sync";
 const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
+const PROJECTS_URL: &str = "/rest/v2/projects";
 
 // CRATES.IO URLS
 const VERSIONS_URL: &str = "/v1/crates/tod/versions";
@@ -65,6 +64,11 @@ pub fn sections_for_project(config: &Config, project_id: &str) -> Result<Vec<Sec
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
     let json = get_todoist_rest(config, url)?;
     sections::json_to_sections(json)
+}
+
+pub fn projects(config: &Config) -> Result<Vec<Project>, String> {
+    let json = get_todoist_rest(config, PROJECTS_URL.to_string())?;
+    projects::json_to_projects(json)
 }
 
 /// Move an item to a different project
@@ -314,7 +318,7 @@ mod tests {
             .mock("POST", "/sync/v9/quick/add")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::item())
+            .with_body(test::responses::item())
             .create();
 
         let config = Config::new("12341234", Some(server.url())).unwrap();
@@ -342,7 +346,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::items())
+            .with_body(test::responses::items())
             .create();
 
         let config = Config::new("12341234", Some(server.url())).unwrap();
@@ -359,10 +363,7 @@ mod tests {
                 checked: false,
                 description: String::from(""),
                 due: Some(DateInfo {
-                    date: String::from(format!(
-                        "{}T23:59:00Z",
-                        time::today_string(&config_with_timezone)
-                    )),
+                    date: format!("{}T23:59:00Z", time::today_string(&config_with_timezone)),
                     is_recurring: true,
                     timezone: None,
                 }),
@@ -381,7 +382,7 @@ mod tests {
             .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::sync())
+            .with_body(test::responses::sync())
             .create();
 
         let config = Config::new("12341234", Some(server.url()))
@@ -401,14 +402,13 @@ mod tests {
             .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::sync())
+            .with_body(test::responses::sync())
             .create();
 
         let item = test::helpers::item_fixture();
         let project_name = "testy";
-        let config = Config::new("12341234", Some(server.url()))
-            .unwrap()
-            .add_project(String::from(project_name), 1);
+        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+        config.add_project(String::from(project_name), 1);
 
         let config = Config {
             mock_url: Some(server.url()),
@@ -430,7 +430,7 @@ mod tests {
             .mock("POST", url)
             .with_status(204)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::sync())
+            .with_body(test::responses::sync())
             .create();
 
         let config = Config::new("12341234", Some(server.url())).unwrap();
@@ -450,7 +450,7 @@ mod tests {
             .mock("POST", url)
             .with_status(204)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::sync())
+            .with_body(test::responses::sync())
             .create();
 
         let config = Config::new("12341234", Some(server.url())).unwrap();
@@ -468,7 +468,7 @@ mod tests {
             .mock("GET", "/v1/crates/tod/versions")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(&test::responses::versions())
+            .with_body(test::responses::versions())
             .create();
 
         let config = Config {

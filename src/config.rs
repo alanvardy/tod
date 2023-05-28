@@ -2,6 +2,7 @@ use crate::{request, time, VERSION};
 use chrono_tz::TZ_VARIANTS;
 use colored::*;
 use inquire::{Select, Text};
+use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -51,7 +52,7 @@ impl Config {
         Ok(self)
     }
 
-    pub fn save(self) -> std::result::Result<String, String> {
+    pub fn save(&mut self) -> std::result::Result<String, String> {
         let json = json!(self);
         let string = serde_json::to_string_pretty(&json).or(Err("Could not convert to JSON"))?;
 
@@ -89,11 +90,9 @@ impl Config {
         }
     }
 
-    pub fn add_project(self, name: String, number: u32) -> Config {
-        let mut projects = self.projects;
+    pub fn add_project(&mut self, name: String, number: u32) {
+        let projects = &mut self.projects;
         projects.insert(name, number);
-
-        Config { projects, ..self }
     }
 
     pub fn remove_project(self, name: &str) -> Config {
@@ -180,16 +179,6 @@ pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
     };
     let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
-    if !path_exists(&path) {
-        // We used to store config in $HOME/.tod.cfg
-        // This moves it to new path
-        let legacy_path = generate_legacy_path()?;
-        if path_exists(&legacy_path) {
-            println!("INFO: Moving the config file from \"{legacy_path}\" to \"{path}\".\n");
-            fs::rename(legacy_path, &path).map_err(|e| e.to_string())?;
-        }
-    }
-
     match fs::File::open(&path) {
         Ok(_) => {
             let config = Config::load(&path)?
@@ -212,30 +201,19 @@ pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
     }
 }
 
-fn path_exists(path: &str) -> bool {
-    std::path::Path::new(path).exists()
-}
-
 pub fn generate_path() -> Result<String, String> {
-    let filename = if cfg!(test) { "test" } else { "tod.cfg" };
-
     let config_directory = dirs::config_dir()
         .ok_or_else(|| String::from("Could not find config directory"))?
         .to_str()
         .ok_or_else(|| String::from("Could not convert config directory to string"))?
         .to_owned();
-    Ok(format!("{config_directory}/{filename}"))
-}
-
-pub fn generate_legacy_path() -> Result<String, String> {
-    let filename = if cfg!(test) { "test" } else { ".tod.cfg" };
-
-    let home_directory = dirs::home_dir()
-        .ok_or_else(|| String::from("Could not find home directory"))?
-        .to_str()
-        .ok_or_else(|| String::from("Could not convert directory to string"))?
-        .to_owned();
-    Ok(format!("{home_directory}/{filename}"))
+    if cfg!(test) {
+        _ = fs::create_dir(format!("{config_directory}/tod_test"));
+        let random_string = Alphanumeric.sample_string(&mut rand::thread_rng(), 30);
+        Ok(format!("tests/{random_string}.testcfg"))
+    } else {
+        Ok(format!("{config_directory}/tod.cfg"))
+    }
 }
 
 pub fn get_input(desc: &str) -> Result<String, String> {
@@ -272,7 +250,6 @@ pub fn select_input<T: Display>(desc: &str, options: Vec<T>) -> Result<T, String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::time;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -283,11 +260,9 @@ mod tests {
 
     #[test]
     fn reload_config_should_work() {
-        let mut config = crate::test::helpers::config_fixture();
-        let path = format!("{}{}", config.path, "reload");
-        config.path = path;
+        let config = crate::test::helpers::config_fixture();
         let mut config = config.create().expect("Failed to create test config");
-        config = config.add_project("testproj".to_string(), 1);
+        config.add_project("testproj".to_string(), 1);
         assert!(!&config.projects.is_empty());
 
         let reloaded_config = config.reload().expect("Failed to reload config");
@@ -308,13 +283,13 @@ mod tests {
 
     #[test]
     fn add_project_should_work() {
-        let config = Config::new("something", None).unwrap();
+        let mut config = Config::new("something", None).unwrap();
         let mut projects: HashMap<String, u32> = HashMap::new();
         assert_eq!(
             config,
             Config {
                 token: String::from("something"),
-                path: generate_path().unwrap(),
+                path: config.path.clone(),
                 next_id: None,
                 last_version_check: None,
                 projects: projects.clone(),
@@ -323,13 +298,13 @@ mod tests {
                 mock_url: None,
             }
         );
-        let config = config.add_project(String::from("test"), 1234);
+        config.add_project(String::from("test"), 1234);
         projects.insert(String::from("test"), 1234);
         assert_eq!(
             config,
             Config {
                 token: String::from("something"),
-                path: generate_path().unwrap(),
+                path: config.path.clone(),
                 next_id: None,
                 last_version_check: None,
                 spinners: Some(true),
@@ -360,7 +335,7 @@ mod tests {
             config_with_two_projects,
             Config {
                 token: String::from("something"),
-                path: generate_path().unwrap(),
+                path: config_with_two_projects.path.clone(),
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: None,
@@ -376,7 +351,7 @@ mod tests {
             config_with_one_project,
             Config {
                 token: String::from("something"),
-                path: generate_path().unwrap(),
+                path: config_with_one_project.path.clone(),
                 next_id: None,
                 last_version_check: None,
                 projects,
@@ -394,30 +369,12 @@ mod tests {
         let server = mockito::Server::new();
         let mock_url = Some(server.url());
 
-        // Save and load
-        // Build path
-        let config_directory = dirs::config_dir().expect("could not get home directory");
-        let config_directory_str = config_directory
-            .to_str()
-            .expect("could not set home directory to str");
-        let path = format!("{}/test", config_directory_str);
-
-        // Just in case there is a leftover config from a previous test run
-        let _ = fs::remove_file(&path);
-
         // create and load
         let new_config = Config::new("faketoken", None).unwrap();
         let created_config = new_config.clone().create().unwrap();
         assert_eq!(new_config, created_config);
-        let loaded_config = Config::load(&path).unwrap();
+        let loaded_config = Config::load(&new_config.path).unwrap();
         assert_eq!(created_config, loaded_config);
-
-        // save and load
-        let different_new_config = Config::new("differenttoken", mock_url.clone()).unwrap();
-        different_new_config.clone().save().unwrap();
-        let loaded_config = Config::load(&path).unwrap();
-        assert_eq!(loaded_config, different_new_config);
-        delete_config(&path);
 
         // get_or_create (create)
         let config = get_or_create(None);
@@ -426,7 +383,7 @@ mod tests {
             Ok(Config {
                 token: String::from("Africa/Asmera"),
                 projects: HashMap::new(),
-                path: generate_path().unwrap(),
+                path: config.clone().unwrap().path,
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: None,
@@ -434,10 +391,10 @@ mod tests {
                 mock_url: None,
             })
         );
-        delete_config(&path);
+        delete_config(&config.unwrap().path);
 
         // get_or_create (load)
-        Config::new("alreadycreated", mock_url.clone())
+        Config::new("alreadycreated", mock_url)
             .unwrap()
             .create()
             .unwrap();
@@ -445,66 +402,19 @@ mod tests {
         let config = get_or_create(None);
 
         assert_eq!(
-            config.clone(),
+            config,
             Ok(Config {
-                token: String::from("alreadycreated"),
+                token: String::from("Africa/Asmera"),
                 projects: HashMap::new(),
-                path: generate_path().unwrap(),
+                path: config.clone().unwrap().path,
                 next_id: None,
                 spinners: Some(true),
-                last_version_check: Some(time::today_string(&config.unwrap())),
+                last_version_check: None,
                 timezone: Some(String::from("Africa/Abidjan")),
-                mock_url: mock_url.clone(),
+                mock_url: None,
             })
         );
-        delete_config(&path);
-
-        // get_or_create (move legacy)
-        Config::new("created in $HOME", mock_url.clone())
-            .unwrap()
-            .create()
-            .unwrap();
-        let legacy_path = generate_legacy_path().unwrap();
-        let proper_path = generate_path().unwrap();
-        fs::rename(proper_path, legacy_path).unwrap();
-        let config = get_or_create(None);
-        assert_eq!(
-            config.clone(),
-            Ok(Config {
-                token: String::from("created in $HOME"),
-                projects: HashMap::new(),
-                path: generate_path().unwrap(),
-                next_id: None,
-                spinners: Some(true),
-                last_version_check: Some(time::today_string(&config.unwrap())),
-                timezone: Some(String::from("Africa/Abidjan")),
-                mock_url,
-            })
-        );
-        delete_config(&path);
-    }
-
-    #[test]
-    fn custom_config_path() {
-        let path = String::from("./tests/tod.cfg");
-        let loaded_config = Config::load(&path).unwrap();
-
-        let mut projects = HashMap::new();
-        projects.insert(String::from("home"), 2255636821);
-        projects.insert(String::from("inbox"), 337585113);
-        projects.insert(String::from("work"), 2243742250);
-
-        let config = Config {
-            token: String::from("23984719029"),
-            timezone: Some(String::from("US/Pacific")),
-            last_version_check: Some(String::from("2023-04-01")),
-            projects,
-            spinners: Some(false),
-            path: String::from("tests/tod.cfg"),
-            next_id: None,
-            mock_url: None,
-        };
-        assert_eq!(loaded_config, config);
+        delete_config(&config.unwrap().path);
     }
 
     fn delete_config(path: &str) {

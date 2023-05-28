@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::config::Config;
 use crate::items::{FormatType, Item, Priority};
-use crate::{config, items, projects, request};
+use crate::{input, items, projects, request};
 use colored::*;
 use serde::Deserialize;
 
@@ -126,7 +126,7 @@ fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> 
 fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, String> {
     let options = vec!["add", "skip"];
     println!("{}", project);
-    match config::select_input("Select an option", options.clone()) {
+    match input::select("Select an option", options.clone()) {
         Ok(string) => {
             if string == "add" {
                 add(config, project.name, project.id)
@@ -164,7 +164,7 @@ fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
         .map(|s| s.to_string())
         .collect();
     println!("{}", item.fmt(config, FormatType::Single));
-    match config::select_input("Select an option", options) {
+    match input::select("Select an option", options) {
         Ok(string) => {
             if string == "complete" {
                 Some(request::complete_item(config))
@@ -202,11 +202,10 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
 pub fn rename_item(config: &Config, project_id: &str) -> Result<String, String> {
     let project_tasks = request::items_for_project(config, project_id)?;
 
-    let selected_task = config::select_input("Choose a task of the project:", project_tasks)?;
+    let selected_task = input::select("Choose a task of the project:", project_tasks)?;
     let task_content = selected_task.content.as_str();
 
-    let new_task_content =
-        config::get_input_with_default("Edit the task you selected:", task_content)?;
+    let new_task_content = input::string_with_default("Edit the task you selected:", task_content)?;
 
     if task_content == new_task_content {
         return Ok(green_string(
@@ -297,7 +296,7 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
     } else {
         for item in undated_items.iter() {
             println!("{}", item.fmt(config, FormatType::Single));
-            let due_string = config::get_input("Input a date in natural language or (c)omplete")?;
+            let due_string = input::string("Input a date in natural language or (c)omplete")?;
             match due_string.as_str() {
                 "complete" | "c" => {
                     let config = config.set_next_id(&item.id);
@@ -314,17 +313,12 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
 pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, String> {
     println!("{}", item.fmt(config, FormatType::Single));
 
-    let mut options = config
-        .projects
-        .keys()
-        .map(|k| k.to_owned())
-        .collect::<Vec<String>>();
-
+    let mut options = project_names(config);
+    options.reverse();
     options.push("complete".to_string());
     options.reverse();
 
-    let project_name =
-        config::select_input("Enter destination project name or complete:", options)?;
+    let project_name = input::select("Enter destination project name or complete:", options)?;
 
     match project_name.as_str() {
         "complete" => {
@@ -338,7 +332,7 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
             if section_names.is_empty() {
                 request::move_item_to_project(config, item, &project_name)
             } else {
-                let section_name = config::select_input("Select section", section_names)?;
+                let section_name = input::select("Select section", section_names)?;
                 let section_id = &sections
                     .iter()
                     .find(|x| x.name == section_name.as_str())
@@ -372,6 +366,15 @@ pub fn green_string(str: &str) -> String {
     String::from(str).green().to_string()
 }
 
+pub fn project_names(config: &Config) -> Vec<String> {
+    let mut names = config
+        .projects
+        .keys()
+        .map(|k| k.to_owned())
+        .collect::<Vec<String>>();
+    names.sort();
+    names
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -532,5 +535,37 @@ mod tests {
         let config = config.reload().unwrap();
         let config_keys: Vec<String> = config.projects.keys().map(|k| k.to_string()).collect();
         assert!(config_keys.contains(&"Doomsday".to_string()))
+    }
+
+    #[test]
+    fn can_handle_item() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sync())
+            .create();
+
+        let item = test::helpers::item_fixture();
+        let config = Config::new("123", Some(server.url())).unwrap();
+        let result = handle_item(&config, item);
+        let expected = Some(Ok(String::from("✓")));
+        assert_eq!(result, expected);
+        mock.assert();
+    }
+
+    #[test]
+    fn can_get_project_names() {
+        let mut config = Config::new("123", None).unwrap();
+        let result = project_names(&config);
+        let expected: Vec<String> = vec![];
+        assert_eq!(result, expected);
+
+        config.add_project(String::from("NEWPROJECT"), 123);
+
+        let result = project_names(&config);
+        let expected: Vec<String> = vec![String::from("NEWPROJECT")];
+        assert_eq!(result, expected);
     }
 }

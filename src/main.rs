@@ -36,6 +36,7 @@ fn main() {
         }
         Some(("task", task_matches)) => match task_matches.subcommand() {
             Some(("create", m)) => task_create(m),
+            Some(("edit", m)) => task_edit(m),
             Some(("list", m)) => task_list(m),
             Some(("next", m)) => task_next(m),
             Some(("complete", m)) => task_complete(m),
@@ -97,6 +98,10 @@ fn cmd() -> Command {
                          .arg(priority_arg())
                          .arg(content_arg())
                          .arg(project_arg()),
+                       Command::new("edit").about("Edit an exising task")
+                         .arg(config_arg())
+                         .arg(project_arg())
+                         .arg(task_arg()),
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
                          .arg(project_arg())
@@ -182,6 +187,7 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
     use inquire::Select;
     use items::Priority;
+    dbg!(matches);
 
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, "content", "Content")?;
@@ -215,6 +221,28 @@ fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
 
     request::add_item_to_inbox(&config, &text, items::Priority::None)?;
     Ok(projects::green_string("✓"))
+}
+
+#[cfg(not(tarpaulin_include))]
+fn task_edit(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project_name = fetch_project(matches, &config)?;
+    let project_id = projects::project_id(&config, &project_name)?;
+    let project_tasks = request::items_for_project(&config, &project_id)?;
+
+    let selected_task = config::select_input("Choose a task of the project:", project_tasks)
+        .expect("Failed to create task list from project");
+    let task_content = selected_task.content.as_str();
+
+    let new_task_content = config::get_input_with_default("Edit the task you selected:", task_content)
+        .expect("Failed to edit task");
+
+    dbg!(new_task_content.clone());
+    if task_content == new_task_content {
+        return Ok(String::from(""));
+    }
+
+    request::update_item_name(&config, selected_task, new_task_content)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -378,6 +406,17 @@ fn project_arg() -> Arg {
         .required(false)
         .value_name("PROJECT NAME")
         .help("The project into which the task will be added")
+}
+
+#[cfg(not(tarpaulin_include))]
+fn task_arg() -> Arg {
+    Arg::new("task")
+        .short('t')
+        .long("task")
+        .num_args(1)
+        .required(false)
+        .value_name("TASK NAME")
+        .help("The task on which an action will be executed")
 }
 
 #[test]

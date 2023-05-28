@@ -240,7 +240,6 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let new_task_content = config::get_input_with_default("Edit the task you selected:", task_content)
         .expect("Failed to edit task");
 
-    dbg!(new_task_content.clone());
     if task_content == new_task_content {
         return Ok(String::from(""));
     }

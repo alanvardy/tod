@@ -118,6 +118,9 @@ tod task create
 # Create a task in a project
 tod task create --content "Write more rust" --project code
 
+# Import your projects
+tod project import
+
 # Get the next task for a project
 tod task next
 

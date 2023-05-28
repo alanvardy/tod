@@ -120,6 +120,17 @@ pub fn update_item_due(config: &Config, item: Item, due_string: String) -> Resul
     // Does not pass back an item
     Ok(String::from("✓"))
 }
+
+/// Update the name of an item by ID
+pub fn update_item_name(config: &Config, item: Item, new_name: String) -> Result<String, String> {
+    let body = json!({ "content": new_name });
+    let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
+
+    post_todoist_rest(config, url, body)?;
+    // Does not pass back an item
+    Ok(String::from("✓"))
+}
+
 /// Complete the last item returned by "next item"
 pub fn complete_item(config: &Config) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": new_uuid(), "temp_id": new_uuid(), "args": {"id": config.next_id}}]});

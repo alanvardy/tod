@@ -6,8 +6,10 @@ extern crate clap;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use colored::*;
 use config::Config;
+use items::Priority;
 
 mod config;
+mod input;
 mod items;
 mod projects;
 mod request;
@@ -146,50 +148,20 @@ fn cmd() -> Command {
         )
 }
 
-#[cfg(not(tarpaulin_include))]
-fn has_flag(matches: ArgMatches, id: &'static str) -> bool {
-    matches.get_one::<String>(id) == Some(&String::from("yes"))
-}
+// --- TOP LEVEL ---
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_config(matches: &ArgMatches) -> Result<Config, String> {
-    let config_path = matches.get_one::<String>("config").map(|s| s.to_owned());
+fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
+    let config = fetch_config(matches)?;
 
-    config::get_or_create(config_path)
+    request::add_item_to_inbox(&config, &text, items::Priority::None)?;
+    Ok(projects::green_string("✓"))
 }
 
-#[cfg(not(tarpaulin_include))]
-fn fetch_string(matches: &ArgMatches, field: &str, prompt: &str) -> Result<String, String> {
-    let argument_content = matches.get_one::<String>(field).map(|s| s.to_owned());
-    match argument_content {
-        Some(string) => Ok(string),
-        None => config::get_input(prompt),
-    }
-}
-
-#[cfg(not(tarpaulin_include))]
-fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String> {
-    let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
-    match project_content {
-        Some(string) => Ok(string),
-        None => {
-            let mut options = config
-                .projects
-                .keys()
-                .map(|k| k.to_owned())
-                .collect::<Vec<String>>();
-            options.sort();
-
-            config::select_input("Select project", options)
-        }
-    }
-}
+// --- TASK ---
 
 #[cfg(not(tarpaulin_include))]
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
-    use inquire::Select;
-    use items::Priority;
-
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, "content", "Content")?;
     let priority = match Priority::get_from_matches(matches) {
@@ -201,27 +173,16 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
                 Priority::Medium,
                 Priority::High,
             ];
-            Select::new(
+            input::select(
                 "Choose a priority that should be assigned to task:",
                 options,
-            )
-            .prompt()
-            .map_err(|e| e.to_string())
-            .expect("Failed to create option list of priorities")
+            )?
         }
     };
 
     let project = fetch_project(matches, &config)?;
 
     projects::add_item_to_project(&config, content, &project, priority)
-}
-
-#[cfg(not(tarpaulin_include))]
-fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-
-    request::add_item_to_inbox(&config, &text, items::Priority::None)?;
-    Ok(projects::green_string("✓"))
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -232,13 +193,12 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
 
     projects::rename_item(&config, &project_id)
 }
-
 #[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    if has_flag(matches.clone(), "scheduled") {
+    if has_flag(matches, "scheduled") {
         projects::scheduled_items(&config, &project)
     } else {
         projects::all_items(&config, &project)
@@ -261,6 +221,8 @@ fn task_complete(matches: &ArgMatches) -> Result<String, String> {
         None => Err("There is nothing to complete. Try to mark a task as 'next'.".to_string()),
     }
 }
+
+// --- PROJECT ---
 
 #[cfg(not(tarpaulin_include))]
 fn project_list(matches: &ArgMatches) -> Result<String, String> {
@@ -324,6 +286,8 @@ fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
 
     projects::schedule(&config, &project)
 }
+
+// --- ARGUMENT HELPERS ---
 
 #[cfg(not(tarpaulin_include))]
 fn priority_arg() -> Arg {
@@ -402,6 +366,44 @@ fn project_arg() -> Arg {
         .value_name("PROJECT NAME")
         .help("The project into which the task will be added")
 }
+
+// --- VALUE HELPERS ---
+
+/// Checks if the flag was used
+#[cfg(not(tarpaulin_include))]
+fn has_flag(matches: &ArgMatches, id: &'static str) -> bool {
+    matches.get_one::<String>(id) == Some(&String::from("yes"))
+}
+
+#[cfg(not(tarpaulin_include))]
+fn fetch_config(matches: &ArgMatches) -> Result<Config, String> {
+    let config_path = matches.get_one::<String>("config").map(|s| s.to_owned());
+
+    config::get_or_create(config_path)
+}
+
+#[cfg(not(tarpaulin_include))]
+fn fetch_string(matches: &ArgMatches, field: &str, prompt: &str) -> Result<String, String> {
+    let argument_content = matches.get_one::<String>(field).map(|s| s.to_owned());
+    match argument_content {
+        Some(string) => Ok(string),
+        None => input::string(prompt),
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String> {
+    let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
+    match project_content {
+        Some(string) => Ok(string),
+        None => {
+            let options = projects::project_names(config);
+            input::select("Select project", options)
+        }
+    }
+}
+
+// --- TESTS ---
 
 #[test]
 fn verify_cmd() {

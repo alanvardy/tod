@@ -1,12 +1,10 @@
-use crate::{request, time, VERSION};
+use crate::{input, request, time, VERSION};
 use chrono_tz::TZ_VARIANTS;
 use colored::*;
-use inquire::{Select, Text};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::fs;
 use std::io::{Read, Write};
 
@@ -83,13 +81,6 @@ impl Config {
         Config::load(&self.path)
     }
 
-    pub fn set_path(self, path: &str) -> Config {
-        Config {
-            path: String::from(path),
-            ..self
-        }
-    }
-
     pub fn add_project(&mut self, name: String, number: u32) {
         let projects = &mut self.projects;
         projects.insert(name, number);
@@ -157,7 +148,7 @@ impl Config {
                 .collect::<Vec<String>>();
             options.sort();
 
-            let tz = select_input(desc, options)?;
+            let tz = input::select(desc, options)?;
             let config = Config {
                 timezone: Some(tz),
                 ..self
@@ -185,17 +176,10 @@ pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
                 .check_for_timezone()?
                 .check_for_latest_version()?;
 
-            // When we move the config file we also need to rename the path in JSON
-            if config.path != path {
-                let new_config = config.set_path(&path);
-                new_config.clone().save()?;
-                Ok(new_config)
-            } else {
-                Ok(config)
-            }
+            Ok(config)
         }
         Err(_) => {
-            let token = get_input(desc)?;
+            let token = input::string(desc)?;
             Config::new(&token, None)?.create()?.check_for_timezone()
         }
     }
@@ -214,37 +198,6 @@ pub fn generate_path() -> Result<String, String> {
     } else {
         Ok(format!("{config_directory}/tod.cfg"))
     }
-}
-
-pub fn get_input(desc: &str) -> Result<String, String> {
-    if cfg!(test) {
-        return Ok(String::from("Africa/Asmera"));
-    }
-
-    Text::new(desc).prompt().map_err(|e| e.to_string())
-}
-
-pub fn get_input_with_default(desc: &str, default_message: &str) -> Result<String, String> {
-    if cfg!(test) {
-        return Ok(String::from(default_message));
-    }
-
-    Text::new(desc)
-        .with_initial_value(default_message)
-        .prompt()
-        .map_err(|e| e.to_string())
-}
-
-pub fn select_input<T: Display>(desc: &str, options: Vec<T>) -> Result<T, String> {
-    if cfg!(test) {
-        return Ok(options
-            .into_iter()
-            .next()
-            .expect("Must provide a vector of options"));
-    }
-    Select::new(desc, options)
-        .prompt()
-        .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

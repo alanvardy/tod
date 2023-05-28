@@ -229,7 +229,10 @@ pub fn get_input_with_default(desc: &str, default_message: &str) -> Result<Strin
         return Ok(String::from("Africa/Asmera"));
     }
 
-    Text::new(desc).with_default(default_message).prompt().map_err(|e| e.to_string())
+    Text::new(desc)
+        .with_default(default_message)
+        .prompt()
+        .map_err(|e| e.to_string())
 }
 
 pub fn select_input<T: Display>(desc: &str, options: Vec<T>) -> Result<T, String> {

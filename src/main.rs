@@ -189,7 +189,6 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
     use inquire::Select;
     use items::Priority;
-    dbg!(matches);
 
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, "content", "Content")?;

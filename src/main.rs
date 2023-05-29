@@ -101,8 +101,7 @@ fn cmd() -> Command {
                          .arg(project_arg()),
                        Command::new("edit").about("Edit an exising task")
                          .arg(config_arg())
-                         .arg(project_arg())
-                         .arg(task_arg()),
+                         .arg(project_arg()),
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
                          .arg(project_arg())
@@ -414,17 +413,6 @@ fn project_arg() -> Arg {
         .required(false)
         .value_name("PROJECT NAME")
         .help("The project into which the task will be added")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn task_arg() -> Arg {
-    Arg::new("task")
-        .short('t')
-        .long("task")
-        .num_args(1)
-        .required(false)
-        .value_name("TASK NAME")
-        .help("The task on which an action will be executed")
 }
 
 #[test]

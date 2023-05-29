@@ -237,8 +237,7 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let task_content = selected_task.content.as_str();
 
     let new_task_content =
-        config::get_input_with_default("Edit the task you selected:", task_content)
-            .expect("Failed to edit task");
+        config::get_input_with_default("Edit the task you selected:", task_content)?;
 
     if task_content == new_task_content {
         return Ok(String::from(""));

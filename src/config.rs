@@ -203,6 +203,7 @@ pub fn generate_path() -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -213,7 +214,7 @@ mod tests {
 
     #[test]
     fn reload_config_should_work() {
-        let config = crate::test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let mut config = config.create().expect("Failed to create test config");
         config.add_project("testproj".to_string(), 1);
         assert!(!&config.projects.is_empty());

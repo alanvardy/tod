@@ -340,17 +340,17 @@ mod tests {
 
     #[test]
     fn date_value_can_handle_date() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         // On another day
-        assert_eq!(test::helpers::item_fixture().date_value(&config), 50);
+        assert_eq!(test::fixtures::item().date_value(&config), 50);
 
         // Recurring
         let item = Item {
             due: Some(DateInfo {
                 is_recurring: true,
-                ..test::helpers::item_fixture().due.unwrap()
+                ..test::fixtures::item().due.unwrap()
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
         assert_eq!(item.date_value(&config), 0);
 
@@ -361,7 +361,7 @@ mod tests {
                 is_recurring: true,
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
         assert_eq!(item.date_value(&config), 150);
 
@@ -372,13 +372,13 @@ mod tests {
 
     #[test]
     fn date_value_can_handle_datetime() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             due: Some(DateInfo {
                 date: String::from("2021-02-27T19:41:56Z"),
-                ..test::helpers::item_fixture().due.unwrap()
+                ..test::fixtures::item().due.unwrap()
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         assert_eq!(item.date_value(&config), 50);
@@ -386,14 +386,14 @@ mod tests {
 
     #[test]
     fn can_format_item_with_a_date() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: String::from("2021-08-13"),
-                ..test::helpers::item_fixture().due.unwrap()
+                ..test::fixtures::item().due.unwrap()
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         let output = if test::helpers::supports_coloured_output() {
@@ -407,14 +407,14 @@ mod tests {
 
     #[test]
     fn can_format_item_with_today() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: time::today_string(&config),
-                ..test::helpers::item_fixture().due.unwrap()
+                ..test::fixtures::item().due.unwrap()
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         let output = if test::helpers::supports_coloured_output() {
@@ -427,21 +427,21 @@ mod tests {
 
     #[test]
     fn value_can_get_the_value_of_an_item() {
-        let config = test::helpers::config_fixture();
-        let item = test::helpers::item_fixture();
+        let config = test::fixtures::config();
+        let item = test::fixtures::item();
 
         assert_eq!(item.value(&config), 53);
     }
 
     #[test]
     fn datetime_works_with_datetime() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
-                ..test::helpers::item_fixture().due.unwrap()
+                ..test::fixtures::item().due.unwrap()
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         assert_matches!(item.datetime(&config), Some(DateTime { .. }));
@@ -449,13 +449,13 @@ mod tests {
 
     #[test]
     fn datetime_works_with_date() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             due: Some(DateInfo {
                 date: time::today_string(&config),
-                ..test::helpers::item_fixture().due.unwrap()
+                ..test::fixtures::item().due.unwrap()
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         assert_eq!(item.datetime(&config), None);
@@ -463,10 +463,10 @@ mod tests {
 
     #[test]
     fn has_no_date_works() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             due: None,
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         assert!(item.has_no_date());
@@ -474,19 +474,19 @@ mod tests {
         let item_today = Item {
             due: Some(DateInfo {
                 date: time::today_string(&config),
-                ..test::helpers::item_fixture().due.unwrap()
+                ..test::fixtures::item().due.unwrap()
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
         assert!(!item_today.has_no_date());
     }
 
     #[test]
     fn has_time_works() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             due: None,
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         assert!(!item.has_time(&config));
@@ -514,10 +514,10 @@ mod tests {
 
     #[test]
     fn is_today_works() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             due: None,
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         assert!(!item.is_today(&config));
@@ -528,7 +528,7 @@ mod tests {
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
         assert!(item_today.is_today(&config));
 
@@ -538,21 +538,21 @@ mod tests {
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
         assert!(!item_in_past.is_today(&config));
     }
 
     #[test]
     fn sort_by_value_works() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let today = Item {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         let today_recurring = Item {
@@ -561,7 +561,7 @@ mod tests {
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         let future = Item {
@@ -570,7 +570,7 @@ mod tests {
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::helpers::item_fixture()
+            ..test::fixtures::item()
         };
 
         let input = vec![future.clone(), today_recurring.clone(), today.clone()];
@@ -581,7 +581,7 @@ mod tests {
 
     #[test]
     fn sort_by_datetime_works() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let no_date = Item {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
@@ -642,7 +642,7 @@ mod tests {
 
     #[test]
     fn is_overdue_works() {
-        let config = test::helpers::config_fixture();
+        let config = test::fixtures::config();
         let item = Item {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),

@@ -1,16 +1,21 @@
 #[cfg(test)]
 pub mod helpers {
-    use crate::config;
-    use crate::config::Config;
-    use crate::items::{DateInfo, Item};
-    use std::collections::HashMap;
 
     /// Checks if environment supports colored output (GitHub Actions does not)
     pub fn supports_coloured_output() -> bool {
         colored::control::SHOULD_COLORIZE.should_colorize()
     }
+}
+#[cfg(test)]
+pub mod fixtures {
+    use std::collections::HashMap;
 
-    pub fn item_fixture() -> Item {
+    use crate::{
+        config::{self, Config},
+        items::{DateInfo, Item},
+    };
+
+    pub fn item() -> Item {
         Item {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
@@ -26,22 +31,28 @@ pub mod helpers {
         }
     }
 
-    pub fn config_fixture() -> Config {
+    pub fn config(
+        mock_url: Option<String>,
+        mock_string: Option<String>,
+        mock_select: Option<usize>,
+    ) -> Config {
         Config {
             token: String::from("alreadycreated"),
             projects: HashMap::new(),
             path: config::generate_path().unwrap(),
             next_id: None,
-            spinners: Some(true),
-            last_version_check: None,
             timezone: Some(String::from("US/Pacific")),
-            mock_url: None,
+            last_version_check: None,
+            mock_url,
+            mock_string,
+            mock_select,
+            spinners: Some(true),
         }
     }
 }
 #[cfg(test)]
 pub mod responses {
-    use crate::test::helpers;
+    use crate::test::fixtures;
     use crate::{time, VERSION};
 
     pub fn sync() -> String {
@@ -109,7 +120,7 @@ pub mod responses {
                 }}
             ]
         }}",
-            time::today_string(&helpers::config_fixture())
+            time::today_string(&fixtures::config(None, None, None))
         )
     }
 

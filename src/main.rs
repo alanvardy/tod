@@ -163,7 +163,7 @@ fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let content = fetch_string(matches, "content", "Content")?;
+    let content = fetch_string(matches, &config, "content", "Content")?;
     let priority = match Priority::get_from_matches(matches) {
         Some(value) => value,
         None => {
@@ -176,6 +176,7 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
             input::select(
                 "Choose a priority that should be assigned to task:",
                 options,
+                config.mock_select,
             )?
         }
     };
@@ -234,8 +235,8 @@ fn project_list(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn project_add(matches: &ArgMatches) -> Result<String, String> {
     let mut config = fetch_config(matches)?;
-    let name = fetch_string(matches, "name", "Enter project name or alias")?;
-    let id = fetch_string(matches, "id", "Enter ID of project")?;
+    let name = fetch_string(matches, &config, "name", "Enter project name or alias")?;
+    let id = fetch_string(matches, &config, "id", "Enter ID of project")?;
 
     projects::add(&mut config, name, id)
 }
@@ -379,15 +380,22 @@ fn has_flag(matches: &ArgMatches, id: &'static str) -> bool {
 fn fetch_config(matches: &ArgMatches) -> Result<Config, String> {
     let config_path = matches.get_one::<String>("config").map(|s| s.to_owned());
 
-    config::get_or_create(config_path)
+    config::get_or_create(config_path)?
+        .check_for_timezone()?
+        .check_for_latest_version()
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_string(matches: &ArgMatches, field: &str, prompt: &str) -> Result<String, String> {
+fn fetch_string(
+    matches: &ArgMatches,
+    config: &Config,
+    field: &str,
+    prompt: &str,
+) -> Result<String, String> {
     let argument_content = matches.get_one::<String>(field).map(|s| s.to_owned());
     match argument_content {
         Some(string) => Ok(string),
-        None => input::string(prompt),
+        None => input::string(prompt, config.mock_string.clone()),
     }
 }
 
@@ -398,7 +406,7 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String
         Some(string) => Ok(string),
         None => {
             let options = projects::project_names(config);
-            input::select("Select project", options)
+            input::select("Select project", options, config.mock_select)
         }
     }
 }

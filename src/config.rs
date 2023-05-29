@@ -22,6 +22,8 @@ pub struct Config {
     pub timezone: Option<String>,
     pub last_version_check: Option<String>,
     pub mock_url: Option<String>,
+    pub mock_string: Option<String>,
+    pub mock_select: Option<usize>,
     // Whether spinners are enabled
     pub spinners: Option<bool>,
 }
@@ -37,6 +39,8 @@ impl Config {
             timezone: None,
             spinners: Some(true),
             mock_url,
+            mock_string: None,
+            mock_select: None,
             projects,
         })
     }
@@ -108,7 +112,7 @@ impl Config {
         Config { next_id, ..self }
     }
 
-    fn check_for_latest_version(self: Config) -> Result<Config, String> {
+    pub fn check_for_latest_version(self: Config) -> Result<Config, String> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
             last_version_check: Some(time::today_string(&self)),
@@ -138,7 +142,7 @@ impl Config {
         Ok(new_config)
     }
 
-    fn check_for_timezone(self: Config) -> Result<Config, String> {
+    pub fn check_for_timezone(self: Config) -> Result<Config, String> {
         if self.timezone.is_none() {
             let desc = "Please select your timezone";
             let mut options = TZ_VARIANTS
@@ -148,7 +152,7 @@ impl Config {
                 .collect::<Vec<String>>();
             options.sort();
 
-            let tz = input::select(desc, options)?;
+            let tz = input::select(desc, options, self.mock_select)?;
             let config = Config {
                 timezone: Some(tz),
                 ..self
@@ -168,19 +172,15 @@ pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
         None => generate_path()?,
         Some(path) => path.trim().to_owned(),
     };
-    let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
     match fs::File::open(&path) {
-        Ok(_) => {
-            let config = Config::load(&path)?
-                .check_for_timezone()?
-                .check_for_latest_version()?;
-
-            Ok(config)
-        }
+        Ok(_) => Config::load(&path),
         Err(_) => {
-            let token = input::string(desc)?;
-            Config::new(&token, None)?.create()?.check_for_timezone()
+            let desc =
+                "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
+
+            let token = input::string(desc, Some(String::new()))?;
+            Config::new(&token, None)?.create()
         }
     }
 }
@@ -202,6 +202,8 @@ pub fn generate_path() -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    use crate::test;
+
     use super::*;
     use pretty_assertions::assert_eq;
 
@@ -213,7 +215,7 @@ mod tests {
 
     #[test]
     fn reload_config_should_work() {
-        let config = crate::test::helpers::config_fixture();
+        let config = test::fixtures::config(None, None, None);
         let mut config = config.create().expect("Failed to create test config");
         config.add_project("testproj".to_string(), 1);
         assert!(!&config.projects.is_empty());
@@ -249,6 +251,8 @@ mod tests {
                 spinners: Some(true),
                 timezone: None,
                 mock_url: None,
+                mock_string: None,
+                mock_select: None,
             }
         );
         config.add_project(String::from("test"), 1234);
@@ -264,6 +268,8 @@ mod tests {
                 projects,
                 timezone: None,
                 mock_url: None,
+                mock_string: None,
+                mock_select: None,
             }
         );
     }
@@ -282,6 +288,8 @@ mod tests {
             projects: projects.clone(),
             timezone: Some(String::from("Asia/Pyongyang")),
             mock_url: None,
+            mock_string: None,
+            mock_select: None,
         };
 
         assert_eq!(
@@ -295,6 +303,8 @@ mod tests {
                 projects: projects.clone(),
                 timezone: Some(String::from("Asia/Pyongyang")),
                 mock_url: None,
+                mock_string: None,
+                mock_select: None,
             }
         );
         let config_with_one_project = config_with_two_projects.remove_project("test");
@@ -311,6 +321,8 @@ mod tests {
                 spinners: Some(true),
                 timezone: Some(String::from("Asia/Pyongyang")),
                 mock_url: None,
+                mock_string: None,
+                mock_select: None,
             }
         );
     }
@@ -334,14 +346,16 @@ mod tests {
         assert_eq!(
             config,
             Ok(Config {
-                token: String::from("Africa/Asmera"),
+                token: String::new(),
                 projects: HashMap::new(),
                 path: config.clone().unwrap().path,
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: None,
-                timezone: Some(String::from("Africa/Abidjan")),
+                timezone: None,
                 mock_url: None,
+                mock_string: None,
+                mock_select: None,
             })
         );
         delete_config(&config.unwrap().path);
@@ -357,14 +371,16 @@ mod tests {
         assert_eq!(
             config,
             Ok(Config {
-                token: String::from("Africa/Asmera"),
+                token: String::new(),
                 projects: HashMap::new(),
                 path: config.clone().unwrap().path,
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: None,
-                timezone: Some(String::from("Africa/Abidjan")),
+                timezone: None,
                 mock_url: None,
+                mock_string: None,
+                mock_select: None,
             })
         );
         delete_config(&config.unwrap().path);

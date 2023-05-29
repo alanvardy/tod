@@ -126,7 +126,7 @@ fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> 
 fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, String> {
     let options = vec!["add", "skip"];
     println!("{}", project);
-    match input::select("Select an option", options.clone()) {
+    match input::select("Select an option", options.clone(), config.mock_select) {
         Ok(string) => {
             if string == "add" {
                 add(config, project.name, project.id)
@@ -164,7 +164,7 @@ fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
         .map(|s| s.to_string())
         .collect();
     println!("{}", item.fmt(config, FormatType::Single));
-    match input::select("Select an option", options) {
+    match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "complete" {
                 Some(request::complete_item(config))
@@ -202,7 +202,11 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
 pub fn rename_item(config: &Config, project_id: &str) -> Result<String, String> {
     let project_tasks = request::items_for_project(config, project_id)?;
 
-    let selected_task = input::select("Choose a task of the project:", project_tasks)?;
+    let selected_task = input::select(
+        "Choose a task of the project:",
+        project_tasks,
+        config.mock_select,
+    )?;
     let task_content = selected_task.content.as_str();
 
     let new_task_content = input::string_with_default("Edit the task you selected:", task_content)?;
@@ -296,7 +300,10 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
     } else {
         for item in undated_items.iter() {
             println!("{}", item.fmt(config, FormatType::Single));
-            let due_string = input::string("Input a date in natural language or (c)omplete")?;
+            let due_string = input::string(
+                "Input a date in natural language or (c)omplete",
+                config.mock_string.clone(),
+            )?;
             match due_string.as_str() {
                 "complete" | "c" => {
                     let config = config.set_next_id(&item.id);
@@ -318,7 +325,11 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
     options.push("complete".to_string());
     options.reverse();
 
-    let project_name = input::select("Enter destination project name or complete:", options)?;
+    let project_name = input::select(
+        "Enter destination project name or complete:",
+        options,
+        config.mock_select,
+    )?;
 
     match project_name.as_str() {
         "complete" => {
@@ -332,7 +343,8 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
             if section_names.is_empty() {
                 request::move_item_to_project(config, item, &project_name)
             } else {
-                let section_name = input::select("Select section", section_names)?;
+                let section_name =
+                    input::select("Select section", section_names, config.mock_select)?;
                 let section_id = &sections
                     .iter()
                     .find(|x| x.name == section_name.as_str())
@@ -519,11 +531,9 @@ mod tests {
             .with_body(test::responses::projects())
             .create();
 
-        let mut config = Config::new("12341234", Some(server.url()))
-            .unwrap()
+        let mut config = test::fixtures::config(Some(server.url()), None, Some(0))
             .create()
             .unwrap();
-
         let string = if test::helpers::supports_coloured_output() {
             "\u{1b}[32mNo more projects\u{1b}[0m".to_string()
         } else {
@@ -547,12 +557,46 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let item = test::helpers::item_fixture();
-        let config = Config::new("123", Some(server.url())).unwrap();
+        let item = test::fixtures::item();
+        let config = test::fixtures::config(Some(server.url()), None, Some(0));
         let result = handle_item(&config, item);
         let expected = Some(Ok(String::from("✓")));
         assert_eq!(result, expected);
         mock.assert();
+    }
+
+    #[test]
+    fn can_process_items() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::items())
+            .create();
+
+        let mock2 = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sync())
+            .create();
+
+        let mut config = test::fixtures::config(Some(server.url()), None, Some(0))
+            .create()
+            .unwrap();
+        let project_name = String::from("Project2");
+        config.add_project(project_name.clone(), 123);
+
+        let result = process_items(config, &project_name);
+        let string = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mThere are no more tasks in 'Project2'\u{1b}[0m"
+        } else {
+            "There are no more tasks in 'Project2'"
+        };
+        assert_eq!(result, Ok(string.to_string()));
+        mock.assert();
+        mock2.assert();
     }
 
     #[test]

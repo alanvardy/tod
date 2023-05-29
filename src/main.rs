@@ -239,7 +239,7 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
         config::get_input_with_default("Edit the task you selected:", task_content)?;
 
     if task_content == new_task_content {
-        return Ok(String::from(""));
+        return Ok(String::from("The content is the same, no need to change it"));
     }
 
     request::update_item_name(&config, selected_task, new_task_content)

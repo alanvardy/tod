@@ -226,7 +226,7 @@ pub fn get_input(desc: &str) -> Result<String, String> {
 
 pub fn get_input_with_default(desc: &str, default_message: &str) -> Result<String, String> {
     if cfg!(test) {
-        return Ok(String::from("Africa/Asmera"));
+        return Ok(String::from(default_message));
     }
 
     Text::new(desc)

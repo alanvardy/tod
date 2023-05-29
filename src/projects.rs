@@ -199,6 +199,24 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
     Ok(buffer)
 }
 
+pub fn rename_item(config: &Config, project_id: &str) -> Result<String, String> {
+    let project_tasks = request::items_for_project(&config, &project_id)?;
+
+    let selected_task = config::select_input("Choose a task of the project:", project_tasks)?;
+    let task_content = selected_task.content.as_str();
+
+    let new_task_content =
+        config::get_input_with_default("Edit the task you selected:", task_content)?;
+
+    if task_content == new_task_content {
+        return Ok(String::from(
+            "The content is the same, no need to change it",
+        ));
+    }
+
+    request::update_item_name(&config, selected_task, new_task_content)
+}
+
 /// All items for a project
 pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(config, project_name)?;

@@ -230,19 +230,8 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project_name = fetch_project(matches, &config)?;
     let project_id = projects::project_id(&config, &project_name)?;
-    let project_tasks = request::items_for_project(&config, &project_id)?;
 
-    let selected_task = config::select_input("Choose a task of the project:", project_tasks)?;
-    let task_content = selected_task.content.as_str();
-
-    let new_task_content =
-        config::get_input_with_default("Edit the task you selected:", task_content)?;
-
-    if task_content == new_task_content {
-        return Ok(String::from("The content is the same, no need to change it"));
-    }
-
-    request::update_item_name(&config, selected_task, new_task_content)
+    projects::rename_item(&config, &project_id)
 }
 
 #[cfg(not(tarpaulin_include))]

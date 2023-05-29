@@ -75,9 +75,8 @@ pub fn projects(config: &Config) -> Result<Vec<Project>, String> {
 pub fn move_item_to_project(
     config: &Config,
     item: Item,
-    project_name: &str,
+    project_id: String,
 ) -> Result<String, String> {
-    let project_id = projects::project_id(config, project_name)?;
     let body = json!({"commands": [{"type": "item_move", "uuid": new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
@@ -249,7 +248,7 @@ fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> {
     }
 }
 
-/// Get latest version number from Cargo.io
+/// Get latest version number from Crates.io
 pub fn get_latest_version(config: Config) -> Result<String, String> {
     #[cfg(not(test))]
     let cargo_url: String = "https://crates.io/api".to_string();
@@ -414,7 +413,9 @@ mod tests {
             mock_url: Some(server.url()),
             ..config
         };
-        let response = move_item_to_project(&config, item, project_name);
+
+        let project_id = projects::project_id(&config, project_name).unwrap();
+        let response = move_item_to_project(&config, item, project_id);
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));

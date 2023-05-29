@@ -330,7 +330,8 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
             let sections = request::sections_for_project(config, &project_id)?;
             let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
             if section_names.is_empty() {
-                request::move_item_to_project(config, item, &project_name)
+                let project_id = projects::project_id(config, &project_name)?;
+                request::move_item_to_project(config, item, project_id)
             } else {
                 let section_name = input::select("Select section", section_names)?;
                 let section_id = &sections
@@ -356,7 +357,8 @@ pub fn add_item_to_project(
     match project {
         "inbox" | "i" => Ok(green_string("✓")),
         project => {
-            request::move_item_to_project(config, item, project)?;
+            let project_id = project_id(config, project)?;
+            request::move_item_to_project(config, item, project_id)?;
             Ok(green_string("✓"))
         }
     }
@@ -378,7 +380,7 @@ pub fn project_names(config: &Config) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test;
+    use crate::{request::move_item_to_project, test};
     use pretty_assertions::assert_eq;
 
     /// Need to adjust this value forward or back an hour when timezone changes
@@ -444,6 +446,25 @@ mod tests {
         };
 
         assert_eq!(next_item(config_with_timezone, "good"), Ok(string));
+    }
+
+    #[test]
+    fn can_move_item_to_project() {
+        let mut server = mockito::Server::new();
+        let _mock = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::items())
+            .create();
+
+        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+
+        config.add_project(String::from("good"), 1);
+        let item = test::helpers::item_fixture();
+        let result = move_item_to_project(&config, item, String::from("1"));
+        let expected = Ok(String::from("✓"));
+        assert_eq!(result, expected);
     }
 
     #[test]

@@ -404,7 +404,7 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let item = test::helpers::item_fixture();
+        let item = test::fixtures::item();
         let project_name = "testy";
         let mut config = Config::new("12341234", Some(server.url())).unwrap();
         config.add_project(String::from(project_name), 1);
@@ -423,7 +423,7 @@ mod tests {
 
     #[test]
     fn should_prioritize_an_item() {
-        let item = test::helpers::item_fixture();
+        let item = test::fixtures::item();
         let url: &str = &format!("{}{}", "/rest/v2/tasks/", item.id);
         let mut server = mockito::Server::new();
 
@@ -443,7 +443,7 @@ mod tests {
 
     #[test]
     fn should_update_date_on_an_item() {
-        let item = test::helpers::item_fixture();
+        let item = test::fixtures::item();
         let url: &str = &format!("{}{}", "/rest/v2/tasks/", item.id);
         let mut server = mockito::Server::new();
 

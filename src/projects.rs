@@ -461,7 +461,7 @@ mod tests {
         let mut config = Config::new("12341234", Some(server.url())).unwrap();
 
         config.add_project(String::from("good"), 1);
-        let item = test::helpers::item_fixture();
+        let item = test::fixtures::item();
         let result = move_item_to_project(&config, item, String::from("1"));
         let expected = Ok(String::from("✓"));
         assert_eq!(result, expected);
@@ -568,7 +568,7 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let item = test::helpers::item_fixture();
+        let item = test::fixtures::item();
         let config = Config::new("123", Some(server.url())).unwrap();
         let result = handle_item(&config, item);
         let expected = Some(Ok(String::from("✓")));

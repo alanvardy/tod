@@ -233,8 +233,7 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let project_id = projects::project_id(&config, &project_name)?;
     let project_tasks = request::items_for_project(&config, &project_id)?;
 
-    let selected_task = config::select_input("Choose a task of the project:", project_tasks)
-        .expect("Failed to create task list from project");
+    let selected_task = config::select_input("Choose a task of the project:", project_tasks)?;
     let task_content = selected_task.content.as_str();
 
     let new_task_content =

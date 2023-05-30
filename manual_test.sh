@@ -12,6 +12,8 @@ commands=(
 "cargo run -- task create -p '🦾  Digital' -c \"test\""
 "cargo run -- task create --project '🦾  Digital' --content \"test\""
 "cargo run -- task create --project '🦾  Digital' --content \"test\" --priority 2"
+"cargo run -- task edit"
+"cargo run -- task edit -p '🦾  Digital'"
 "cargo run -- task list"
 "cargo run -- task list -s"
 "cargo run -- task list --scheduled"
@@ -33,6 +35,8 @@ commands=(
 
 for cmd in "${commands[@]}"
 do
+  echo ""
+  echo ""
   echo "Executing command: $cmd"
 
   if ! eval "$cmd"; then

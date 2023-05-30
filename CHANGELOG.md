@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `tod task edit`. Thank you `@BobToninho`
+
 ## 2023-05-28 v0.4.2
 
 - Internal refactor of priority code. Thank you, `@titoOdUA`

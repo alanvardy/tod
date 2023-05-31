@@ -612,4 +612,37 @@ mod tests {
         let expected: Vec<String> = vec![String::from("NEWPROJECT")];
         assert_eq!(result, expected);
     }
+
+    #[test]
+    fn can_empty() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::items())
+            .create();
+
+        let mock2 = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sync())
+            .create();
+
+        let mut config =
+            test::fixtures::config(Some(server.url()), Some(String::from("NEWTEXT")), Some(0));
+
+        config.add_project(String::from("projectname"), 123);
+
+        let result = empty(&config, "projectname");
+        let string = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mSuccessfully emptied projectname\u{1b}[0m"
+        } else {
+            "Successfully emptied projectname"
+        };
+        assert_eq!(result, Ok(String::from(string)));
+        mock.assert();
+        mock2.assert();
+    }
 }

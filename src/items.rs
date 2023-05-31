@@ -1,5 +1,6 @@
 use chrono::DateTime;
 use chrono::NaiveDate;
+use chrono::Utc;
 use chrono_tz::Tz;
 use clap::ArgMatches;
 use colored::*;
@@ -9,6 +10,7 @@ use std::cmp::Reverse;
 use std::fmt::Display;
 
 use crate::config::Config;
+use crate::time::timezone_from_str;
 use crate::{items, request, time};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -20,6 +22,7 @@ pub struct Item {
     pub description: String,
     pub due: Option<DateInfo>,
     pub is_deleted: bool,
+    completed_at: Option<DateTime<Utc>>,
 }
 
 #[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone, Eq, PartialEq)]
@@ -252,6 +255,13 @@ impl Item {
             self.clone().datetimeinfo(config),
             Ok(DateTimeInfo::DateTime { .. })
         )
+    }
+
+    pub fn get_completed_at(&self, config: &Config) -> DateTime<Tz> {
+        let tz = timezone_from_str(&config.timezone);
+        self.completed_at
+            .expect("Can't get completed_at time for a task")
+            .with_timezone(&tz)
     }
 }
 
@@ -584,6 +594,7 @@ mod tests {
             due: None,
             priority: Priority::Medium,
             is_deleted: false,
+            completed_at: None,
         };
 
         let date_not_datetime = Item {
@@ -645,6 +656,7 @@ mod tests {
             due: None,
             priority: Priority::Medium,
             is_deleted: false,
+            completed_at: None,
         };
 
         assert!(!item.is_overdue(&config));

@@ -2,7 +2,8 @@ use std::fmt::Display;
 
 use crate::config::Config;
 use crate::items::{FormatType, Item, Priority};
-use crate::{config, items, projects, request};
+use crate::{config, items, projects, request, time};
+use chrono::Duration;
 use colored::*;
 use serde::Deserialize;
 
@@ -193,6 +194,32 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
     buffer.push_str(&green_string(&format!("Schedule for {project_name}")));
 
     for item in items::sort_by_datetime(filtered_items, config) {
+        buffer.push('\n');
+        buffer.push_str(&item.fmt(config, FormatType::List));
+    }
+    Ok(buffer)
+}
+
+// Get tasks completed yesterday for project
+pub fn completed_items(config: &Config, project_name: &str) -> Result<String, String> {
+    let project_id = projects::project_id(config, project_name)?;
+
+    let items = request::completed_items_for_project(config, &project_id)?;
+
+    let items: Vec<Item> = items
+        .into_iter()
+        .filter(|item| {
+            item.get_completed_at(config).date_naive()
+                == time::now(config).date_naive() - Duration::days(1)
+        })
+        .collect();
+
+    let mut buffer = String::new();
+    buffer.push_str(&green_string(&format!(
+        "Completed yesterday for {project_name}"
+    )));
+
+    for item in items.iter() {
         buffer.push('\n');
         buffer.push_str(&item.fmt(config, FormatType::List));
     }

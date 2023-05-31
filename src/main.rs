@@ -101,7 +101,8 @@ fn cmd() -> Command {
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
                          .arg(project_arg())
-                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today and have a time")),
+                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today and have a time"))
+                         .arg(flag_arg("done-yesterday", 'd',  "Only list tasks that were done yesterday")),
                        Command::new("next").about("Get the next task by priority")
                          .arg(config_arg())
                          .arg(project_arg()),
@@ -227,6 +228,8 @@ fn task_list(matches: &ArgMatches) -> Result<String, String> {
 
     if has_flag(matches.clone(), "scheduled") {
         projects::scheduled_items(&config, &project)
+    } else if has_flag(matches.clone(), "done-yesterday") {
+        projects::completed_items(&config, &project)
     } else {
         projects::all_items(&config, &project)
     }

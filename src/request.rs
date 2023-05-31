@@ -60,6 +60,14 @@ pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>,
     items::json_to_items(json)
 }
 
+/// Get a vector of all completed items for a project
+pub fn completed_items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
+    let url = String::from("/sync/v9/archive/items");
+    let body = json!({ "project_id": project_id });
+    let json = post_todoist_sync(config, url, body)?;
+    items::json_to_items(json)
+}
+
 pub fn sections_for_project(config: &Config, project_id: &str) -> Result<Vec<Section>, String> {
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
     let json = get_todoist_rest(config, url)?;
@@ -322,6 +330,7 @@ mod tests {
                 description: String::from(""),
                 due: None,
                 is_deleted: false,
+                completed_at: None,
             })
         );
         mock.assert();
@@ -358,6 +367,7 @@ mod tests {
                 }),
                 priority: items::Priority::Medium,
                 is_deleted: false,
+                completed_at: None,
             }])
         );
 

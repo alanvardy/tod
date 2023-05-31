@@ -29,7 +29,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(token: &str, mock_url: Option<String>) -> Result<Config, String> {
+    pub fn new(token: &str) -> Result<Config, String> {
         let projects: HashMap<String, u32> = HashMap::new();
         Ok(Config {
             path: generate_path()?,
@@ -38,7 +38,7 @@ impl Config {
             last_version_check: None,
             timezone: None,
             spinners: Some(true),
-            mock_url,
+            mock_url: None,
             mock_string: None,
             mock_select: None,
             projects,
@@ -180,7 +180,7 @@ pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
             let token = input::string(desc, Some(String::new()))?;
-            Config::new(&token, None)?.create()
+            Config::new(&token)?.create()
         }
     }
 }
@@ -202,6 +202,33 @@ pub fn generate_path() -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+
+    impl Config {
+        /// add the url of the mockito server
+        pub fn mock_url(self, url: String) -> Config {
+            Config {
+                mock_url: Some(url),
+                ..self
+            }
+        }
+
+        /// Mock out the string response
+        pub fn mock_string(self, string: &str) -> Config {
+            Config {
+                mock_string: Some(string.to_string()),
+                ..self
+            }
+        }
+
+        /// Mock out the select response, setting the index of the response
+        pub fn mock_select(self, index: usize) -> Config {
+            Config {
+                mock_select: Some(index),
+                ..self
+            }
+        }
+    }
+
     use crate::test;
 
     use super::*;
@@ -209,13 +236,13 @@ mod tests {
 
     #[test]
     fn new_should_generate_config() {
-        let config = Config::new("something", None).unwrap();
+        let config = Config::new("something").unwrap();
         assert_eq!(config.token, String::from("something"));
     }
 
     #[test]
     fn reload_config_should_work() {
-        let config = test::fixtures::config(None, None, None);
+        let config = test::fixtures::config();
         let mut config = config.create().expect("Failed to create test config");
         config.add_project("testproj".to_string(), 1);
         assert!(!&config.projects.is_empty());
@@ -228,7 +255,7 @@ mod tests {
 
     #[test]
     fn set_and_clear_next_id_should_work() {
-        let config = Config::new("something", None).unwrap();
+        let config = test::fixtures::config();
         assert_eq!(config.next_id, None);
         let config = config.set_next_id(&String::from("123123"));
         assert_eq!(config.next_id, Some(String::from("123123")));
@@ -238,18 +265,18 @@ mod tests {
 
     #[test]
     fn add_project_should_work() {
-        let mut config = Config::new("something", None).unwrap();
+        let mut config = test::fixtures::config();
         let mut projects: HashMap<String, u32> = HashMap::new();
         assert_eq!(
             config,
             Config {
-                token: String::from("something"),
+                token: String::from("alreadycreated"),
                 path: config.path.clone(),
                 next_id: None,
                 last_version_check: None,
                 projects: projects.clone(),
                 spinners: Some(true),
-                timezone: None,
+                timezone: Some(String::from("US/Pacific")),
                 mock_url: None,
                 mock_string: None,
                 mock_select: None,
@@ -260,13 +287,13 @@ mod tests {
         assert_eq!(
             config,
             Config {
-                token: String::from("something"),
+                token: String::from("alreadycreated"),
                 path: config.path.clone(),
                 next_id: None,
                 last_version_check: None,
                 spinners: Some(true),
                 projects,
-                timezone: None,
+                timezone: Some(String::from("US/Pacific")),
                 mock_url: None,
                 mock_string: None,
                 mock_select: None,
@@ -332,10 +359,9 @@ mod tests {
         // These need to be run sequentially as they write to the filesystem.
 
         let server = mockito::Server::new();
-        let mock_url = Some(server.url());
 
         // create and load
-        let new_config = Config::new("faketoken", None).unwrap();
+        let new_config = test::fixtures::config();
         let created_config = new_config.clone().create().unwrap();
         assert_eq!(new_config, created_config);
         let loaded_config = Config::load(&new_config.path).unwrap();
@@ -361,8 +387,8 @@ mod tests {
         delete_config(&config.unwrap().path);
 
         // get_or_create (load)
-        Config::new("alreadycreated", mock_url)
-            .unwrap()
+        test::fixtures::config()
+            .mock_url(server.url())
             .create()
             .unwrap();
 

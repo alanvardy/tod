@@ -321,7 +321,7 @@ mod tests {
             .with_body(test::responses::item())
             .create();
 
-        let config = Config::new("12341234", Some(server.url())).unwrap();
+        let config = test::fixtures::config().mock_url(server.url());
 
         assert_eq!(
             add_item_to_inbox(&config, "testy test", Priority::None),
@@ -349,7 +349,7 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let config = Config::new("12341234", Some(server.url())).unwrap();
+        let config = test::fixtures::config().mock_url(server.url());
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
             ..config
@@ -385,8 +385,8 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let config = Config::new("12341234", Some(server.url()))
-            .unwrap()
+        let config = test::fixtures::config()
+            .mock_url(server.url())
             .set_next_id(&"112233".to_string());
 
         let response = complete_item(&config);
@@ -407,7 +407,7 @@ mod tests {
 
         let item = test::fixtures::item();
         let project_name = "testy";
-        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+        let mut config = test::fixtures::config().mock_url(server.url());
         config.add_project(String::from(project_name), 1);
 
         let config = Config {
@@ -433,7 +433,7 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let config = Config::new("12341234", Some(server.url())).unwrap();
+        let config = test::fixtures::config().mock_url(server.url());
 
         let response = update_item_priority(config, item, Priority::High);
         mock.assert();
@@ -453,7 +453,7 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let config = Config::new("12341234", Some(server.url())).unwrap();
+        let config = test::fixtures::config().mock_url(server.url());
 
         let response = update_item_due(&config, item, "today".to_string());
         mock.assert();
@@ -471,10 +471,7 @@ mod tests {
             .with_body(test::responses::versions())
             .create();
 
-        let config = Config {
-            mock_url: Some(server.url()),
-            ..Config::new("12341234", Some(server.url())).unwrap()
-        };
+        let config = test::fixtures::config().mock_url(server.url());
 
         let response = get_latest_version(config);
         mock.assert();

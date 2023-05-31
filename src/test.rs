@@ -31,11 +31,7 @@ pub mod fixtures {
         }
     }
 
-    pub fn config(
-        mock_url: Option<String>,
-        mock_string: Option<String>,
-        mock_select: Option<usize>,
-    ) -> Config {
+    pub fn config() -> Config {
         Config {
             token: String::from("alreadycreated"),
             projects: HashMap::new(),
@@ -43,9 +39,9 @@ pub mod fixtures {
             next_id: None,
             timezone: Some(String::from("US/Pacific")),
             last_version_check: None,
-            mock_url,
-            mock_string,
-            mock_select,
+            mock_url: None,
+            mock_string: None,
+            mock_select: None,
             spinners: Some(true),
         }
     }
@@ -120,7 +116,7 @@ pub mod responses {
                 }}
             ]
         }}",
-            time::today_string(&fixtures::config(None, None, None))
+            time::today_string(&fixtures::config())
         )
     }
 

@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn should_add_and_remove_projects() {
-        let config = Config::new("123123", None).unwrap().create().unwrap();
+        let config = test::fixtures::config().create().unwrap();
 
         let mut config = config;
 
@@ -410,7 +410,7 @@ mod tests {
     }
     #[test]
     fn should_list_projects() {
-        let mut config = Config::new("123123", None).unwrap();
+        let mut config = test::fixtures::config();
 
         config.add_project(String::from("first"), 1);
         config.add_project(String::from("second"), 2);
@@ -434,7 +434,7 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+        let mut config = test::fixtures::config().mock_url(server.url());
 
         config.add_project(String::from("good"), 1);
 
@@ -468,7 +468,7 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+        let mut config = test::fixtures::config().mock_url(server.url());
         config.add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
@@ -503,7 +503,7 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let mut config = Config::new("12341234", Some(server.url())).unwrap();
+        let mut config = test::fixtures::config().mock_url(server.url());
         config.add_project(String::from("good"), 1);
 
         let config_with_timezone = Config {
@@ -522,7 +522,7 @@ mod tests {
     }
 
     #[test]
-    fn should_import_projects() {
+    fn test_import() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("GET", "/rest/v2/projects")
@@ -531,9 +531,12 @@ mod tests {
             .with_body(test::responses::projects())
             .create();
 
-        let mut config = test::fixtures::config(Some(server.url()), None, Some(0))
+        let mut config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0)
             .create()
             .unwrap();
+
         let string = if test::helpers::supports_coloured_output() {
             "\u{1b}[32mNo more projects\u{1b}[0m".to_string()
         } else {
@@ -548,7 +551,7 @@ mod tests {
     }
 
     #[test]
-    fn can_handle_item() {
+    fn test_handle_item() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/sync")
@@ -558,7 +561,9 @@ mod tests {
             .create();
 
         let item = test::fixtures::item();
-        let config = test::fixtures::config(Some(server.url()), None, Some(0));
+        let config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0);
         let result = handle_item(&config, item);
         let expected = Some(Ok(String::from("✓")));
         assert_eq!(result, expected);
@@ -566,7 +571,7 @@ mod tests {
     }
 
     #[test]
-    fn can_process_items() {
+    fn test_process_items() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
@@ -582,7 +587,9 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let mut config = test::fixtures::config(Some(server.url()), None, Some(0))
+        let mut config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0)
             .create()
             .unwrap();
         let project_name = String::from("Project2");
@@ -600,8 +607,8 @@ mod tests {
     }
 
     #[test]
-    fn can_get_project_names() {
-        let mut config = Config::new("123", None).unwrap();
+    fn test_project_names() {
+        let mut config = test::fixtures::config();
         let result = project_names(&config);
         let expected: Vec<String> = vec![];
         assert_eq!(result, expected);
@@ -614,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn can_empty() {
+    fn test_empty() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
@@ -630,8 +637,10 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let mut config =
-            test::fixtures::config(Some(server.url()), Some(String::from("NEWTEXT")), Some(0));
+        let mut config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_string("newtext")
+            .mock_select(0);
 
         config.add_project(String::from("projectname"), 123);
 
@@ -645,6 +654,7 @@ mod tests {
         mock.assert();
         mock2.assert();
     }
+
     #[test]
     fn test_prioritize_items() {
         let mut server = mockito::Server::new();
@@ -655,8 +665,7 @@ mod tests {
             .with_body(test::responses::items())
             .create();
 
-        let mut config =
-            test::fixtures::config(Some(server.url()), Some(String::from("NEWTEXT")), Some(0));
+        let mut config = test::fixtures::config().mock_url(server.url());
 
         config.add_project(String::from("projectname"), 123);
 

@@ -645,4 +645,28 @@ mod tests {
         mock.assert();
         mock2.assert();
     }
+    #[test]
+    fn test_prioritize_items() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::items())
+            .create();
+
+        let mut config =
+            test::fixtures::config(Some(server.url()), Some(String::from("NEWTEXT")), Some(0));
+
+        config.add_project(String::from("projectname"), 123);
+
+        let result = prioritize_items(&config, "projectname");
+        let string = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mNo tasks to prioritize in projectname\u{1b}[0m"
+        } else {
+            "No tasks to prioritize in projectname"
+        };
+        assert_eq!(result, Ok(String::from(string)));
+        mock.assert();
+    }
 }

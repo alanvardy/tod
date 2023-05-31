@@ -405,7 +405,7 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String
     match project_content {
         Some(string) => Ok(string),
         None => {
-            let options = projects::project_names(config);
+            let options = projects::project_names(config)?;
             input::select("Select project", options, config.mock_select)
         }
     }

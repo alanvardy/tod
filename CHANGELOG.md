@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-05-31 v0.4.3
+
 - Add `tod task edit`. Thank you `@BobToninho`
 - Improve error when no projects found in config
 

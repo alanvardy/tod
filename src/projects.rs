@@ -6,7 +6,9 @@ use crate::{input, items, projects, request};
 use colored::*;
 use serde::Deserialize;
 
-const ADD_ERROR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
+const ADD_ERR: &str = "Must provide project name and number, i.e. tod --add projectname 12345";
+
+const NO_PROJECTS_ERR: &str = "No projects in config, please run `tod project import`";
 
 // Projects are split into sections
 #[derive(PartialEq, Deserialize, Clone, Debug)]
@@ -57,7 +59,7 @@ pub fn list(config: &Config) -> Result<String, String> {
 
 /// Add a project to the projects HashMap in Config
 pub fn add(config: &mut Config, name: String, id: String) -> Result<String, String> {
-    let id = id.parse::<u32>().or(Err(ADD_ERROR))?;
+    let id = id.parse::<u32>().or(Err(ADD_ERR))?;
 
     config.add_project(name, id);
     config.save()
@@ -320,7 +322,7 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
 pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, String> {
     println!("{}", item.fmt(config, FormatType::Single));
 
-    let mut options = project_names(config);
+    let mut options = project_names(config)?;
     options.reverse();
     options.push("complete".to_string());
     options.reverse();
@@ -378,14 +380,18 @@ pub fn green_string(str: &str) -> String {
     String::from(str).green().to_string()
 }
 
-pub fn project_names(config: &Config) -> Vec<String> {
+pub fn project_names(config: &Config) -> Result<Vec<String>, String> {
     let mut names = config
         .projects
         .keys()
         .map(|k| k.to_owned())
         .collect::<Vec<String>>();
     names.sort();
-    names
+    if names.is_empty() {
+        Err(NO_PROJECTS_ERR.to_string())
+    } else {
+        Ok(names)
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -610,13 +616,13 @@ mod tests {
     fn test_project_names() {
         let mut config = test::fixtures::config();
         let result = project_names(&config);
-        let expected: Vec<String> = vec![];
+        let expected = Err(String::from(NO_PROJECTS_ERR));
         assert_eq!(result, expected);
 
         config.add_project(String::from("NEWPROJECT"), 123);
 
         let result = project_names(&config);
-        let expected: Vec<String> = vec![String::from("NEWPROJECT")];
+        let expected: Result<Vec<String>, String> = Ok(vec![String::from("NEWPROJECT")]);
         assert_eq!(result, expected);
     }
 

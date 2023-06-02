@@ -19,7 +19,7 @@ pub mod fixtures {
         Item {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
-            checked: false,
+            checked: None,
             description: String::from(""),
             due: Some(DateInfo {
                 date: String::from("2061-11-13"),
@@ -27,7 +27,8 @@ pub mod fixtures {
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
             priority: crate::items::Priority::Medium,
-            is_deleted: false,
+            is_deleted: None,
+            is_completed: None,
         }
     }
 

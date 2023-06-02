@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add description flag to `tod task create`
+
 ## 2023-05-31 v0.4.3
 
 - Add `tod task edit`. Thank you `@BobToninho`

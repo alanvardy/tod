@@ -16,10 +16,13 @@ pub struct Item {
     pub id: String,
     pub content: String,
     pub priority: Priority,
-    pub checked: bool,
     pub description: String,
     pub due: Option<DateInfo>,
-    pub is_deleted: bool,
+    /// Only on rest api return value
+    pub is_completed: Option<bool>,
+    pub is_deleted: Option<bool>,
+    /// only on sync api return value
+    pub checked: Option<bool>,
 }
 
 #[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone, Eq, PartialEq)]
@@ -49,12 +52,12 @@ impl Display for Priority {
 }
 
 impl Priority {
-    pub fn to_string_in_sync_format(&self) -> String {
+    pub fn to_integer(&self) -> u8 {
         match self {
-            Priority::None => "p4".into(),
-            Priority::Low => "p3".into(),
-            Priority::Medium => "p2".into(),
-            Priority::High => "p1".into(),
+            Priority::None => 4,
+            Priority::Low => 3,
+            Priority::Medium => 2,
+            Priority::High => 1,
         }
     }
 
@@ -577,11 +580,12 @@ mod tests {
         let no_date = Item {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
-            checked: false,
+            checked: None,
             description: String::from(""),
             due: None,
             priority: Priority::Medium,
-            is_deleted: false,
+            is_deleted: None,
+            is_completed: None,
         };
 
         let date_not_datetime = Item {
@@ -638,11 +642,12 @@ mod tests {
         let item = Item {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
-            checked: false,
+            checked: None,
             description: String::from(""),
             due: None,
             priority: Priority::Medium,
-            is_deleted: false,
+            is_deleted: None,
+            is_completed: None,
         };
 
         assert!(!item.is_overdue(&config));
@@ -690,5 +695,13 @@ mod tests {
         let json = String::from("2{.e");
         let error_text = String::from("Could not parse response for item: Error(\"invalid type: integer `2`, expected struct Item\", line: 1, column: 1)");
         assert_eq!(json_to_item(json), Err(error_text));
+    }
+
+    #[test]
+    fn test_to_integer() {
+        assert_eq!(Priority::None.to_integer(), 4);
+        assert_eq!(Priority::Low.to_integer(), 3);
+        assert_eq!(Priority::Medium.to_integer(), 2);
+        assert_eq!(Priority::High.to_integer(), 1);
     }
 }

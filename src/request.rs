@@ -43,12 +43,25 @@ struct Version {
 }
 
 /// Add a new item to the inbox with natural language support
-pub fn add_item_to_inbox(config: &Config, task: &str, priority: Priority) -> Result<Item, String> {
+pub fn quick_add_item(config: &Config, content: &str) -> Result<Item, String> {
     let url = String::from(QUICK_ADD_URL);
-    let task = format!("{} {}", task, priority.to_string_in_sync_format());
-    let body = json!({"text": task, "auto_reminder": true});
+    let body = json!({"text": content, "auto_reminder": true});
 
     let json = post_todoist_sync(config, url, body)?;
+    items::json_to_item(json)
+}
+
+/// Add item without natural language support but supports additional parameters
+pub fn add_item(
+    config: &Config,
+    content: &str,
+    priority: Priority,
+    description: String,
+) -> Result<Item, String> {
+    let url = String::from(REST_V2_TASKS_URL);
+    let body = json!({"content": content, "description": description, "auto_reminder": true, "priority": priority.to_integer()});
+
+    let json = post_todoist_rest(config, url, body)?;
     items::json_to_item(json)
 }
 
@@ -312,7 +325,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn should_add_item_to_inbox() {
+    fn test_quick_add_item() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/quick/add")
@@ -324,15 +337,16 @@ mod tests {
         let config = test::fixtures::config().mock_url(server.url());
 
         assert_eq!(
-            add_item_to_inbox(&config, "testy test", Priority::None),
+            quick_add_item(&config, "testy test"),
             Ok(Item {
                 id: String::from("5149481867"),
                 priority: items::Priority::None,
                 content: String::from("testy test"),
-                checked: false,
+                checked: Some(false),
                 description: String::from(""),
                 due: None,
-                is_deleted: false,
+                is_deleted: Some(false),
+                is_completed: None,
             })
         );
         mock.assert();
@@ -360,7 +374,7 @@ mod tests {
             Ok(vec![Item {
                 id: String::from("999999"),
                 content: String::from("Put out recycling"),
-                checked: false,
+                checked: Some(false),
                 description: String::from(""),
                 due: Some(DateInfo {
                     date: format!("{}T23:59:00Z", time::today_string(&config_with_timezone)),
@@ -368,7 +382,8 @@ mod tests {
                     timezone: None,
                 }),
                 priority: items::Priority::Medium,
-                is_deleted: false,
+                is_deleted: Some(false),
+                is_completed: None,
             }])
         );
 

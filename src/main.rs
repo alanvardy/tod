@@ -96,12 +96,13 @@ fn cmd() -> Command {
                     .propagate_version(true)
                     .subcommand_required(true)
                     .subcommands([
-                       Command::new("create").about("Create a new task")
+                       Command::new("create").about("Create a new task (without NLP)")
                          .arg(config_arg())
                          .arg(priority_arg())
                          .arg(content_arg())
+                         .arg(description_arg())
                          .arg(project_arg()),
-                       Command::new("edit").about("Edit an exising task")
+                       Command::new("edit").about("Edit an exising task's content")
                          .arg(config_arg())
                          .arg(project_arg()),
                        Command::new("list").about("List all tasks in a project")
@@ -154,7 +155,7 @@ fn cmd() -> Command {
 fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
-    request::add_item_to_inbox(&config, &text, items::Priority::None)?;
+    request::quick_add_item(&config, &text)?;
     Ok(projects::green_string("✓"))
 }
 
@@ -164,26 +165,14 @@ fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
 fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, &config, "content", "Content")?;
-    let priority = match Priority::get_from_matches(matches) {
-        Some(value) => value,
-        None => {
-            let options = vec![
-                Priority::None,
-                Priority::Low,
-                Priority::Medium,
-                Priority::High,
-            ];
-            input::select(
-                "Choose a priority that should be assigned to task:",
-                options,
-                config.mock_select,
-            )?
-        }
-    };
-
+    let priority = fetch_priority(matches, &config)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::add_item_to_project(&config, content, &project, priority)
+    let description = matches
+        .get_one::<String>("description")
+        .map(|s| s.to_owned())
+        .unwrap_or(String::new());
+    projects::add_item_to_project(&config, content, &project, priority, description)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -347,6 +336,17 @@ fn content_arg() -> Arg {
 }
 
 #[cfg(not(tarpaulin_include))]
+fn description_arg() -> Arg {
+    Arg::new("description")
+        .short('d')
+        .long("description")
+        .num_args(1)
+        .required(false)
+        .value_name("DESCRIPTION TEXT")
+        .help("Description for task")
+}
+
+#[cfg(not(tarpaulin_include))]
 fn name_arg() -> Arg {
     Arg::new("name")
         .short('n')
@@ -411,6 +411,25 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String
     }
 }
 
+#[cfg(not(tarpaulin_include))]
+fn fetch_priority(matches: &ArgMatches, config: &Config) -> Result<Priority, String> {
+    match Priority::get_from_matches(matches) {
+        Some(priority) => Ok(priority),
+        None => {
+            let options = vec![
+                Priority::None,
+                Priority::Low,
+                Priority::Medium,
+                Priority::High,
+            ];
+            input::select(
+                "Choose a priority that should be assigned to task:",
+                options,
+                config.mock_select,
+            )
+        }
+    }
+}
 // --- TESTS ---
 
 #[test]

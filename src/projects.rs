@@ -358,14 +358,15 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
     }
 }
 
-/// Add item to project with natural language processing
+/// Add item to project without natural language processing
 pub fn add_item_to_project(
     config: &Config,
     content: String,
     project: &str,
     priority: Priority,
+    description: String,
 ) -> Result<String, String> {
-    let item = request::add_item_to_inbox(config, &content, priority)?;
+    let item = request::add_item(config, &content, priority, description)?;
 
     match project {
         "inbox" | "i" => Ok(green_string("✓")),

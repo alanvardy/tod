@@ -3,13 +3,12 @@ use chrono::NaiveDate;
 use chrono_tz::Tz;
 use clap::ArgMatches;
 use colored::*;
-use inquire::Select;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
 
 use crate::config::Config;
-use crate::{items, request, time};
+use crate::{input, items, time, todoist};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Item {
@@ -305,34 +304,23 @@ pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item>
         .collect()
 }
 
-pub fn set_priority(config: &Config, item: items::Item) {
+pub fn set_priority(config: &Config, item: items::Item) -> Result<String, String> {
     println!("{}", item.fmt(config, FormatType::Single));
 
-    let options = vec![Priority::Low, Priority::Medium, Priority::High];
-    let priority = Select::new(
-        "Choose a priority that should be assigned to task:",
+    let options = vec![
+        Priority::None,
+        Priority::Low,
+        Priority::Medium,
+        Priority::High,
+    ];
+    let priority = input::select(
+        "Choose a priority that should be assigned to task: ",
         options,
-    )
-    .prompt()
-    .map_err(|e| e.to_string())
-    .expect("Failed to create option list of priorities");
+        config.mock_select,
+    )?;
 
     let config = config.set_next_id(&item.id);
-    match priority {
-        Priority::Low => {
-            request::update_item_priority(config, item, Priority::Low)
-                .expect("could not set priority");
-        }
-        Priority::Medium => {
-            request::update_item_priority(config, item, Priority::Medium)
-                .expect("could not set priority");
-        }
-        Priority::High => {
-            request::update_item_priority(config, item, Priority::High)
-                .expect("could not set priority");
-        }
-        _ => println!("Not a valid input, please pick one of the options"),
-    }
+    todoist::update_item_priority(config, item, priority)
 }
 
 #[cfg(test)]
@@ -703,5 +691,24 @@ mod tests {
         assert_eq!(Priority::Low.to_integer(), 3);
         assert_eq!(Priority::Medium.to_integer(), 2);
         assert_eq!(Priority::High.to_integer(), 1);
+    }
+
+    #[test]
+    fn test_set_priority() {
+        let item = test::fixtures::item();
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/rest/v2/tasks/222")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::item())
+            .create();
+        let config = test::fixtures::config()
+            .mock_select(1)
+            .mock_url(server.url());
+
+        let result = set_priority(&config, item);
+        assert_eq!(result, Ok("✓".to_string()));
+        mock.assert();
     }
 }

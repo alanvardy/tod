@@ -1,4 +1,4 @@
-use crate::{input, request, time, VERSION};
+use crate::{cargo, input, time, VERSION};
 use chrono_tz::TZ_VARIANTS;
 use colored::*;
 use rand::distributions::{Alphanumeric, DistString};
@@ -120,7 +120,7 @@ impl Config {
         };
 
         if last_version != Some(time::today_string(&self)) {
-            match request::get_latest_version(self) {
+            match cargo::get_latest_version(self) {
                 Ok(version) if version.as_str() != VERSION => {
                     println!(
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",

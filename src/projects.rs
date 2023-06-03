@@ -319,11 +319,13 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
             .to_string())
     }
 }
+
 pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, String> {
     println!("{}", item.fmt(config, FormatType::Single));
 
     let mut options = project_names(config)?;
     options.reverse();
+    options.push("skip".to_string());
     options.push("complete".to_string());
     options.reverse();
 
@@ -338,6 +340,7 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
             request::complete_item(&config.set_next_id(&item.id))?;
             Ok(green_string("✓"))
         }
+        "skip" => Ok(green_string("Skipped")),
         _ => {
             let project_id = projects::project_id(config, &project_name)?;
             let sections = request::sections_for_project(config, &project_id)?;
@@ -684,5 +687,20 @@ mod tests {
         };
         assert_eq!(result, Ok(String::from(string)));
         mock.assert();
+    }
+
+    #[test]
+    fn test_move_item_to_project() {
+        let mut config = test::fixtures::config().mock_select(1);
+        let item = test::fixtures::item();
+        config.add_project("projectname".to_string(), 123);
+
+        let result = move_item_to_project(&config, item);
+        let string = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mSkipped\u{1b}[0m"
+        } else {
+            "Skipped"
+        };
+        assert_eq!(result, Ok(String::from(string)));
     }
 }

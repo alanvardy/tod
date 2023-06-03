@@ -8,14 +8,15 @@ use colored::*;
 use config::Config;
 use items::Priority;
 
+mod cargo;
 mod config;
 mod input;
 mod items;
 mod projects;
-mod request;
 mod sections;
 mod test;
 mod time;
+mod todoist;
 
 const APP: &str = "Tod";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -155,7 +156,7 @@ fn cmd() -> Command {
 fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
-    request::quick_add_item(&config, &text)?;
+    todoist::quick_add_item(&config, &text)?;
     Ok(projects::green_string("✓"))
 }
 
@@ -181,7 +182,7 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let project_name = fetch_project(matches, &config)?;
     let project_id = projects::project_id(&config, &project_name)?;
 
-    projects::rename_item(&config, &project_id)
+    projects::rename_items(&config, &project_id)
 }
 #[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
@@ -207,7 +208,7 @@ fn task_next(matches: &ArgMatches) -> Result<String, String> {
 fn task_complete(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     match config.next_id {
-        Some(_) => request::complete_item(&config),
+        Some(_) => todoist::complete_item(&config),
         None => Err("There is nothing to complete. Try to mark a task as 'next'.".to_string()),
     }
 }

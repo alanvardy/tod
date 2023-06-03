@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::config::Config;
 use crate::items::{FormatType, Item, Priority};
-use crate::{input, items, projects, request};
+use crate::{input, items, projects, todoist};
 use colored::*;
 use serde::Deserialize;
 
@@ -96,7 +96,7 @@ pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
 
 fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<Item>, String> {
     let project_id = projects::project_id(config, project_name)?;
-    let items = request::items_for_project(config, &project_id)?;
+    let items = todoist::items_for_project(config, &project_id)?;
     let filtered_items = items::filter_not_in_future(items, config)?;
     let items = items::sort_by_value(filtered_items, config);
 
@@ -105,7 +105,7 @@ fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<Item>, 
 
 /// Fetch projects and prompt to add them to config one by one
 pub fn import(config: &mut Config) -> Result<String, String> {
-    let projects = request::projects(config)?;
+    let projects = todoist::projects(config)?;
     let new_projects = filter_new_projects(config, projects);
     for project in new_projects {
         maybe_add_project(config, project)?;
@@ -145,7 +145,7 @@ fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, St
 /// Get next items and give an interactive prompt for completing them one by one
 pub fn process_items(config: Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(&config, project_name)?;
-    let items = request::items_for_project(&config, &project_id)?;
+    let items = todoist::items_for_project(&config, &project_id)?;
     let items = items::filter_not_in_future(items, &config)?;
     for item in items {
         config.set_next_id(&item.id).save()?;
@@ -169,7 +169,7 @@ fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "complete" {
-                Some(request::complete_item(config))
+                Some(todoist::complete_item(config))
             } else if string == "skip" {
                 Some(Ok(green_string("item skipped")))
             } else {
@@ -184,7 +184,7 @@ fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
 pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(config, project_name)?;
 
-    let items = request::items_for_project(config, &project_id)?;
+    let items = todoist::items_for_project(config, &project_id)?;
     let filtered_items = items::filter_today_and_has_time(items, config);
 
     if filtered_items.is_empty() {
@@ -201,8 +201,8 @@ pub fn scheduled_items(config: &Config, project_name: &str) -> Result<String, St
     Ok(buffer)
 }
 
-pub fn rename_item(config: &Config, project_id: &str) -> Result<String, String> {
-    let project_tasks = request::items_for_project(config, project_id)?;
+pub fn rename_items(config: &Config, project_id: &str) -> Result<String, String> {
+    let project_tasks = todoist::items_for_project(config, project_id)?;
 
     let selected_task = input::select(
         "Choose a task of the project:",
@@ -219,14 +219,14 @@ pub fn rename_item(config: &Config, project_id: &str) -> Result<String, String> 
         ));
     }
 
-    request::update_item_name(config, selected_task, new_task_content)
+    todoist::update_item_name(config, selected_task, new_task_content)
 }
 
 /// All items for a project
 pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(config, project_name)?;
 
-    let items = request::items_for_project(config, &project_id)?;
+    let items = todoist::items_for_project(config, &project_id)?;
 
     let mut buffer = String::new();
     buffer.push_str(&green_string(&format!("Tasks for {project_name}")));
@@ -242,7 +242,7 @@ pub fn all_items(config: &Config, project_name: &str) -> Result<String, String> 
 pub fn empty(config: &Config, project_name: &str) -> Result<String, String> {
     let id = projects::project_id(config, project_name)?;
 
-    let items = request::items_for_project(config, &id)?;
+    let items = todoist::items_for_project(config, &id)?;
 
     if items.is_empty() {
         Ok(green_string(&format!(
@@ -263,7 +263,7 @@ pub fn empty(config: &Config, project_name: &str) -> Result<String, String> {
 pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, String> {
     let inbox_id = projects::project_id(config, project_name)?;
 
-    let items = request::items_for_project(config, &inbox_id)?;
+    let items = todoist::items_for_project(config, &inbox_id)?;
 
     let unprioritized_items: Vec<Item> = items
         .into_iter()
@@ -276,7 +276,7 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
             .to_string())
     } else {
         for item in unprioritized_items.iter() {
-            items::set_priority(config, item.to_owned());
+            items::set_priority(config, item.to_owned())?;
         }
         Ok(format!("Successfully prioritized {project_name}")
             .green()
@@ -288,7 +288,7 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
 pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
     let project_id = projects::project_id(config, project_name)?;
 
-    let items = request::items_for_project(config, &project_id)?;
+    let items = todoist::items_for_project(config, &project_id)?;
 
     let undated_items: Vec<Item> = items
         .into_iter()
@@ -303,15 +303,17 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
         for item in undated_items.iter() {
             println!("{}", item.fmt(config, FormatType::Single));
             let due_string = input::string(
-                "Input a date in natural language or (c)omplete",
+                "Input a date in natural language, (s)kip or (c)omplete",
                 config.mock_string.clone(),
             )?;
             match due_string.as_str() {
                 "complete" | "c" => {
                     let config = config.set_next_id(&item.id);
-                    request::complete_item(&config)?
+                    todoist::complete_item(&config)?
                 }
-                _ => request::update_item_due(config, item.to_owned(), due_string)?,
+                "skip" | "s" => "Skipped".to_string(),
+
+                _ => todoist::update_item_due(config, item.to_owned(), due_string)?,
             };
         }
         Ok(format!("Successfully dated {project_name}")
@@ -337,16 +339,16 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
 
     match project_name.as_str() {
         "complete" => {
-            request::complete_item(&config.set_next_id(&item.id))?;
+            todoist::complete_item(&config.set_next_id(&item.id))?;
             Ok(green_string("✓"))
         }
         "skip" => Ok(green_string("Skipped")),
         _ => {
             let project_id = projects::project_id(config, &project_name)?;
-            let sections = request::sections_for_project(config, &project_id)?;
+            let sections = todoist::sections_for_project(config, &project_id)?;
             let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
             if section_names.is_empty() {
-                request::move_item_to_project(config, item, &project_name)
+                todoist::move_item_to_project(config, item, &project_name)
             } else {
                 let section_name =
                     input::select("Select section", section_names, config.mock_select)?;
@@ -355,7 +357,7 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
                     .find(|x| x.name == section_name.as_str())
                     .expect("Section does not exist")
                     .id;
-                request::move_item_to_section(config, item, section_id)
+                todoist::move_item_to_section(config, item, section_id)
             }
         }
     }
@@ -369,12 +371,12 @@ pub fn add_item_to_project(
     priority: Priority,
     description: String,
 ) -> Result<String, String> {
-    let item = request::add_item(config, &content, priority, description)?;
+    let item = todoist::add_item(config, &content, priority, description)?;
 
     match project {
         "inbox" | "i" => Ok(green_string("✓")),
         project => {
-            request::move_item_to_project(config, item, project)?;
+            todoist::move_item_to_project(config, item, project)?;
             Ok(green_string("✓"))
         }
     }
@@ -702,5 +704,30 @@ mod tests {
             "Skipped"
         };
         assert_eq!(result, Ok(String::from(string)));
+    }
+
+    #[test]
+    fn test_rename_items() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::items())
+            .create();
+
+        let mut config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0);
+        config.add_project("Project".to_string(), 123);
+
+        let result = rename_items(&config, "123");
+        let string = if test::helpers::supports_coloured_output() {
+            "\u{1b}[32mThe content is the same, no need to change it\u{1b}[0m"
+        } else {
+            "The content is the same, no need to change it"
+        };
+        assert_eq!(result, Ok(string.to_string()));
+        mock.assert();
     }
 }

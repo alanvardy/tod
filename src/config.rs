@@ -1,3 +1,4 @@
+use crate::cargo::Version;
 use crate::{cargo, input, time, VERSION};
 use chrono_tz::TZ_VARIANTS;
 use colored::*;
@@ -120,8 +121,8 @@ impl Config {
         };
 
         if last_version != Some(time::today_string(&self)) {
-            match cargo::get_latest_version(self) {
-                Ok(version) if version.as_str() != VERSION => {
+            match cargo::compare_versions(self) {
+                Ok(Version::Dated(version)) => {
                     println!(
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
                         version,
@@ -130,7 +131,7 @@ impl Config {
                     );
                     new_config.clone().save().unwrap();
                 }
-                Ok(_) => (),
+                Ok(Version::Latest) => (),
                 Err(err) => println!(
                     "{}, {:?}",
                     "Could not fetch Tod version from Cargo.io".red(),

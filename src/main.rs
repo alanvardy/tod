@@ -56,6 +56,10 @@ fn main() {
             Some(("import", m)) => project_import(m),
             _ => unreachable!(),
         },
+        Some(("version", version_matches)) => match version_matches.subcommand() {
+            Some(("check", m)) => version_check(m),
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 
@@ -144,6 +148,15 @@ fn cmd() -> Command {
                        Command::new("process").about("Complete all tasks that are due today or undated in a project individually in priority order")
                         .arg(config_arg())
                         .arg(project_arg())
+                ]
+                    ),
+            Command::new("version")
+                   .arg_required_else_help(true)
+                   .propagate_version(true)
+                   .subcommand_required(true)
+                   .subcommands([
+                       Command::new("check").about("Check to see if tod is on the latest version, returns exit code 1 if out of date")
+                         .arg(config_arg()),
                 ]
                     )
         ]
@@ -276,6 +289,24 @@ fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
 
     projects::schedule(&config, &project)
+}
+
+// --- VERSION ---
+
+#[cfg(not(tarpaulin_include))]
+fn version_check(matches: &ArgMatches) -> Result<String, String> {
+    use cargo::Version;
+
+    let config = fetch_config(matches)?;
+
+    match cargo::compare_versions(config) {
+        Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
+        Ok(Version::Dated(version)) => Err(format!(
+            "Tod is out of date with version: {}, latest is:{}",
+            version, VERSION
+        )),
+        Err(e) => Err(e),
+    }
 }
 
 // --- ARGUMENT HELPERS ---

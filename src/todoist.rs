@@ -3,8 +3,8 @@ use serde_json::json;
 mod request;
 
 use crate::config::Config;
+use crate::items::priority::Priority;
 use crate::items::Item;
-use crate::items::Priority;
 use crate::projects::Project;
 use crate::sections::Section;
 use crate::{items, projects, sections};
@@ -137,6 +137,7 @@ pub fn complete_item(config: &Config) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::items::priority::Priority;
     use crate::items::{DateInfo, Item};
     use crate::{test, time};
     use pretty_assertions::assert_eq;
@@ -157,7 +158,7 @@ mod tests {
             quick_add_item(&config, "testy test"),
             Ok(Item {
                 id: String::from("5149481867"),
-                priority: items::Priority::None,
+                priority: Priority::None,
                 content: String::from("testy test"),
                 checked: Some(false),
                 description: String::from(""),
@@ -198,7 +199,7 @@ mod tests {
                     is_recurring: true,
                     timezone: None,
                 }),
-                priority: items::Priority::Medium,
+                priority: Priority::Medium,
                 is_deleted: Some(false),
                 is_completed: None,
             }])

@@ -6,7 +6,7 @@ extern crate clap;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use colored::*;
 use config::Config;
-use items::Priority;
+use items::priority::Priority;
 
 mod cargo;
 mod config;

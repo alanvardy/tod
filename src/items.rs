@@ -1,20 +1,21 @@
 use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono_tz::Tz;
-use clap::ArgMatches;
 use colored::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
 
+pub(crate) mod priority;
 use crate::config::Config;
 use crate::{input, items, time, todoist};
+use priority::Priority;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Item {
     pub id: String,
     pub content: String,
-    pub priority: Priority,
+    pub priority: priority::Priority,
     pub description: String,
     pub due: Option<DateInfo>,
     /// Only on rest api return value
@@ -24,48 +25,9 @@ pub struct Item {
     pub checked: Option<bool>,
 }
 
-#[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone, Eq, PartialEq)]
-#[repr(u8)]
-pub enum Priority {
-    None = 1,
-    Low = 2,
-    Medium = 3,
-    High = 4,
-}
-
 impl Display for Item {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.content)
-    }
-}
-
-impl Display for Priority {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Priority::None => write!(f, "NONE"),
-            Priority::Low => write!(f, "LOW"),
-            Priority::Medium => write!(f, "MEDIUM"),
-            Priority::High => write!(f, "HIGH"),
-        }
-    }
-}
-
-impl Priority {
-    pub fn to_integer(&self) -> u8 {
-        match self {
-            Priority::None => 4,
-            Priority::Low => 3,
-            Priority::Medium => 2,
-            Priority::High => 1,
-        }
-    }
-
-    pub fn get_from_matches(matches: &ArgMatches) -> Option<Self> {
-        let priority_arg = &matches.get_one::<String>("priority").map(|s| s.to_owned());
-        match priority_arg {
-            None => None,
-            Some(priority) => serde_json::from_str(priority).ok(),
-        }
     }
 }
 
@@ -101,10 +63,10 @@ enum DateTimeInfo {
 impl Item {
     pub fn fmt(&self, config: &Config, format: FormatType) -> String {
         let content = match self.priority {
-            Priority::Low => self.content.blue(),
-            Priority::Medium => self.content.yellow(),
-            Priority::High => self.content.red(),
-            Priority::None => self.content.normal(),
+            priority::Priority::Low => self.content.blue(),
+            priority::Priority::Medium => self.content.yellow(),
+            priority::Priority::High => self.content.red(),
+            priority::Priority::None => self.content.normal(),
         };
 
         let buffer = match format {

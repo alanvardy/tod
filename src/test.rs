@@ -26,7 +26,7 @@ pub mod fixtures {
                 is_recurring: false,
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
-            priority: crate::items::Priority::Medium,
+            priority: crate::items::priority::Priority::Medium,
             is_deleted: None,
             is_completed: None,
         }

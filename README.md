@@ -88,6 +88,7 @@ Usage: tod [OPTIONS] [COMMAND]
 Commands:
   task     
   project  
+  version  
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -95,7 +96,6 @@ Options:
   -q, --quickadd <quickadd>...       Create a new task with natural language processing.
   -h, --help                         Print help
   -V, --version                      Print version
-
 ```
 
 And also use it to dig into subcommands

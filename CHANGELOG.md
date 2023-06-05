@@ -5,6 +5,7 @@
 - Add description flag to `tod task create`
 - Add ability to skip tasks in `project prioritize` and `project empty`
 - Improve naming of priorities in prompt
+- Add `tod version check` to check if Tod is on the latest version
 
 ## 2023-05-31 v0.4.3
 

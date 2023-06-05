@@ -178,6 +178,12 @@ tod tasks list --project work
   tod project process --project physical;
 ```
 
+### Update Tod only if it is out of date
+
+```bash
+tod version check || cargo install tod --force
+```
+
 ## How item priority is determined
 
 Items are ranked by points and the first is returned, the points are the sum of the following:

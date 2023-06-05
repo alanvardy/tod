@@ -4,6 +4,7 @@
 
 - Add description flag to `tod task create`
 - Add ability to skip tasks in `project prioritize` and `project empty`
+- Improve naming of priorities in prompt
 
 ## 2023-05-31 v0.4.3
 

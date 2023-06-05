@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
 use crate::config::Config;
-use crate::items::{FormatType, Item, Priority};
+use crate::items::priority::Priority;
+use crate::items::{FormatType, Item};
 use crate::{input, items, projects, todoist};
 use colored::*;
 use serde::Deserialize;

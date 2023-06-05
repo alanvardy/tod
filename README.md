@@ -6,13 +6,38 @@ A tiny todoist CLI program. Takes simple input and dumps it in your inbox or ano
 
 ![Tod](tod.gif)
 
+## Table of Contents
+
+
+<!--toc:start-->
+- [Tod](#tod)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+    - [Crates.io (Linux, Mac, and Windows)](#cratesio-linux-mac-and-windows)
+    - [AUR (Arch-based Linux)](#aur-arch-based-linux)
+    - [GitHub (Linux, Mac, and Windows)](#github-linux-mac-and-windows)
+  - [Usage](#usage)
+    - [Discovering the commands](#discovering-the-commands)
+    - [Usage Examples](#usage-examples)
+    - [Shell script examples](#shell-script-examples)
+      - [Sort, schedule, prioritize, and process tasks](#sort-schedule-prioritize-and-process-tasks)
+  - [How item priority is determined](#how-item-priority-is-determined)
+  - [Disabling spinners](#disabling-spinners)
+  - [Why I made this](#why-i-made-this)
+  - [Related projects](#related-projects)
+  - [Contributing](#contributing)
+<!--toc:end-->
+
+
 Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on the first run, and your data in JSON format in `$XDG_CONFIG_HOME/tod.cfg`. This defaults to:
 
 - `~/.config/tod.cfg` on Linux
 - `~/Library/Application Support/tod.cfg` on Mac
 - No idea about Windows, sorry!
 
-## Install from Crates.io
+## Installation
+
+### Crates.io (Linux, Mac, and Windows)
 
 [Install Rust](https://www.rust-lang.org/tools/install)
 
@@ -27,14 +52,14 @@ Install Tod
 cargo install tod
 ```
 
-## Install from AUR (for Arch-based Linux distributions)
+### AUR (Arch-based Linux)
 
 ```bash
 # Use yay or another AUR helper
 yay tod-bin
 ```
 
-## Install from GitHub
+### GitHub (Linux, Mac, and Windows)
 
 [Install Rust](https://www.rust-lang.org/tools/install)
 
@@ -51,7 +76,7 @@ You can then find the binary in `/target/release/`
 
 ## Usage
 
-Start with the help flag to get the latest commands
+### Discovering the commands
 
 ```bash
 > tod -h
@@ -93,20 +118,8 @@ Options:
 
 ```
 
-- Add your most commonly used projects, the project ID is the last series of numbers in the URL. If the project name includes spaces, wrap the project name with quotes.
-- You can use natural language processing such as dates priority etc when sending to inbox, but not to the projects due to current limitations.
-- Items are ranked by points and the first is returned:
-  - Item is overdue: 150
-  - The date is today with no time: 100
-  - The date is today with time in next or last 15 min: 200
-  - No date: 80
-  - Not recurring: 50
-  - Item has no priority: 2
-  - Priority 1: 1
-  - Priority 2: 3
-  - Priority 3: 4
 
-### Examples
+### Usage Examples
 
 ```bash
 # Quickly create a task
@@ -137,6 +150,48 @@ tod tasks list --scheduled --project work
 tod tasks list --project work
 ```
 
+### Shell script examples
+
+#### Sort, schedule, prioritize, and process tasks
+
+```bash
+  echo "" && \
+  echo "=== EMPTYING INBOX ===" && \
+  tod project empty --project inbox && \
+  echo "" && \
+  echo "=== SCHEDULING DIGITAL ===" && \
+  tod project schedule --project digital && \
+  echo "" && \
+  echo "=== SCHEDULING PHYSICAL ===" && \
+  tod project schedule --project physical && \
+  echo "" && \
+  echo "=== PRIORITIZING DIGITAL ===" && \
+  tod project prioritize --project digital && \
+  echo "" && \
+  echo "=== PRIORITIZING PHYSICAL ===" && \
+  tod project prioritize --project physical
+  echo "" && \
+  echo "=== PROCESSING DIGITAL ===" && \
+  tod project process --project digital && \
+  echo "" && \
+  echo "=== PROCESSING PHYSICAL ===" && \
+  tod project process --project physical;
+```
+
+## How item priority is determined
+
+Items are ranked by points and the first is returned, the points are the sum of the following:
+
+  - Item is overdue: 150
+  - The date is today with no time: 100
+  - The date is today with time in next or last 15 min: 200
+  - No date: 80
+  - Not recurring: 50
+  - Item has no priority: 2
+  - Priority 1: 1
+  - Priority 2: 3
+  - Priority 3: 4
+
 ## Disabling spinners
 
 Find the line in your `tod.cfg` that reads `"spinners": null` and change the value to false.
@@ -159,3 +214,7 @@ Some points around my general strategy:
 ## Related projects
 
 - [Alfred Workflow](https://github.com/stacksjb/AlfredTodWorkflow)
+
+## Contributing
+
+Contributions are welcome, just please open up an issue before putting too much work into a PR.

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
+    color,
     config::Config,
     items::{self, Item},
     projects,
@@ -119,7 +120,7 @@ impl Report {
 
     pub fn print(&self) -> Result<String, String> {
         let mut buffer = String::new();
-        buffer.push_str(&projects::green_string(&format!(
+        buffer.push_str(&color::green_string(&format!(
             "{} in {} project:",
             self.report_type, self.project_name
         )));

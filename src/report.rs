@@ -6,6 +6,7 @@ use crate::{
     projects,
 };
 
+#[derive(PartialEq, Debug)]
 pub enum CommonReports {
     DoneYesterday,
     DoneToday,
@@ -23,26 +24,40 @@ impl Display for CommonReports {
 }
 
 pub struct Report {
-    project_name: String,
-    items: Vec<Item>,
-    config: Config,
-    report_type: CommonReports,
+    pub project_name: String,
+    pub items: Vec<Item>,
+    pub config: Config,
+    pub report_type: CommonReports,
 }
 
 impl Report {
     pub fn new(config: Config, project: &str, report_type: CommonReports) -> Result<Self, String> {
+        let project_id =
+            projects::project_id(&config, project).map_err(|_| format!("Failed to get project"))?;
         match report_type {
-            CommonReports::DoneYesterday => Report::form_done_yesterday_report(config, project),
-            CommonReports::DoneToday => Report::form_done_today_report(config, project),
-            CommonReports::DueToday => Report::form_due_today_report(config, project),
+            CommonReports::DoneYesterday => {
+                let items = crate::todoist::completed_items_for_project(&config, &project_id)
+                    .map_err(|_| format!("Failed to get completed items for the project"))?;
+                Report::form_done_yesterday_report(config, project, items)
+            }
+            CommonReports::DoneToday => {
+                let items = crate::todoist::completed_items_for_project(&config, &project_id)
+                    .map_err(|_| format!("Failed to get completed items for the project"))?;
+                Report::form_done_today_report(config, project, items)
+            }
+            CommonReports::DueToday => {
+                let items = crate::todoist::items_for_project(&config, &project_id)
+                    .map_err(|_| format!("Failed to get completed items for the project"))?;
+                Report::form_due_today_report(config, project, items)
+            }
         }
     }
 
-    fn form_done_yesterday_report(config: Config, project: &str) -> Result<Self, String> {
-        let project_id =
-            projects::project_id(&config, project).map_err(|_| format!("Failed to get project"))?;
-        let items = crate::todoist::completed_items_for_project(&config, &project_id)
-            .map_err(|_| format!("Failed to get completed items for the project"))?;
+    fn form_done_yesterday_report(
+        config: Config,
+        project: &str,
+        items: Vec<Item>,
+    ) -> Result<Self, String> {
         let items: Vec<Item> = items
             .into_iter()
             .filter(|item| {
@@ -62,11 +77,11 @@ impl Report {
         })
     }
 
-    fn form_done_today_report(config: Config, project: &str) -> Result<Self, String> {
-        let project_id =
-            projects::project_id(&config, project).map_err(|_| format!("Failed to get project"))?;
-        let items = crate::todoist::completed_items_for_project(&config, &project_id)
-            .map_err(|_| format!("Failed to get completed items for the project"))?;
+    fn form_done_today_report(
+        config: Config,
+        project: &str,
+        items: Vec<Item>,
+    ) -> Result<Self, String> {
         let items: Vec<Item> = items
             .into_iter()
             .filter(|item| {
@@ -85,11 +100,11 @@ impl Report {
         })
     }
 
-    fn form_due_today_report(config: Config, project: &str) -> Result<Self, String> {
-        let project_id =
-            projects::project_id(&config, project).map_err(|_| format!("Failed to get project"))?;
-        let items = crate::todoist::items_for_project(&config, &project_id)
-            .map_err(|_| format!("Failed to get completed items for the project"))?;
+    fn form_due_today_report(
+        config: Config,
+        project: &str,
+        items: Vec<Item>,
+    ) -> Result<Self, String> {
         let items: Vec<Item> = items
             .into_iter()
             .filter(|item| item.is_today(&config))
@@ -98,7 +113,7 @@ impl Report {
             config,
             project_name: project.to_string(),
             items,
-            report_type: CommonReports::DoneToday,
+            report_type: CommonReports::DueToday,
         })
     }
 
@@ -114,5 +129,109 @@ impl Report {
             buffer.push_str(&item.fmt(&self.config, items::FormatType::List));
         }
         Ok(buffer)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CommonReports, Report};
+    use crate::{
+        items::{DateInfo, Item},
+        test::fixtures,
+    };
+
+    #[test]
+    fn check_form_done_today_report() {
+        let config = fixtures::config();
+        let items = get_test_tasks();
+        let project_name = "test1";
+
+        let report = Report::form_done_today_report(config, project_name, items);
+        assert!(&report.is_ok());
+
+        let report = report.unwrap();
+        assert_eq!(report.items.len(), 1);
+        assert_eq!(report.report_type, CommonReports::DoneToday);
+        assert_eq!(report.project_name, project_name);
+    }
+
+    #[test]
+    fn check_form_done_yesterday_report() {
+        let config = fixtures::config();
+        let items = get_test_tasks();
+        let project_name = "test2";
+
+        let report = Report::form_done_yesterday_report(config, project_name, items);
+        assert!(&report.is_ok());
+
+        let report = report.unwrap();
+        assert_eq!(report.items.len(), 1);
+        assert_eq!(report.report_type, CommonReports::DoneYesterday);
+        assert_eq!(report.project_name, project_name);
+    }
+
+    #[test]
+    fn check_form_due_today_report() {
+        let config = fixtures::config();
+        let items = get_test_tasks();
+        let project_name = "test3";
+
+        let report = Report::form_due_today_report(config, project_name, items);
+        assert!(&report.is_ok());
+
+        let report = report.unwrap();
+        assert_eq!(report.items.len(), 1);
+        assert_eq!(report.report_type, CommonReports::DueToday);
+        assert_eq!(report.project_name, project_name);
+    }
+
+    fn get_test_tasks() -> Vec<Item> {
+        vec![
+            Item {
+                id: String::from("222"),
+                content: String::from("Test task 1"),
+                checked: None,
+                description: String::from(""),
+                due: Some(DateInfo {
+                    date: String::from("2061-11-13"),
+                    is_recurring: false,
+                    timezone: Some(String::from("America/Los_Angeles")),
+                }),
+                priority: crate::items::priority::Priority::Medium,
+                is_deleted: None,
+                is_completed: None,
+                completed_at: Some(chrono::Utc::now()),
+            },
+            Item {
+                id: String::from("222"),
+                content: String::from("Test task 2"),
+                checked: None,
+                description: String::from(""),
+                due: Some(DateInfo {
+                    date: chrono::Utc::now().date_naive().to_string(),
+                    is_recurring: false,
+                    timezone: Some(String::from("America/Los_Angeles")),
+                }),
+                priority: crate::items::priority::Priority::Medium,
+                is_deleted: None,
+                is_completed: None,
+                completed_at: None,
+            },
+            Item {
+                id: String::from("222"),
+                content: String::from("Test task 3"),
+                checked: None,
+                description: String::from(""),
+                due: Some(DateInfo {
+                    date: String::from("2061-11-13"),
+                    is_recurring: false,
+                    timezone: Some(String::from("America/Los_Angeles")),
+                }),
+                priority: crate::items::priority::Priority::Medium,
+                is_deleted: None,
+                is_completed: None,
+                completed_at: Some(chrono::Utc::now() - chrono::Duration::days(1)),
+            },
+        ]
     }
 }

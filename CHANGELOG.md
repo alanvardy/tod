@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix out of date version text
+
 ## 2023-06-06 v0.4.5
 
 - Show item count in `project list`

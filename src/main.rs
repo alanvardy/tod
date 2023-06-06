@@ -303,7 +303,7 @@ fn version_check(matches: &ArgMatches) -> Result<String, String> {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
         Ok(Version::Dated(version)) => Err(format!(
             "Tod is out of date with version: {}, latest is:{}",
-            version, VERSION
+            VERSION, version
         )),
         Err(e) => Err(e),
     }

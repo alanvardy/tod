@@ -1,5 +1,6 @@
 use chrono::DateTime;
 use chrono::NaiveDate;
+use chrono::Utc;
 use chrono_tz::Tz;
 use colored::*;
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,7 @@ pub struct Item {
     pub is_deleted: Option<bool>,
     /// only on sync api return value
     pub checked: Option<bool>,
+    pub completed_at: Option<DateTime<Utc>>,
 }
 
 impl Display for Item {
@@ -194,7 +196,7 @@ impl Item {
     }
 
     // Returns true if the datetime is today and there is a time
-    fn is_today(&self, config: &Config) -> bool {
+    pub fn is_today(&self, config: &Config) -> bool {
         match self.datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(config),
@@ -222,6 +224,13 @@ impl Item {
             self.clone().datetimeinfo(config),
             Ok(DateTimeInfo::DateTime { .. })
         )
+    }
+
+    pub fn get_completed_at(&self, config: &Config) -> DateTime<Tz> {
+        let tz = time::timezone_from_str(&config.timezone);
+        self.completed_at
+            .expect("Can't get completed_at time for a task")
+            .with_timezone(&tz)
     }
 }
 
@@ -536,6 +545,7 @@ mod tests {
             priority: Priority::Medium,
             is_deleted: None,
             is_completed: None,
+            completed_at: None,
         };
 
         let date_not_datetime = Item {
@@ -598,6 +608,7 @@ mod tests {
             priority: Priority::Medium,
             is_deleted: None,
             is_completed: None,
+            completed_at: None,
         };
 
         assert!(!item.is_overdue(&config));

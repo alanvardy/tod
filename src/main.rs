@@ -13,6 +13,7 @@ mod config;
 mod input;
 mod items;
 mod projects;
+mod report;
 mod sections;
 mod test;
 mod time;
@@ -113,7 +114,10 @@ fn cmd() -> Command {
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
                          .arg(project_arg())
-                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today and have a time")),
+                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today and have a time"))
+                         .arg(flag_arg("done-today", 't',  "Only list tasks that were done today"))
+                         .arg(flag_arg("due-today", 'x',  "Only list tasks that are due today"))
+                         .arg(flag_arg("done-yesterday", 'd',  "Only list tasks that were done yesterday")),
                        Command::new("next").about("Get the next task by priority")
                          .arg(config_arg())
                          .arg(project_arg()),
@@ -204,6 +208,15 @@ fn task_list(matches: &ArgMatches) -> Result<String, String> {
 
     if has_flag(matches, "scheduled") {
         projects::scheduled_items(&config, &project)
+    } else if has_flag(&matches, "done-yesterday") {
+        let report = report::Report::new(config, &project, report::CommonReports::DoneYesterday);
+        report.print()
+    } else if has_flag(&matches, "done-today") {
+        let report = report::Report::new(config, &project, report::CommonReports::DoneToday);
+        report.print()
+    } else if has_flag(&matches, "due-today") {
+        let report = report::Report::new(config, &project, report::CommonReports::DueToday);
+        report.print()
     } else {
         projects::all_items(&config, &project)
     }

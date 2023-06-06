@@ -119,6 +119,14 @@ pub fn update_item_name(config: &Config, item: Item, new_name: String) -> Result
     Ok(String::from("✓"))
 }
 
+/// Get a vector of all completed items for a project
+pub fn completed_items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
+    let url = String::from("/sync/v9/archive/items");
+    let body = json!({ "project_id": project_id });
+    let json = crate::todoist::request::post_todoist_sync(config, url, body)?;
+    items::json_to_items(json)
+}
+
 /// Complete the last item returned by "next item"
 pub fn complete_item(config: &Config) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": config.next_id}}]});
@@ -165,6 +173,7 @@ mod tests {
                 due: None,
                 is_deleted: Some(false),
                 is_completed: None,
+                completed_at: None
             })
         );
         mock.assert();
@@ -202,6 +211,7 @@ mod tests {
                 priority: Priority::Medium,
                 is_deleted: Some(false),
                 is_completed: None,
+                completed_at: None
             }])
         );
 

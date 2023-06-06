@@ -29,6 +29,7 @@ pub mod fixtures {
             priority: crate::items::priority::Priority::Medium,
             is_deleted: None,
             is_completed: None,
+            completed_at: None,
         }
     }
 

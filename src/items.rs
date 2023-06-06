@@ -226,11 +226,13 @@ impl Item {
         )
     }
 
-    pub fn get_completed_at(&self, config: &Config) -> DateTime<Tz> {
+    /// Returns optional completion time of the task. None if task is not completed
+    pub fn get_completed_at(&self, config: &Config) -> Option<DateTime<Tz>> {
         let tz = time::timezone_from_str(&config.timezone);
-        self.completed_at
-            .expect("Can't get completed_at time for a task")
-            .with_timezone(&tz)
+        match self.completed_at {
+            Some(comletion_time) => Some(comletion_time.with_timezone(&tz)),
+            _ => None,
+        }
     }
 }
 

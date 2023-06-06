@@ -30,7 +30,7 @@ pub struct Report {
 }
 
 impl Report {
-    pub fn new(config: Config, project: &str, report_type: CommonReports) -> Self {
+    pub fn new(config: Config, project: &str, report_type: CommonReports) -> Result<Self, String> {
         match report_type {
             CommonReports::DoneYesterday => Report::form_done_yesterday_report(config, project),
             CommonReports::DoneToday => Report::form_done_today_report(config, project),
@@ -38,58 +38,68 @@ impl Report {
         }
     }
 
-    fn form_done_yesterday_report(config: Config, project: &str) -> Self {
-        let project_id = projects::project_id(&config, project).expect("Failed to get project ID");
+    fn form_done_yesterday_report(config: Config, project: &str) -> Result<Self, String> {
+        let project_id =
+            projects::project_id(&config, project).map_err(|_| format!("Failed to get project"))?;
         let items = crate::todoist::completed_items_for_project(&config, &project_id)
-            .expect("Failed to get completed items for a project");
+            .map_err(|_| format!("Failed to get completed items for the project"))?;
         let items: Vec<Item> = items
             .into_iter()
             .filter(|item| {
-                item.get_completed_at(&config).date_naive()
-                    == crate::time::now(&config).date_naive() - chrono::Duration::days(1)
+                item.get_completed_at(&config)
+                    .map(|completion_time| {
+                        completion_time.date_naive()
+                            == crate::time::now(&config).date_naive() - chrono::Duration::days(1)
+                    })
+                    .unwrap_or(false)
             })
             .collect();
-        Report {
+        Ok(Report {
             config,
             project_name: project.to_string(),
             items,
             report_type: CommonReports::DoneYesterday,
-        }
+        })
     }
 
-    fn form_done_today_report(config: Config, project: &str) -> Self {
-        let project_id = projects::project_id(&config, project).expect("Failed to get project ID");
+    fn form_done_today_report(config: Config, project: &str) -> Result<Self, String> {
+        let project_id =
+            projects::project_id(&config, project).map_err(|_| format!("Failed to get project"))?;
         let items = crate::todoist::completed_items_for_project(&config, &project_id)
-            .expect("Failed to get completed items for a project");
+            .map_err(|_| format!("Failed to get completed items for the project"))?;
         let items: Vec<Item> = items
             .into_iter()
             .filter(|item| {
-                item.get_completed_at(&config).date_naive()
-                    == crate::time::now(&config).date_naive()
+                item.get_completed_at(&config)
+                    .map(|completion_time| {
+                        completion_time.date_naive() == crate::time::now(&config).date_naive()
+                    })
+                    .unwrap_or(false)
             })
             .collect();
-        Report {
+        Ok(Report {
             config,
             project_name: project.to_string(),
             items,
             report_type: CommonReports::DoneToday,
-        }
+        })
     }
 
-    fn form_due_today_report(config: Config, project: &str) -> Report {
-        let project_id = projects::project_id(&config, project).expect("Failed to get project ID");
+    fn form_due_today_report(config: Config, project: &str) -> Result<Self, String> {
+        let project_id =
+            projects::project_id(&config, project).map_err(|_| format!("Failed to get project"))?;
         let items = crate::todoist::items_for_project(&config, &project_id)
-            .expect("Failed to get items for a project");
+            .map_err(|_| format!("Failed to get completed items for the project"))?;
         let items: Vec<Item> = items
             .into_iter()
             .filter(|item| item.is_today(&config))
             .collect();
-        Report {
+        Ok(Report {
             config,
             project_name: project.to_string(),
             items,
             report_type: CommonReports::DoneToday,
-        }
+        })
     }
 
     pub fn print(&self) -> Result<String, String> {

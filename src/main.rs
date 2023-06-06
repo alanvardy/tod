@@ -209,14 +209,11 @@ fn task_list(matches: &ArgMatches) -> Result<String, String> {
     if has_flag(matches, "scheduled") {
         projects::scheduled_items(&config, &project)
     } else if has_flag(matches, "done-yesterday") {
-        let report = report::Report::new(config, &project, report::CommonReports::DoneYesterday);
-        report.print()
+        report::Report::new(config, &project, report::CommonReports::DoneYesterday)?.print()
     } else if has_flag(matches, "done-today") {
-        let report = report::Report::new(config, &project, report::CommonReports::DoneToday);
-        report.print()
+        report::Report::new(config, &project, report::CommonReports::DoneToday)?.print()
     } else if has_flag(matches, "due-today") {
-        let report = report::Report::new(config, &project, report::CommonReports::DueToday);
-        report.print()
+        report::Report::new(config, &project, report::CommonReports::DueToday)?.print()
     } else {
         projects::all_items(&config, &project)
     }

@@ -1,12 +1,4 @@
 #[cfg(test)]
-pub mod helpers {
-
-    /// Checks if environment supports colored output (GitHub Actions does not)
-    pub fn supports_coloured_output() -> bool {
-        colored::control::SHOULD_COLORIZE.should_colorize()
-    }
-}
-#[cfg(test)]
 pub mod fixtures {
     use std::collections::HashMap;
 

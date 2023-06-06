@@ -1,12 +1,12 @@
 use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono_tz::Tz;
-use colored::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
 
 pub(crate) mod priority;
+use crate::color;
 use crate::config::Config;
 use crate::{input, items, time, todoist};
 use priority::Priority;
@@ -63,10 +63,10 @@ enum DateTimeInfo {
 impl Item {
     pub fn fmt(&self, config: &Config, format: FormatType) -> String {
         let content = match self.priority {
-            priority::Priority::Low => self.content.blue(),
-            priority::Priority::Medium => self.content.yellow(),
-            priority::Priority::High => self.content.red(),
-            priority::Priority::None => self.content.normal(),
+            priority::Priority::Low => color::blue_string(&self.content),
+            priority::Priority::Medium => color::yellow_string(&self.content),
+            priority::Priority::High => color::red_string(&self.content),
+            priority::Priority::None => color::normal_string(&self.content),
         };
 
         let buffer = match format {
@@ -349,13 +349,10 @@ mod tests {
             ..test::fixtures::item()
         };
 
-        let output = if test::helpers::supports_coloured_output() {
-            "\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: 2021-08-13"
-        } else {
+        assert_eq!(
+            format!("{}", item.fmt(&config, FormatType::Single)),
             "Get gifts for the twins\nDue: 2021-08-13"
-        };
-
-        assert_eq!(format!("{}", item.fmt(&config, FormatType::Single)), output);
+        );
     }
 
     #[test]
@@ -370,12 +367,10 @@ mod tests {
             ..test::fixtures::item()
         };
 
-        let output = if test::helpers::supports_coloured_output() {
-            "\u{1b}[33mGet gifts for the twins\u{1b}[0m\nDue: Today"
-        } else {
+        assert_eq!(
+            format!("{}", item.fmt(&config, FormatType::Single)),
             "Get gifts for the twins\nDue: Today"
-        };
-        assert_eq!(format!("{}", item.fmt(&config, FormatType::Single)), output);
+        );
     }
 
     #[test]

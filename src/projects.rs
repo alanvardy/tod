@@ -116,24 +116,25 @@ pub fn project_id(config: &Config, project_name: &str) -> Result<String, String>
 }
 
 /// Get the next item by priority and save its id to config
-pub fn next_item(config: Config, project_name: &str) -> Result<String, String> {
+pub fn next(config: Config, project_name: &str) -> Result<String, String> {
     match fetch_next_item(&config, project_name) {
-        Ok(Some(item)) => {
+        Ok(Some((item, remaining))) => {
             config.set_next_id(&item.id).save()?;
-            Ok(item.fmt(&config, FormatType::Single))
+            let item_string = item.fmt(&config, FormatType::Single);
+            Ok(format!("{item_string}\n{remaining} task(s) remaining"))
         }
         Ok(None) => Ok(color::green_string("No items on list")),
         Err(e) => Err(e),
     }
 }
 
-fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<Item>, String> {
+fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<(Item, usize)>, String> {
     let project_id = projects::project_id(config, project_name)?;
     let items = todoist::items_for_project(config, &project_id)?;
     let filtered_items = items::filter_not_in_future(items, config)?;
     let items = items::sort_by_value(filtered_items, config);
 
-    Ok(items.first().map(|item| item.to_owned()))
+    Ok(items.first().map(|item| (item.to_owned(), items.len())))
 }
 
 /// Fetch projects and prompt to add them to config one by one
@@ -498,8 +499,10 @@ mod tests {
         config_with_timezone.clone().create().unwrap();
 
         assert_eq!(
-            next_item(config_with_timezone, "good"),
-            Ok(format!("Put out recycling\nDue: {TIME} ↻"))
+            next(config_with_timezone, "good"),
+            Ok(format!(
+                "Put out recycling\nDue: {TIME} ↻\n1 task(s) remaining"
+            ))
         );
     }
 

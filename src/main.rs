@@ -214,7 +214,7 @@ fn task_next(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::next_item(config, &project)
+    projects::next(config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]

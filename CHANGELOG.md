@@ -2,24 +2,31 @@
 
 ## Unreleased
 
+- Fix out of date version text
+
+## 2023-06-06 v0.4.5
+
+- Show item count in `project list`
+- Add remaining task count to `task next`
+
 ## 2023-06-04 v0.4.4
 
-- Add description flag to `tod task create`
+- Add description flag to `task create`
 - Add ability to skip tasks in `project prioritize` and `project empty`
 - Improve naming of priorities in prompt
-- Add `tod version check` to check if Tod is on the latest version
+- Add `version check` to check if Tod is on the latest version
 
 ## 2023-05-31 v0.4.3
 
-- Add `tod task edit`. Thank you `@BobToninho`
+- Add `task edit`. Thank you `@BobToninho`
 - Improve error when no projects found in config
 
 ## 2023-05-28 v0.4.2
 
 - Internal refactor of priority code. Thank you, `@titoOdUA`
 - Clarify scheduled flag in help
-- Add priority flag to `tod task create`
-- Add `tod project import`
+- Add priority flag to `task create`
+- Add `project import`
 - Remove support for legacy path
 - Create random config file for each test
 
@@ -28,12 +35,12 @@
 - Speed up CI by improving caching
 - Improve formatting of tasks both individually and in lists
 - Return an error during complete task if there is no next task in config. Thank you, `@titoOdUA`
-- Add ability to skip a task in `tod project process` command. Thank you, `@titoOdUA`
+- Add ability to skip a task in `project process` command. Thank you, `@titoOdUA`
 - Refactor to reduce the use of clone by passing references
 
 ## 2023-05-06 v0.4.0
 
-- Break the whole API and move over to GitHub CLI inspired commands i.e. `tod task create` instead of `tod -tp`. This opens the path to adding many new features and eases the maintenance burden.
+- Break the whole API and move over to GitHub CLI inspired commands i.e. `task create` instead of `-tp`. This opens the path to adding many new features and eases the maintenance burden.
 
 ## 2023-04-15 v0.3.11
 
@@ -163,7 +170,7 @@
 
 - Check for the latest version once per day and prompt to update with `cargo install tod`
 - Update dependencies
-- Only show the time when a DateTime is today
+- Only show the time when a Date Time is today
 - Code cleanup around error handling
 - Code cleanup around handling
 

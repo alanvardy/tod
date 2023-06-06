@@ -1,6 +1,6 @@
 [package]
 name = "tod"
-version = "0.4.4"
+version = "0.4.5"
 authors = ["Alan Vardy <alan@vardy.cc>"]
 edition = "2021"
 license = "MIT"
@@ -24,11 +24,13 @@ regex = "1"
 chrono = { version = "0.4.26", features = ["serde"] }
 chrono-tz = "0.8.1"
 colored = "2.0.0"
-clap = "4.3.0"
+clap = "4.3.2"
 spinners = "4.1.0"
 inquire = "0.6.2"
 serde_repr = "0.1.12"
 rand = "0.8.5"
+rayon = "1.7.0"
+pad = "0.1.6"
 
 [dev-dependencies]
 mockito = "1.0.0"

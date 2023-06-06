@@ -1,7 +1,6 @@
 use crate::cargo::Version;
-use crate::{cargo, input, time, VERSION};
+use crate::{cargo, color, input, time, VERSION};
 use chrono_tz::TZ_VARIANTS;
-use colored::*;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -127,14 +126,14 @@ impl Config {
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
                         version,
                         VERSION,
-                        "cargo install tod --force".bright_cyan()
+                        color::cyan_string("cargo install tod --force")
                     );
                     new_config.clone().save().unwrap();
                 }
                 Ok(Version::Latest) => (),
                 Err(err) => println!(
                     "{}, {:?}",
-                    "Could not fetch Tod version from Cargo.io".red(),
+                    color::red_string("Could not fetch Tod version from Cargo.io"),
                     err
                 ),
             };

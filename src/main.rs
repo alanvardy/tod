@@ -4,11 +4,11 @@ extern crate matches;
 extern crate clap;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use colored::*;
 use config::Config;
 use items::priority::Priority;
 
 mod cargo;
+mod color;
 mod config;
 mod input;
 mod items;
@@ -70,7 +70,7 @@ fn main() {
             std::process::exit(0);
         }
         Err(e) => {
-            println!("{}", e.red());
+            println!("{}", color::red_string(&e));
             std::process::exit(1);
         }
     }
@@ -174,7 +174,7 @@ fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
     todoist::quick_add_item(&config, &text)?;
-    Ok(projects::green_string("✓"))
+    Ok(color::green_string("✓"))
 }
 
 // --- TASK ---
@@ -224,7 +224,7 @@ fn task_next(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::next_item(config, &project)
+    projects::next(config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -313,7 +313,7 @@ fn version_check(matches: &ArgMatches) -> Result<String, String> {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
         Ok(Version::Dated(version)) => Err(format!(
             "Tod is out of date with version: {}, latest is:{}",
-            version, VERSION
+            VERSION, version
         )),
         Err(e) => Err(e),
     }

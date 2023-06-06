@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show item count in `project list`
+
 ## 2023-06-04 v0.4.4
 
 - Add description flag to `tod task create`

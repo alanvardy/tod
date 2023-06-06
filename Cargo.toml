@@ -29,6 +29,7 @@ spinners = "4.1.0"
 inquire = "0.6.2"
 serde_repr = "0.1.12"
 rand = "0.8.5"
+rayon = "1.7.0"
 
 [dev-dependencies]
 mockito = "1.0.0"

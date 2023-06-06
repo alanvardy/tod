@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::fmt::Display;
 
 use crate::config::Config;
@@ -43,6 +44,12 @@ pub fn json_to_projects(json: String) -> Result<Vec<Project>, String> {
 
 /// List the projects in config
 pub fn list(config: &Config) -> Result<String, String> {
+    let result: Vec<String> = config
+        .projects
+        .par_iter()
+        .map(|(k, _)| project_name_with_count(config, k))
+        .collect::<Vec<String>>();
+    dbg!(result);
     let mut projects: Vec<String> = config.projects.keys().map(|k| k.to_owned()).collect();
     if projects.is_empty() {
         return Ok(String::from("No projects found"));
@@ -56,6 +63,25 @@ pub fn list(config: &Config) -> Result<String, String> {
         buffer.push_str(&key);
     }
     Ok(buffer)
+}
+
+fn project_name_with_count(config: &Config, project_name: &str) -> String {
+    let count = match get_item_count(config, project_name) {
+        Ok(num) => format!("{}", num),
+        Err(_) => String::new(),
+    };
+
+    let padding = 30 - project_name.len();
+
+    format!("{project_name} {:padding$}", "")
+}
+
+fn get_item_count(config: &Config, project_name: &str) -> Result<u8, String> {
+    let project_id = projects::project_id(config, project_name)?;
+
+    let count = todoist::items_for_project(config, &project_id)?.len();
+
+    Ok(count as u8)
 }
 
 /// Add a project to the projects HashMap in Config

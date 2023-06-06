@@ -39,7 +39,7 @@ impl Report {
     }
 
     fn form_done_yesterday_report(config: Config, project: &str) -> Self {
-        let project_id = projects::project_id(&config, &project).expect("Failed to get project ID");
+        let project_id = projects::project_id(&config, project).expect("Failed to get project ID");
         let items = crate::todoist::completed_items_for_project(&config, &project_id)
             .expect("Failed to get completed items for a project");
         let items: Vec<Item> = items
@@ -58,7 +58,7 @@ impl Report {
     }
 
     fn form_done_today_report(config: Config, project: &str) -> Self {
-        let project_id = projects::project_id(&config, &project).expect("Failed to get project ID");
+        let project_id = projects::project_id(&config, project).expect("Failed to get project ID");
         let items = crate::todoist::completed_items_for_project(&config, &project_id)
             .expect("Failed to get completed items for a project");
         let items: Vec<Item> = items
@@ -77,7 +77,7 @@ impl Report {
     }
 
     fn form_due_today_report(config: Config, project: &str) -> Report {
-        let project_id = projects::project_id(&config, &project).expect("Failed to get project ID");
+        let project_id = projects::project_id(&config, project).expect("Failed to get project ID");
         let items = crate::todoist::items_for_project(&config, &project_id)
             .expect("Failed to get items for a project");
         let items: Vec<Item> = items

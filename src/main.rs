@@ -106,6 +106,7 @@ fn cmd() -> Command {
                          .arg(priority_arg())
                          .arg(content_arg())
                          .arg(description_arg())
+                         .arg(due_arg())
                          .arg(project_arg()),
                        Command::new("edit").about("Edit an exising task's content")
                          .arg(config_arg())
@@ -187,7 +188,8 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
         .get_one::<String>("description")
         .map(|s| s.to_owned())
         .unwrap_or(String::new());
-    projects::add_item_to_project(&config, content, &project, priority, description)
+    let due = matches.get_one::<String>("due").map(|s| s.to_owned());
+    projects::add_item_to_project(&config, content, &project, priority, description, due)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -382,6 +384,17 @@ fn description_arg() -> Arg {
         .required(false)
         .value_name("DESCRIPTION TEXT")
         .help("Description for task")
+}
+
+#[cfg(not(tarpaulin_include))]
+fn due_arg() -> Arg {
+    Arg::new("due")
+        .short('u')
+        .long("due")
+        .num_args(1)
+        .required(false)
+        .value_name("DUE DATE")
+        .help("Date date in format YYYY-MM-DD, YYYY-MM-DD HH:MM, or natural language")
 }
 
 #[cfg(not(tarpaulin_include))]

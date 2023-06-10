@@ -31,6 +31,13 @@ pub struct Project {
     pub parent_id: Option<String>,
 }
 
+pub enum TaskFilter {
+    /// Does not have a date or datetime on it
+    Unscheduled,
+    /// Date or datetime is before today
+    Overdue,
+}
+
 impl Display for Project {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}\n{}", self.name, self.url)
@@ -321,22 +328,22 @@ pub fn prioritize_items(config: &Config, project_name: &str) -> Result<String, S
 }
 
 /// Put dates on all items without dates
-pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
+pub fn schedule(config: &Config, project_name: &str, filter: TaskFilter) -> Result<String, String> {
     let project_id = projects::project_id(config, project_name)?;
 
     let items = todoist::items_for_project(config, &project_id)?;
 
-    let undated_items: Vec<Item> = items
+    let filtered_items: Vec<Item> = items
         .into_iter()
-        .filter(|item| item.has_no_date() || item.is_overdue(config))
+        .filter(|item| item.filter(config, &filter))
         .collect::<Vec<Item>>();
 
-    if undated_items.is_empty() {
+    if filtered_items.is_empty() {
         Ok(color::green_string(&format!(
-            "No tasks to date in {project_name}"
+            "No tasks to schedule in {project_name}"
         )))
     } else {
-        for item in undated_items.iter() {
+        for item in filtered_items.iter() {
             println!("{}", item.fmt(config, FormatType::Single));
             let due_string = input::string(
                 "Input a date in natural language, (s)kip or (c)omplete",
@@ -353,7 +360,7 @@ pub fn schedule(config: &Config, project_name: &str) -> Result<String, String> {
             };
         }
         Ok(color::green_string(&format!(
-            "Successfully dated {project_name}"
+            "Successfully scheduled tasks in {project_name}"
         )))
     }
 }
@@ -525,6 +532,7 @@ mod tests {
             ..config
         };
 
+        // invalid project
         assert_eq!(
             scheduled_items(&config_with_timezone, "test"),
             Err(String::from(
@@ -532,6 +540,7 @@ mod tests {
             ))
         );
 
+        // valid project
         let result = scheduled_items(&config_with_timezone, "good");
         assert_eq!(
             result,
@@ -692,7 +701,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prioritize_items() {
+    fn test_prioritize_items_with_no_items() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
@@ -744,5 +753,27 @@ mod tests {
             Ok("The content is the same, no need to change it".to_string())
         );
         mock.assert();
+    }
+    #[test]
+    fn test_schedule() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::items())
+            .create();
+
+        let mut config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0);
+        config.add_project("Project".to_string(), 123);
+
+        let result = schedule(&config, "Project", TaskFilter::Unscheduled);
+        assert_eq!(result, Ok("No tasks to schedule in Project".to_string()));
+
+        let result = schedule(&config, "Project", TaskFilter::Overdue);
+        assert_eq!(result, Ok("No tasks to schedule in Project".to_string()));
+        mock.expect(2);
     }
 }

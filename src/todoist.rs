@@ -1,4 +1,6 @@
-use serde_json::json;
+use std::collections::HashMap;
+
+use serde_json::{json, Number, Value};
 
 mod request;
 
@@ -7,7 +9,7 @@ use crate::items::priority::Priority;
 use crate::items::Item;
 use crate::projects::Project;
 use crate::sections::Section;
-use crate::{items, projects, sections};
+use crate::{items, projects, sections, time};
 
 // TODOIST URLS
 const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
@@ -32,9 +34,26 @@ pub fn add_item(
     content: &str,
     priority: Priority,
     description: String,
+    due: Option<String>,
 ) -> Result<Item, String> {
     let url = String::from(REST_V2_TASKS_URL);
-    let body = json!({"content": content, "description": description, "auto_reminder": true, "priority": priority.to_integer()});
+    let mut body: HashMap<String, Value> = HashMap::new();
+    body.insert("content".to_owned(), Value::String(content.to_owned()));
+    body.insert("description".to_owned(), Value::String(description));
+    body.insert("auto_reminder".to_owned(), Value::Bool(true));
+    body.insert(
+        "priority".to_owned(),
+        Value::Number(Number::from(priority.to_integer())),
+    );
+    if let Some(date) = due {
+        if time::is_date(&date) || time::is_datetime(&date) {
+            body.insert("due_date".to_owned(), Value::String(date));
+        } else {
+            body.insert("due_string".to_owned(), Value::String(date));
+        }
+    }
+
+    let body = json!(body);
 
     let json = request::post_todoist_rest(config, url, body)?;
     items::json_to_item(json)

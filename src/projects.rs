@@ -413,8 +413,9 @@ pub fn add_item_to_project(
     project: &str,
     priority: Priority,
     description: String,
+    due: Option<String>,
 ) -> Result<String, String> {
-    let item = todoist::add_item(config, &content, priority, description)?;
+    let item = todoist::add_item(config, &content, priority, description, due)?;
 
     match project {
         "inbox" | "i" => Ok(color::green_string("✓")),
@@ -775,5 +776,43 @@ mod tests {
         let result = schedule(&config, "Project", TaskFilter::Overdue);
         assert_eq!(result, Ok("No tasks to schedule in Project".to_string()));
         mock.expect(2);
+    }
+
+    #[test]
+    fn test_add_item_to_project() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/rest/v2/tasks/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::item())
+            .create();
+
+        let mock2 = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sync())
+            .create();
+
+        let mut config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0);
+        config.add_project("Project".to_string(), 123);
+
+        let content = String::from("This is content");
+
+        let result = add_item_to_project(
+            &config,
+            content,
+            "Project",
+            Priority::None,
+            String::new(),
+            None,
+        );
+        assert_eq!(result, Ok("✓".to_string()));
+
+        mock.assert();
+        mock2.assert();
     }
 }

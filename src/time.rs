@@ -2,6 +2,7 @@ use crate::config::Config;
 use chrono::offset::{TimeZone, Utc};
 use chrono::{DateTime, NaiveDate};
 use chrono_tz::Tz;
+use regex::Regex;
 
 pub fn now(config: &Config) -> DateTime<Tz> {
     let tz = timezone_from_str(&config.timezone);
@@ -87,4 +88,37 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, String> {
     };
 
     Ok(date)
+}
+
+/// Checks if string is a date in format YYYY-MM-DD
+pub fn is_date(string: &str) -> bool {
+    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+    re.is_match(string)
+}
+
+/// Checks if string is a datetime in format YYYY-MM-DD HH:MM
+pub fn is_datetime(string: &str) -> bool {
+    let re = Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$").unwrap();
+    re.is_match(string)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_date() {
+        assert!(is_date("2022-10-05"));
+        assert!(!is_date("22-10-05"));
+        assert!(!is_date("2022-10-05 24:02"));
+        assert!(!is_date("today"));
+    }
+
+    #[test]
+    fn test_is_datetime() {
+        assert!(!is_datetime("2022-10-05"));
+        assert!(!is_datetime("22-10-05"));
+        assert!(is_datetime("2022-10-05 24:02"));
+        assert!(!is_datetime("today"));
+    }
 }

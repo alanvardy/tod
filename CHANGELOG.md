@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix out of date version text
+- Add `overdue` flag to `project schedule`
 
 ## 2023-06-06 v0.4.5
 

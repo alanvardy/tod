@@ -139,6 +139,7 @@ fn cmd() -> Command {
                         .arg(project_arg()),
                        Command::new("schedule").about("Assign dates to all tasks individually")
                         .arg(config_arg())
+                         .arg(flag_arg("overdue", 'v',  "Only schedule overdue tasks"))
                         .arg(project_arg()),
                        Command::new("prioritize").about("Give every task a priority")
                         .arg(config_arg())
@@ -287,8 +288,13 @@ fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
 fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
+    let filter = if has_flag(matches, "overdue") {
+        projects::TaskFilter::Overdue
+    } else {
+        projects::TaskFilter::Unscheduled
+    };
 
-    projects::schedule(&config, &project)
+    projects::schedule(&config, &project, filter)
 }
 
 // --- VERSION ---

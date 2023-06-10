@@ -8,6 +8,7 @@ use std::fmt::Display;
 pub(crate) mod priority;
 use crate::color;
 use crate::config::Config;
+use crate::projects;
 use crate::{input, items, time, todoist};
 use priority::Priority;
 
@@ -189,7 +190,14 @@ impl Item {
         }
     }
 
-    pub fn has_no_date(&self) -> bool {
+    pub fn filter(&self, config: &Config, filter: &projects::TaskFilter) -> bool {
+        match filter {
+            projects::TaskFilter::Unscheduled => self.has_no_date() || self.is_overdue(config),
+            projects::TaskFilter::Overdue => self.is_overdue(config),
+        }
+    }
+
+    fn has_no_date(&self) -> bool {
         self.due.is_none()
     }
 
@@ -205,7 +213,7 @@ impl Item {
         }
     }
 
-    pub fn is_overdue(&self, config: &Config) -> bool {
+    fn is_overdue(&self, config: &Config) -> bool {
         match self.clone().datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date, config),

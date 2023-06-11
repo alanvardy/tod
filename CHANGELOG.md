@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-06-10 v0.4.6
+
 - Fix out of date version text
 - Add `overdue` flag to `project schedule`
 - Add `due` flag to `task create`

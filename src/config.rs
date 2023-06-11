@@ -29,87 +29,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(token: &str) -> Result<Config, String> {
-        let projects: HashMap<String, u32> = HashMap::new();
-        Ok(Config {
-            path: generate_path()?,
-            token: String::from(token),
-            next_id: None,
-            last_version_check: None,
-            timezone: None,
-            spinners: Some(true),
-            mock_url: None,
-            mock_string: None,
-            mock_select: None,
-            projects,
-        })
-    }
-
-    pub fn create(self) -> Result<Config, String> {
-        let json = json!(self).to_string();
-        let mut file = fs::File::create(&self.path).or(Err("Could not create file"))?;
-        file.write_all(json.as_bytes())
-            .or(Err("Could not write to file"))?;
-        println!("Config successfully created in {}", &self.path);
-        Ok(self)
-    }
-
-    pub fn save(&mut self) -> std::result::Result<String, String> {
-        let json = json!(self);
-        let string = serde_json::to_string_pretty(&json).or(Err("Could not convert to JSON"))?;
-
-        fs::OpenOptions::new()
-            .write(true)
-            .read(true)
-            .truncate(true)
-            .open(&self.path)
-            .or(Err("Could not find config"))?
-            .write_all(string.as_bytes())
-            .or(Err("Could not write to file"))?;
-
-        Ok(String::from("✓"))
-    }
-
-    pub fn load(path: &str) -> Result<Config, String> {
-        let mut json = String::new();
-
-        fs::File::open(path)
-            .or(Err("Could not find file"))?
-            .read_to_string(&mut json)
-            .or(Err("Could not read to string"))?;
-
-        serde_json::from_str::<Config>(&json).map_err(|_| format!("Could not parse JSON:\n{json}"))
-    }
-
-    pub fn reload(&self) -> Result<Self, String> {
-        Config::load(&self.path)
-    }
-
     pub fn add_project(&mut self, name: String, number: u32) {
         let projects = &mut self.projects;
         projects.insert(name, number);
-    }
-
-    pub fn remove_project(self, name: &str) -> Config {
-        let mut projects = self.projects;
-        projects.remove(name);
-
-        Config { projects, ..self }
-    }
-
-    pub fn set_next_id(&self, next_id: &String) -> Config {
-        let next_id: Option<String> = Some(next_id.to_owned());
-
-        Config {
-            next_id,
-            ..self.clone()
-        }
-    }
-
-    pub fn clear_next_id(self) -> Config {
-        let next_id: Option<String> = None;
-
-        Config { next_id, ..self }
     }
 
     pub fn check_for_latest_version(self: Config) -> Result<Config, String> {
@@ -163,6 +85,84 @@ impl Config {
             Ok(config)
         } else {
             Ok(self)
+        }
+    }
+
+    pub fn clear_next_id(self) -> Config {
+        let next_id: Option<String> = None;
+
+        Config { next_id, ..self }
+    }
+
+    pub fn create(self) -> Result<Config, String> {
+        let json = json!(self).to_string();
+        let mut file = fs::File::create(&self.path).or(Err("Could not create file"))?;
+        file.write_all(json.as_bytes())
+            .or(Err("Could not write to file"))?;
+        println!("Config successfully created in {}", &self.path);
+        Ok(self)
+    }
+
+    pub fn load(path: &str) -> Result<Config, String> {
+        let mut json = String::new();
+
+        fs::File::open(path)
+            .or(Err("Could not find file"))?
+            .read_to_string(&mut json)
+            .or(Err("Could not read to string"))?;
+
+        serde_json::from_str::<Config>(&json).map_err(|_| format!("Could not parse JSON:\n{json}"))
+    }
+
+    pub fn new(token: &str) -> Result<Config, String> {
+        let projects: HashMap<String, u32> = HashMap::new();
+        Ok(Config {
+            path: generate_path()?,
+            token: String::from(token),
+            next_id: None,
+            last_version_check: None,
+            timezone: None,
+            spinners: Some(true),
+            mock_url: None,
+            mock_string: None,
+            mock_select: None,
+            projects,
+        })
+    }
+
+    pub fn reload(&self) -> Result<Self, String> {
+        Config::load(&self.path)
+    }
+
+    pub fn remove_project(self, name: &str) -> Config {
+        let mut projects = self.projects;
+        projects.remove(name);
+
+        Config { projects, ..self }
+    }
+
+    pub fn save(&mut self) -> std::result::Result<String, String> {
+        let json = json!(self);
+        let string = serde_json::to_string_pretty(&json).or(Err("Could not convert to JSON"))?;
+
+        fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .truncate(true)
+            .open(&self.path)
+            .or(Err("Could not find config"))?
+            .write_all(string.as_bytes())
+            .or(Err("Could not write to file"))?;
+
+        Ok(color::green_string("✓"))
+    }
+
+    pub fn set_next_id(&self, next_id: &String) -> Config {
+        let next_id: Option<String> = Some(next_id.to_owned());
+
+        Config {
+            next_id,
+            ..self.clone()
         }
     }
 }

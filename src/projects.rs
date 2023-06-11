@@ -110,6 +110,17 @@ pub fn remove(config: Config, project_name: &str) -> Result<String, String> {
     config.remove_project(project_name).save()
 }
 
+/// Rename a project in config
+pub fn rename(config: Config, project_name: &str) -> Result<String, String> {
+    let new_name = input::string_with_default("Input new project name", project_name)?;
+
+    let project_id = project_id(&config, project_name)?;
+    let mut config = config;
+
+    add(&mut config, new_name, project_id)?;
+    remove(config, project_name)
+}
+
 pub fn project_id(config: &Config, project_name: &str) -> Result<String, String> {
     let project_id = config
         .projects

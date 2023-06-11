@@ -49,6 +49,7 @@ fn main() {
             Some(("list", m)) => project_list(m),
             Some(("add", m)) => project_add(m),
             Some(("remove", m)) => project_remove(m),
+            Some(("rename", m)) => project_rename(m),
             Some(("process", m)) => project_process(m),
             Some(("empty", m)) => project_empty(m),
             Some(("schedule", m)) => project_schedule(m),
@@ -133,6 +134,9 @@ fn cmd() -> Command {
                         .arg(name_arg())
                         .arg(id_arg()),
                        Command::new("remove").about("Remove a project from config (not Todoist)")
+                        .arg(config_arg())
+                        .arg(project_arg()),
+                       Command::new("rename").about("Rename a project in config (not Todoist)")
                         .arg(config_arg())
                         .arg(project_arg()),
                        Command::new("empty").about("Empty a project by putting tasks in other projects")
@@ -253,6 +257,14 @@ fn project_remove(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
 
     projects::remove(config, &project)
+}
+
+#[cfg(not(tarpaulin_include))]
+fn project_rename(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let project = fetch_project(matches, &config)?;
+
+    projects::rename(config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]

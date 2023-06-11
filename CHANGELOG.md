@@ -5,6 +5,7 @@
 - Fix out of date version text
 - Add `overdue` flag to `project schedule`
 - Add `due` flag to `task create`
+- Add `project rename`
 
 ## 2023-06-06 v0.4.5
 

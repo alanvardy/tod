@@ -113,6 +113,39 @@ pub mod responses {
         )
     }
 
+    pub fn unscheduled_items() -> String {
+        String::from(
+            "{\
+        \"items\":\
+            [
+                {\
+                \"added_by_uid\":44444444,\
+                \"assigned_by_uid\":null,\
+                \"checked\":false,\
+                \"child_order\":-5,\
+                \"collapsed\":false,\
+                \"content\":\"Put out recycling\",\
+                \"date_added\":\"2021-06-15T13:01:28Z\",\
+                \"date_completed\":null,\
+                \"description\":\"\",\
+                \"due\":null,\
+                \"id\":\"999999\",\
+                \"is_deleted\":false,\
+                \"labels\":[],\
+                \"note_count\":0,\
+                \"parent_id\":null,\
+                \"priority\":3,\
+                \"project_id\":22222222,\
+                \"responsible_uid\":null,\
+                \"section_id\":333333333,\
+                \"sync_id\":null,\
+                \"user_id\":111111111\
+                }
+            ]
+        }",
+        )
+    }
+
     pub fn item() -> String {
         String::from(
             "\

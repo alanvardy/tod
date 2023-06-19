@@ -194,6 +194,7 @@ impl Item {
         match filter {
             projects::TaskFilter::Unscheduled => self.has_no_date() || self.is_overdue(config),
             projects::TaskFilter::Overdue => self.is_overdue(config),
+            projects::TaskFilter::Recurring => self.is_recurring(),
         }
     }
 
@@ -221,6 +222,14 @@ impl Item {
                 time::is_date_in_past(datetime.date_naive(), config)
             }
             Err(_) => false,
+        }
+    }
+
+    /// Returns true if it is a recurring task
+    fn is_recurring(&self) -> bool {
+        match self.due {
+            None => false,
+            Some(DateInfo { is_recurring, .. }) => is_recurring,
         }
     }
 

@@ -36,6 +36,8 @@ pub enum TaskFilter {
     Unscheduled,
     /// Date or datetime is before today
     Overdue,
+    /// Is a recurring task
+    Recurring,
 }
 
 impl Display for Project {
@@ -346,7 +348,7 @@ pub fn schedule(config: &Config, project_name: &str, filter: TaskFilter) -> Resu
 
     let filtered_items: Vec<Item> = items
         .into_iter()
-        .filter(|item| item.filter(config, &filter))
+        .filter(|item| item.filter(config, &filter) && !item.filter(config, &TaskFilter::Recurring))
         .collect::<Vec<Item>>();
 
     if filtered_items.is_empty() {
@@ -773,20 +775,32 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::unscheduled_items())
+            .create();
+
+        let mock2 = server
+            .mock("POST", "/rest/v2/tasks/999999")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::item())
             .create();
 
         let mut config = test::fixtures::config()
             .mock_url(server.url())
-            .mock_select(0);
+            .mock_select(0)
+            .mock_string("tod");
         config.add_project("Project".to_string(), 123);
 
         let result = schedule(&config, "Project", TaskFilter::Unscheduled);
-        assert_eq!(result, Ok("No tasks to schedule in Project".to_string()));
+        assert_eq!(
+            result,
+            Ok("Successfully scheduled tasks in Project".to_string())
+        );
 
         let result = schedule(&config, "Project", TaskFilter::Overdue);
         assert_eq!(result, Ok("No tasks to schedule in Project".to_string()));
         mock.expect(2);
+        mock2.expect(2);
     }
 
     #[test]

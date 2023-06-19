@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Don't `reschedule` overdue recurring tasks (as it wipes out the recurring data)
+
 ## 2023-06-10 v0.4.6
 
 - Fix out of date version text

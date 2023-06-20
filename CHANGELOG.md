@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-06-19 v0.4.7
+
 - Don't `reschedule` overdue recurring tasks (as it wipes out the recurring data)
 - Add `auto` flag to `project remove`
 

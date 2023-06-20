@@ -134,11 +134,8 @@ impl Config {
         Config::load(&self.path)
     }
 
-    pub fn remove_project(self, name: &str) -> Config {
-        let mut projects = self.projects;
-        projects.remove(name);
-
-        Config { projects, ..self }
+    pub fn remove_project(&mut self, name: &str) {
+        self.projects.remove(name);
     }
 
     pub fn save(&mut self) -> std::result::Result<String, String> {
@@ -306,7 +303,7 @@ mod tests {
         let mut projects: HashMap<String, u32> = HashMap::new();
         projects.insert(String::from("test"), 1234);
         projects.insert(String::from("test2"), 4567);
-        let config_with_two_projects = Config {
+        let mut config_with_two_projects = Config {
             token: String::from("something"),
             path: generate_path().unwrap(),
             next_id: None,
@@ -334,14 +331,14 @@ mod tests {
                 mock_select: None,
             }
         );
-        let config_with_one_project = config_with_two_projects.remove_project("test");
+        config_with_two_projects.remove_project("test");
         let mut projects: HashMap<String, u32> = HashMap::new();
         projects.insert(String::from("test2"), 4567);
         assert_eq!(
-            config_with_one_project,
+            config_with_two_projects,
             Config {
                 token: String::from("something"),
-                path: config_with_one_project.path.clone(),
+                path: config_with_two_projects.path.clone(),
                 next_id: None,
                 last_version_check: None,
                 projects,

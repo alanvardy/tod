@@ -135,6 +135,7 @@ fn cmd() -> Command {
                         .arg(id_arg()),
                        Command::new("remove").about("Remove a project from config (not Todoist)")
                         .arg(config_arg())
+                         .arg(flag_arg("auto", 'a',  "Remove all projects from config that are not in Todoist"))
                         .arg(project_arg()),
                        Command::new("rename").about("Rename a project in config (not Todoist)")
                         .arg(config_arg())
@@ -253,10 +254,13 @@ fn project_add(matches: &ArgMatches) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 fn project_remove(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
-
-    projects::remove(config, &project)
+    let mut config = fetch_config(matches)?;
+    if has_flag(matches, "auto") {
+        projects::remove_auto(&mut config)
+    } else {
+        let project = fetch_project(matches, &config)?;
+        projects::remove(&mut config, &project)
+    }
 }
 
 #[cfg(not(tarpaulin_include))]

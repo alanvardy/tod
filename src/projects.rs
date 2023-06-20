@@ -108,8 +108,9 @@ pub fn add(config: &mut Config, name: String, id: String) -> Result<String, Stri
 }
 
 /// Remove a project from the projects HashMap in Config
-pub fn remove(config: Config, project_name: &str) -> Result<String, String> {
-    config.remove_project(project_name).save()
+pub fn remove(config: &mut Config, project_name: &str) -> Result<String, String> {
+    config.remove_project(project_name);
+    config.save()
 }
 
 /// Rename a project in config
@@ -120,7 +121,7 @@ pub fn rename(config: Config, project_name: &str) -> Result<String, String> {
     let mut config = config;
 
     add(&mut config, new_name, project_id)?;
-    remove(config, project_name)
+    remove(&mut config, project_name)
 }
 
 pub fn project_id(config: &Config, project_name: &str) -> Result<String, String> {
@@ -155,6 +156,38 @@ fn fetch_next_item(config: &Config, project_name: &str) -> Result<Option<(Item, 
     let items = items::sort_by_value(filtered_items, config);
 
     Ok(items.first().map(|item| (item.to_owned(), items.len())))
+}
+
+/// Removes all projects from config that don't exist in Todoist
+pub fn remove_auto(config: &mut Config) -> Result<String, String> {
+    let projects = todoist::projects(config)?;
+    let missing_projects = filter_missing_projects(config, projects);
+
+    if missing_projects.is_empty() {
+        return Ok(color::green_string("No projects to auto remove"));
+    }
+
+    for project in &missing_projects {
+        config.remove_project(project);
+    }
+    config.save()?;
+    let project_names = missing_projects.join(", ");
+    let message = format!("Auto removed: {project_names}");
+    Ok(color::green_string(&message))
+}
+
+/// Returns the projects that are not already in config
+fn filter_missing_projects(config: &Config, projects: Vec<Project>) -> Vec<String> {
+    let project_ids: Vec<String> = projects.into_iter().map(|v| v.id).collect();
+    let missing_project_names: Vec<String> = config
+        .projects
+        .clone()
+        .into_iter()
+        .filter(|(_k, v)| !project_ids.contains(&v.to_string()))
+        .map(|(k, _v)| k)
+        .collect();
+
+    missing_project_names
 }
 
 /// Fetch projects and prompt to add them to config one by one
@@ -470,7 +503,7 @@ mod tests {
         let result = add(&mut config, "cool_project".to_string(), "1".to_string());
         assert_eq!(result, Ok("✓".to_string()));
 
-        let result = remove(config, "cool_project");
+        let result = remove(&mut config, "cool_project");
         assert_eq!(Ok("✓".to_string()), result);
     }
     #[test]
@@ -682,6 +715,33 @@ mod tests {
         let result = project_names(&config);
         let expected: Result<Vec<String>, String> = Ok(vec![String::from("NEWPROJECT")]);
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_remove_auto() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/rest/v2/projects")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::projects())
+            .create();
+
+        let mut config = test::fixtures::config()
+            .mock_url(server.url())
+            .create()
+            .unwrap();
+
+        let result = project_names(&config);
+        let expected = Err(String::from(NO_PROJECTS_ERR));
+        assert_eq!(result, expected);
+
+        config.add_project(String::from("NEWPROJECT"), 123);
+
+        let result = remove_auto(&mut config);
+        let expected: Result<String, String> = Ok(String::from("Auto removed: NEWPROJECT"));
+        assert_eq!(result, expected);
+        mock.assert();
     }
 
     #[test]

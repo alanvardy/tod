@@ -136,6 +136,7 @@ fn cmd() -> Command {
                        Command::new("remove").about("Remove a project from config (not Todoist)")
                         .arg(config_arg())
                          .arg(flag_arg("auto", 'a',  "Remove all projects from config that are not in Todoist"))
+                         .arg(flag_arg("all", 'l',  "Remove all projects from config"))
                         .arg(project_arg()),
                        Command::new("rename").about("Rename a project in config (not Todoist)")
                         .arg(config_arg())
@@ -255,11 +256,16 @@ fn project_add(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn project_remove(matches: &ArgMatches) -> Result<String, String> {
     let mut config = fetch_config(matches)?;
-    if has_flag(matches, "auto") {
-        projects::remove_auto(&mut config)
-    } else {
-        let project = fetch_project(matches, &config)?;
-        projects::remove(&mut config, &project)
+    let all = has_flag(matches, "all");
+    let auto = has_flag(matches, "auto");
+    match (all, auto) {
+        (true, false) => projects::remove_all(&mut config),
+        (false, true) => projects::remove_auto(&mut config),
+        (false, false) => {
+            let project = fetch_project(matches, &config)?;
+            projects::remove(&mut config, &project)
+        }
+        (_, _) => Err(String::from("Incorrect flags provided")),
     }
 }
 

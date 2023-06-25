@@ -176,6 +176,31 @@ pub fn remove_auto(config: &mut Config) -> Result<String, String> {
     Ok(color::green_string(&message))
 }
 
+/// Removes all projects from config
+pub fn remove_all(config: &mut Config) -> Result<String, String> {
+    let options = vec!["Cancel", "Confirm"];
+    let selection = input::select(
+        "Confirm removing all projects from config",
+        options,
+        config.mock_select,
+    )?;
+
+    if selection == "Cancel" {
+        return Ok(String::from("Cancelled"));
+    }
+    let projects: Vec<String> = config.projects.clone().into_keys().collect();
+    if projects.is_empty() {
+        return Ok(color::green_string("No projects to remove"));
+    }
+
+    for project in &projects {
+        config.remove_project(project);
+    }
+    config.save()?;
+    let message = String::from("Removed all projects from config");
+    Ok(color::green_string(&message))
+}
+
 /// Returns the projects that are not already in config
 fn filter_missing_projects(config: &Config, projects: Vec<Project>) -> Vec<String> {
     let project_ids: Vec<String> = projects.into_iter().map(|v| v.id).collect();
@@ -742,6 +767,34 @@ mod tests {
         let expected: Result<String, String> = Ok(String::from("Auto removed: NEWPROJECT"));
         assert_eq!(result, expected);
         mock.assert();
+        assert_eq!(
+            project_names(&config),
+            Err(String::from(
+                "No projects in config, please run `tod project import`"
+            ))
+        );
+    }
+
+    #[test]
+    fn test_remove_all() {
+        let mut config = test::fixtures::config().mock_select(1).create().unwrap();
+
+        let result = project_names(&config);
+        let expected = Err(String::from(NO_PROJECTS_ERR));
+        assert_eq!(result, expected);
+
+        config.add_project(String::from("NEWPROJECT"), 123);
+
+        let result = remove_all(&mut config);
+        let expected: Result<String, String> = Ok(String::from("Removed all projects from config"));
+        assert_eq!(result, expected);
+
+        assert_eq!(
+            project_names(&config),
+            Err(String::from(
+                "No projects in config, please run `tod project import`"
+            ))
+        );
     }
 
     #[test]

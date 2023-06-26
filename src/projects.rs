@@ -3,6 +3,7 @@ use rayon::prelude::*;
 use std::fmt::Display;
 
 use crate::config::Config;
+use crate::input::DateTimeInput;
 use crate::items::priority::Priority;
 use crate::items::{FormatType, Item};
 use crate::{color, input, items, projects, todoist};
@@ -416,18 +417,20 @@ pub fn schedule(config: &Config, project_name: &str, filter: TaskFilter) -> Resu
     } else {
         for item in filtered_items.iter() {
             println!("{}", item.fmt(config, FormatType::Single));
-            let due_string = input::string(
-                "Input a date in natural language, (s)kip or (c)omplete",
-                config.mock_string.clone(),
-            )?;
-            match due_string.as_str() {
-                "complete" | "c" => {
+            let datetime_input = input::datetime(config.mock_select, config.mock_string.clone())?;
+            match datetime_input {
+                input::DateTimeInput::Complete => {
                     let config = config.set_next_id(&item.id);
                     todoist::complete_item(&config)?
                 }
-                "skip" | "s" => "Skipped".to_string(),
+                DateTimeInput::Skip => "Skipped".to_string(),
 
-                _ => todoist::update_item_due(config, item.to_owned(), due_string)?,
+                input::DateTimeInput::Text(due_string) => {
+                    todoist::update_item_due(config, item.to_owned(), due_string)?
+                }
+                input::DateTimeInput::None => {
+                    todoist::update_item_due(config, item.to_owned(), "No Date".to_string())?
+                }
             };
         }
         Ok(color::green_string(&format!(
@@ -910,8 +913,18 @@ mod tests {
             Ok("Successfully scheduled tasks in Project".to_string())
         );
 
+        let config = config.mock_select(2);
+
         let result = schedule(&config, "Project", TaskFilter::Overdue);
         assert_eq!(result, Ok("No tasks to schedule in Project".to_string()));
+
+        let config = config.mock_select(3);
+
+        let result = schedule(&config, "Project", TaskFilter::Unscheduled);
+        assert_eq!(
+            result,
+            Ok("Successfully scheduled tasks in Project".to_string())
+        );
         mock.expect(2);
         mock2.expect(2);
     }

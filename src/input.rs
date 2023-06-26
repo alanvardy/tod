@@ -1,6 +1,49 @@
 use std::fmt::Display;
 
-use inquire::{Select, Text};
+use inquire::{DateSelect, Select, Text};
+
+pub enum DateTimeInput {
+    Skip,
+    None,
+    Complete,
+    Text(String),
+}
+/// Get datetime input from user
+pub fn datetime(
+    mock_select: Option<usize>,
+    mock_string: Option<String>,
+) -> Result<DateTimeInput, String> {
+    let options = vec![
+        "Natural Language",
+        "Pick Date",
+        "No Date",
+        "Skip",
+        "Complete",
+    ];
+    let description = "Set a due date";
+    let selection = select(description, options, mock_select)?;
+
+    match selection {
+        "Natural Language" => {
+            let entry = string("Enter datetime in natural language", mock_string)?;
+
+            Ok(DateTimeInput::Text(entry))
+        }
+        "Pick Date" => {
+            let string = DateSelect::new("Select Date")
+                .prompt()
+                .map_err(|e| e.to_string())?
+                .to_string();
+
+            Ok(DateTimeInput::Text(string))
+        }
+
+        "No Date" => Ok(DateTimeInput::None),
+        "Complete" => Ok(DateTimeInput::Complete),
+        "Skip" => Ok(DateTimeInput::Skip),
+        _ => Err(String::from("Unrecognized input")),
+    }
+}
 
 /// Get text input from user
 pub fn string(desc: &str, mock_string: Option<String>) -> Result<String, String> {
@@ -33,8 +76,6 @@ pub fn select<T: Display>(
     options: Vec<T>,
     mock_select: Option<usize>,
 ) -> Result<T, String> {
-    // Just return the first option in test
-
     if cfg!(test) {
         if let Some(index) = mock_select {
             Ok(options

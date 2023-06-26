@@ -698,6 +698,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c33e7c1ddeb15c9abcbfef6029d8e29f69b52b6d6c891031b88ed91b5065803b"
 dependencies = [
  "bitflags",
+ "chrono",
  "crossterm",
  "dyn-clone",
  "lazy_static",

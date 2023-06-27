@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## 2023-06-27 v0.4.8
+
 - Add `all` flag to `project remove`
+- Add a select and date picker to `project schedule`
 
 ## 2023-06-19 v0.4.7
 

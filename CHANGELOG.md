@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Put date picker option first when scheduling
+
 ## 2023-06-27 v0.4.8
 
 - Add `all` flag to `project remove`

@@ -903,7 +903,7 @@ mod tests {
 
         let mut config = test::fixtures::config()
             .mock_url(server.url())
-            .mock_select(0)
+            .mock_select(1)
             .mock_string("tod");
         config.add_project("Project".to_string(), 123);
 

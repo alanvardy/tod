@@ -14,8 +14,8 @@ pub fn datetime(
     mock_string: Option<String>,
 ) -> Result<DateTimeInput, String> {
     let options = vec![
-        "Natural Language",
         "Pick Date",
+        "Natural Language",
         "No Date",
         "Skip",
         "Complete",

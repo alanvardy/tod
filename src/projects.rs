@@ -486,7 +486,7 @@ pub fn add_item_to_project(
     content: String,
     project: &str,
     priority: Priority,
-    description: String,
+    description: Option<String>,
     due: Option<String>,
 ) -> Result<String, String> {
     let item = todoist::add_item(config, &content, priority, description, due)?;
@@ -953,14 +953,7 @@ mod tests {
 
         let content = String::from("This is content");
 
-        let result = add_item_to_project(
-            &config,
-            content,
-            "Project",
-            Priority::None,
-            String::new(),
-            None,
-        );
+        let result = add_item_to_project(&config, content, "Project", Priority::None, None, None);
         assert_eq!(result, Ok("✓".to_string()));
 
         mock.assert();

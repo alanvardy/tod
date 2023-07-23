@@ -33,10 +33,11 @@ pub fn add_item(
     config: &Config,
     content: &str,
     priority: Priority,
-    description: String,
+    description: Option<String>,
     due: Option<String>,
 ) -> Result<Item, String> {
     let url = String::from(REST_V2_TASKS_URL);
+    let description = description.unwrap_or_default();
     let mut body: HashMap<String, Value> = HashMap::new();
     body.insert("content".to_owned(), Value::String(content.to_owned()));
     body.insert("description".to_owned(), Value::String(description));

@@ -190,8 +190,8 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let priority = fetch_priority(matches, &config)?;
     let project = fetch_project(matches, &config)?;
     let description = fetch_description(matches);
+    let due = fetch_due(matches);
 
-    let due = matches.get_one::<String>("due").map(|s| s.to_owned());
     projects::add_item_to_project(&config, content, &project, priority, description, due)
 }
 
@@ -459,6 +459,10 @@ fn fetch_description(matches: &ArgMatches) -> Option<String> {
     matches
         .get_one::<String>("description")
         .map(|s| s.to_owned())
+}
+
+fn fetch_due(matches: &ArgMatches) -> Option<String> {
+    matches.get_one::<String>("due").map(|s| s.to_owned())
 }
 
 #[cfg(not(tarpaulin_include))]

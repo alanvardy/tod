@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Put date picker option first when scheduling
+- Use structs for projects instead storing as a `HashMap` in config. This means that projects need to imported again with `project import`, sorry for the inconvenience. The tech debt around project handling was slowing down development.
+- Remove `project add` as only `project import` can be used now
 
 ## 2023-06-27 v0.4.8
 

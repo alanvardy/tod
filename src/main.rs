@@ -6,6 +6,7 @@ extern crate clap;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use config::Config;
 use items::priority::Priority;
+use projects::Project;
 
 mod cargo;
 mod color;
@@ -22,6 +23,8 @@ const APP: &str = "Tod";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
+
+const NO_PROJECTS_ERR: &str = "No projects in config. Add projects with `tod project import`";
 
 #[cfg(not(tarpaulin_include))]
 fn main() {
@@ -47,7 +50,6 @@ fn main() {
         },
         Some(("project", project_matches)) => match project_matches.subcommand() {
             Some(("list", m)) => project_list(m),
-            Some(("add", m)) => project_add(m),
             Some(("remove", m)) => project_remove(m),
             Some(("rename", m)) => project_rename(m),
             Some(("process", m)) => project_process(m),
@@ -129,10 +131,6 @@ fn cmd() -> Command {
                    .subcommands([
                        Command::new("list").about("List all projects in config")
                          .arg(config_arg()),
-                       Command::new("add").about("Add a project to config (not Todoist)")
-                        .arg(config_arg())
-                        .arg(name_arg())
-                        .arg(id_arg()),
                        Command::new("remove").about("Remove a project from config (not Todoist)")
                         .arg(config_arg())
                          .arg(flag_arg("auto", 'a',  "Remove all projects from config that are not in Todoist"))
@@ -192,16 +190,17 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let description = fetch_description(matches);
     let due = fetch_due(matches);
 
-    projects::add_item_to_project(&config, content, &project, priority, description, due)
+    todoist::add_item(&config, &content, &project, priority, description, due)?;
+
+    Ok(color::green_string("✓"))
 }
 
 #[cfg(not(tarpaulin_include))]
 fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project_name = fetch_project(matches, &config)?;
-    let project_id = projects::project_id(&config, &project_name)?;
+    let project = fetch_project(matches, &config)?;
 
-    projects::rename_items(&config, &project_id)
+    projects::rename_items(&config, &project)
 }
 #[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
@@ -236,18 +235,9 @@ fn task_complete(matches: &ArgMatches) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 fn project_list(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-
-    projects::list(&config)
-}
-
-#[cfg(not(tarpaulin_include))]
-fn project_add(matches: &ArgMatches) -> Result<String, String> {
     let mut config = fetch_config(matches)?;
-    let name = fetch_string(matches, &config, "name", "Enter project name or alias")?;
-    let id = fetch_string(matches, &config, "id", "Enter ID of project")?;
 
-    projects::add(&mut config, name, id)
+    projects::list(&mut config)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -291,10 +281,10 @@ fn project_import(matches: &ArgMatches) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 fn project_empty(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
+    let mut config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::empty(&config, &project)
+    projects::empty(&mut config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -373,17 +363,6 @@ fn config_arg() -> Arg {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn id_arg() -> Arg {
-    Arg::new("id")
-        .short('i')
-        .long("id")
-        .num_args(1)
-        .required(false)
-        .value_name("ID")
-        .help("Identification key")
-}
-
-#[cfg(not(tarpaulin_include))]
 fn content_arg() -> Arg {
     Arg::new("content")
         .short('c')
@@ -414,17 +393,6 @@ fn due_arg() -> Arg {
         .required(false)
         .value_name("DUE DATE")
         .help("Date date in format YYYY-MM-DD, YYYY-MM-DD HH:MM, or natural language")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn name_arg() -> Arg {
-    Arg::new("name")
-        .short('n')
-        .long("name")
-        .num_args(1)
-        .required(false)
-        .value_name("PROJECT NAME")
-        .help("Name of project")
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -480,14 +448,21 @@ fn fetch_string(
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<String, String> {
+fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Project, String> {
     let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
+    let projects = config.projects.clone().unwrap_or_default();
+    if projects.is_empty() {
+        return Err(NO_PROJECTS_ERR.to_string());
+    }
     match project_content {
-        Some(string) => Ok(string),
-        None => {
-            let options = projects::project_names(config)?;
-            input::select("Select project", options, config.mock_select)
-        }
+        Some(project_name) => projects
+            .iter()
+            .find(|p| p.name == project_name.as_str())
+            .map_or_else(
+                || Err("Could not find project in config".to_string()),
+                |p| Ok(p.to_owned()),
+            ),
+        None => input::select("Select project", projects, config.mock_select),
     }
 }
 

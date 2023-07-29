@@ -1,10 +1,10 @@
 use crate::cargo::Version;
-use crate::{cargo, color, input, time, VERSION};
+use crate::projects::Project;
+use crate::{cargo, color, input, time, todoist, VERSION};
 use chrono_tz::TZ_VARIANTS;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
 
@@ -14,7 +14,8 @@ pub struct Config {
     /// The Todoist Api token
     pub token: String,
     /// List of Todoist projects and their project numbers
-    pub projects: HashMap<String, u32>,
+    #[serde(rename = "vecprojects")]
+    pub projects: Option<Vec<Project>>,
     /// Path to config file
     pub path: String,
     /// The ID of the next task
@@ -29,9 +30,21 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn add_project(&mut self, name: String, number: u32) {
-        let projects = &mut self.projects;
-        projects.insert(name, number);
+    pub fn reload_projects(self: &mut Config) -> Result<String, String> {
+        let all_projects = todoist::projects(self)?;
+        let current_projects = self.projects.clone().unwrap_or_default();
+        let current_project_ids: Vec<String> =
+            current_projects.iter().map(|p| p.id.to_owned()).collect();
+
+        let updated_projects = all_projects
+            .iter()
+            .filter(|p| current_project_ids.contains(&p.id))
+            .map(|p| p.to_owned())
+            .collect::<Vec<Project>>();
+
+        self.projects = Some(updated_projects);
+
+        Ok(color::green_string("✓"))
     }
 
     pub fn check_for_latest_version(self: Config) -> Result<Config, String> {
@@ -115,7 +128,6 @@ impl Config {
     }
 
     pub fn new(token: &str) -> Result<Config, String> {
-        let projects: HashMap<String, u32> = HashMap::new();
         Ok(Config {
             path: generate_path()?,
             token: String::from(token),
@@ -126,7 +138,7 @@ impl Config {
             mock_url: None,
             mock_string: None,
             mock_select: None,
-            projects,
+            projects: Some(Vec::new()),
         })
     }
 
@@ -134,8 +146,27 @@ impl Config {
         Config::load(&self.path)
     }
 
-    pub fn remove_project(&mut self, name: &str) {
-        self.projects.remove(name);
+    pub fn add_project(&mut self, project: Project) {
+        let option_projects = &mut self.projects;
+        match option_projects {
+            Some(projects) => {
+                projects.push(project);
+            }
+            None => self.projects = Some(vec![project]),
+        }
+    }
+
+    pub fn remove_project(&mut self, project: &Project) {
+        let projects = self
+            .projects
+            .clone()
+            .unwrap_or_default()
+            .iter()
+            .filter(|p| p.id != project.id)
+            .map(|p| p.to_owned())
+            .collect::<Vec<Project>>();
+
+        self.projects = Some(projects);
     }
 
     pub fn save(&mut self) -> std::result::Result<String, String> {
@@ -241,13 +272,12 @@ mod tests {
     fn reload_config_should_work() {
         let config = test::fixtures::config();
         let mut config = config.create().expect("Failed to create test config");
-        config.add_project("testproj".to_string(), 1);
-        assert!(!&config.projects.is_empty());
+        let project = test::fixtures::project();
+        config.add_project(project);
+        let projects = config.projects.clone().unwrap_or_default();
+        assert!(!&projects.is_empty());
 
-        let reloaded_config = config.reload().expect("Failed to reload config");
-        assert!(reloaded_config.projects.is_empty());
-
-        delete_config(&reloaded_config.path);
+        config.reload().expect("Failed to reload config");
     }
 
     #[test]
@@ -263,92 +293,23 @@ mod tests {
     #[test]
     fn add_project_should_work() {
         let mut config = test::fixtures::config();
-        let mut projects: HashMap<String, u32> = HashMap::new();
-        assert_eq!(
-            config,
-            Config {
-                token: String::from("alreadycreated"),
-                path: config.path.clone(),
-                next_id: None,
-                last_version_check: None,
-                projects: projects.clone(),
-                spinners: Some(true),
-                timezone: Some(String::from("US/Pacific")),
-                mock_url: None,
-                mock_string: None,
-                mock_select: None,
-            }
-        );
-        config.add_project(String::from("test"), 1234);
-        projects.insert(String::from("test"), 1234);
-        assert_eq!(
-            config,
-            Config {
-                token: String::from("alreadycreated"),
-                path: config.path.clone(),
-                next_id: None,
-                last_version_check: None,
-                spinners: Some(true),
-                projects,
-                timezone: Some(String::from("US/Pacific")),
-                mock_url: None,
-                mock_string: None,
-                mock_select: None,
-            }
-        );
+        let projects_count = config.projects.clone().unwrap_or_default().len();
+        assert_eq!(projects_count, 1);
+        config.add_project(test::fixtures::project());
+        let projects_count = config.projects.clone().unwrap_or_default().len();
+        assert_eq!(projects_count, 2);
     }
 
     #[test]
     fn remove_project_should_work() {
-        let mut projects: HashMap<String, u32> = HashMap::new();
-        projects.insert(String::from("test"), 1234);
-        projects.insert(String::from("test2"), 4567);
-        let mut config_with_two_projects = Config {
-            token: String::from("something"),
-            path: generate_path().unwrap(),
-            next_id: None,
-            spinners: Some(true),
-            last_version_check: None,
-            projects: projects.clone(),
-            timezone: Some(String::from("Asia/Pyongyang")),
-            mock_url: None,
-            mock_string: None,
-            mock_select: None,
-        };
-
-        assert_eq!(
-            config_with_two_projects,
-            Config {
-                token: String::from("something"),
-                path: config_with_two_projects.path.clone(),
-                next_id: None,
-                spinners: Some(true),
-                last_version_check: None,
-                projects: projects.clone(),
-                timezone: Some(String::from("Asia/Pyongyang")),
-                mock_url: None,
-                mock_string: None,
-                mock_select: None,
-            }
-        );
-        config_with_two_projects.remove_project("test");
-        let mut projects: HashMap<String, u32> = HashMap::new();
-        projects.insert(String::from("test2"), 4567);
-        assert_eq!(
-            config_with_two_projects,
-            Config {
-                token: String::from("something"),
-                path: config_with_two_projects.path.clone(),
-                next_id: None,
-                last_version_check: None,
-                projects,
-                spinners: Some(true),
-                timezone: Some(String::from("Asia/Pyongyang")),
-                mock_url: None,
-                mock_string: None,
-                mock_select: None,
-            }
-        );
+        let mut config = test::fixtures::config();
+        let projects = config.projects.clone().unwrap_or_default();
+        let project = projects.first().unwrap();
+        let projects_count = config.projects.clone().unwrap_or_default().len();
+        assert_eq!(projects_count, 1);
+        config.remove_project(project);
+        let projects_count = config.projects.clone().unwrap_or_default().len();
+        assert_eq!(projects_count, 0);
     }
 
     #[test]
@@ -370,7 +331,7 @@ mod tests {
             config,
             Ok(Config {
                 token: String::new(),
-                projects: HashMap::new(),
+                projects: Some(Vec::new()),
                 path: config.clone().unwrap().path,
                 next_id: None,
                 spinners: Some(true),
@@ -395,7 +356,7 @@ mod tests {
             config,
             Ok(Config {
                 token: String::new(),
-                projects: HashMap::new(),
+                projects: Some(Vec::new()),
                 path: config.clone().unwrap().path,
                 next_id: None,
                 spinners: Some(true),

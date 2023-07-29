@@ -32,6 +32,7 @@ pub fn quick_add_item(config: &Config, content: &str) -> Result<Item, String> {
 pub fn add_item(
     config: &Config,
     content: &str,
+    project: &Project,
     priority: Priority,
     description: Option<String>,
     due: Option<String>,
@@ -41,6 +42,8 @@ pub fn add_item(
     let mut body: HashMap<String, Value> = HashMap::new();
     body.insert("content".to_owned(), Value::String(content.to_owned()));
     body.insert("description".to_owned(), Value::String(description));
+    body.insert("project_id".to_owned(), Value::String(project.id.clone()));
+
     body.insert("auto_reminder".to_owned(), Value::Bool(true));
     body.insert(
         "priority".to_owned(),
@@ -61,14 +64,15 @@ pub fn add_item(
 }
 
 /// Get a vector of all items for a project
-pub fn items_for_project(config: &Config, project_id: &str) -> Result<Vec<Item>, String> {
+pub fn items_for_project(config: &Config, project: &Project) -> Result<Vec<Item>, String> {
     let url = String::from(PROJECT_DATA_URL);
-    let body = json!({ "project_id": project_id });
+    let body = json!({ "project_id": project.id });
     let json = request::post_todoist_sync(config, url, body)?;
     items::json_to_items(json)
 }
 
-pub fn sections_for_project(config: &Config, project_id: &str) -> Result<Vec<Section>, String> {
+pub fn sections_for_project(config: &Config, project: &Project) -> Result<Vec<Section>, String> {
+    let project_id = &project.id;
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
     let json = request::get_todoist_rest(config, url)?;
     sections::json_to_sections(json)
@@ -83,10 +87,9 @@ pub fn projects(config: &Config) -> Result<Vec<Project>, String> {
 pub fn move_item_to_project(
     config: &Config,
     item: Item,
-    project_name: &str,
+    project: &Project,
 ) -> Result<String, String> {
-    let project_id = projects::project_id(config, project_name)?;
-    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": item.id, "project_id": project_id}}]});
+    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": item.id, "project_id": project.id}}]});
     let url = String::from(SYNC_URL);
 
     request::post_todoist_sync(config, url, body)?;
@@ -206,9 +209,11 @@ mod tests {
             timezone: Some(String::from("US/Pacific")),
             ..config
         };
+        let binding = config_with_timezone.projects.clone().unwrap_or_default();
+        let project = binding.first().unwrap();
 
         assert_eq!(
-            items_for_project(&config_with_timezone, "123123"),
+            items_for_project(&config_with_timezone, &project),
             Ok(vec![Item {
                 id: String::from("999999"),
                 content: String::from("Put out recycling"),
@@ -259,15 +264,16 @@ mod tests {
             .create();
 
         let item = test::fixtures::item();
-        let project_name = "testy";
-        let mut config = test::fixtures::config().mock_url(server.url());
-        config.add_project(String::from(project_name), 1);
+        let config = test::fixtures::config().mock_url(server.url());
 
         let config = Config {
             mock_url: Some(server.url()),
             ..config
         };
-        let response = move_item_to_project(&config, item, project_name);
+
+        let binding = config.projects.clone().unwrap_or_default();
+        let project = binding.first().unwrap();
+        let response = move_item_to_project(&config, item, project);
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));

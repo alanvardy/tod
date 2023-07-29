@@ -1,11 +1,9 @@
 #[cfg(test)]
 pub mod fixtures {
-    use std::collections::HashMap;
 
-    use crate::{
-        config::{self, Config},
-        items::{DateInfo, Item},
-    };
+    use crate::config::{self, Config};
+    use crate::items::{DateInfo, Item};
+    use crate::projects::Project;
 
     pub fn item() -> Item {
         Item {
@@ -27,7 +25,20 @@ pub mod fixtures {
     pub fn config() -> Config {
         Config {
             token: String::from("alreadycreated"),
-            projects: HashMap::new(),
+            projects: Some(vec![Project {
+                id: "123".to_string(),
+                name: "myproject".to_string(),
+                color: "blue".to_string(),
+                comment_count: 1,
+                order: 0,
+                is_shared: false,
+                is_favorite: false,
+                is_inbox_project: false,
+                is_team_inbox: false,
+                view_style: "List".to_string(),
+                url: "www.google.com".to_string(),
+                parent_id: None,
+            }]),
             path: config::generate_path().unwrap(),
             next_id: None,
             timezone: Some(String::from("US/Pacific")),
@@ -36,6 +47,23 @@ pub mod fixtures {
             mock_string: None,
             mock_select: None,
             spinners: Some(true),
+        }
+    }
+
+    pub fn project() -> Project {
+        Project {
+            id: "456".to_string(),
+            name: "newproject".to_string(),
+            color: "blue".to_string(),
+            comment_count: 1,
+            order: 0,
+            is_shared: false,
+            is_favorite: false,
+            is_inbox_project: false,
+            is_team_inbox: false,
+            view_style: "List".to_string(),
+            url: "www.google.com".to_string(),
+            parent_id: None,
         }
     }
 }
@@ -198,7 +226,30 @@ pub mod responses {
         String::from(
             "[
               {
-              \"id\": \"1234\",
+              \"id\": \"123\",
+              \"project_id\": \"5678\",
+              \"order\": 1,
+              \"comment_count\": 1,
+              \"is_shared\": false,
+              \"is_favorite\": false,
+              \"is_inbox_project\": false,
+              \"is_team_inbox\": false,
+              \"color\": \"blue\",
+              \"view_style\": \"list\",
+              \"url\": \"http://www.example.com/\",
+              \"name\": \"Doomsday\"
+              }
+            ]
+            ",
+        )
+    }
+
+    /// Has a new ID
+    pub fn new_projects() -> String {
+        String::from(
+            "[
+              {
+              \"id\": \"890\",
               \"project_id\": \"5678\",
               \"order\": 1,
               \"comment_count\": 1,

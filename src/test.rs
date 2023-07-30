@@ -2,11 +2,11 @@
 pub mod fixtures {
 
     use crate::config::{self, Config};
-    use crate::items::{DateInfo, Item};
     use crate::projects::Project;
+    use crate::tasks::{DateInfo, Task};
 
-    pub fn item() -> Item {
-        Item {
+    pub fn task() -> Task {
+        Task {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
@@ -16,7 +16,7 @@ pub mod fixtures {
                 is_recurring: false,
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
-            priority: crate::items::priority::Priority::Medium,
+            priority: crate::tasks::priority::Priority::Medium,
             is_deleted: None,
             is_completed: None,
         }
@@ -102,7 +102,7 @@ pub mod responses {
         )
     }
 
-    pub fn items() -> String {
+    pub fn tasks() -> String {
         format!(
             "{{\
         \"items\":\
@@ -141,7 +141,7 @@ pub mod responses {
         )
     }
 
-    pub fn unscheduled_items() -> String {
+    pub fn unscheduled_tasks() -> String {
         String::from(
             "{\
         \"items\":\
@@ -174,7 +174,7 @@ pub mod responses {
         )
     }
 
-    pub fn item() -> String {
+    pub fn task() -> String {
         String::from(
             "\
         {\"added_by_uid\":635166,\

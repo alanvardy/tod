@@ -3,9 +3,9 @@ use std::fmt::Display;
 
 use crate::config::Config;
 use crate::input::DateTimeInput;
-use crate::items::priority::Priority;
-use crate::items::{FormatType, Item};
-use crate::{color, input, items, projects, todoist};
+use crate::tasks::priority::Priority;
+use crate::tasks::{FormatType, Task};
+use crate::{color, input, projects, tasks, todoist};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -79,7 +79,7 @@ pub fn list(config: &mut Config) -> Result<String, String> {
 
 /// Formats a string with project name and the count that is a standard length
 fn project_name_with_count(config: &Config, project: &Project) -> String {
-    let count = match count_processable_items(config, project) {
+    let count = match count_processable_tasks(config, project) {
         Ok(num) => format!("{}", num),
         Err(_) => String::new(),
     };
@@ -87,10 +87,10 @@ fn project_name_with_count(config: &Config, project: &Project) -> String {
     format!("{}{}", project.name.pad_to_width(PAD_WIDTH), count)
 }
 
-/// Gets the number of items for a project that are not in the future
-fn count_processable_items(config: &Config, project: &Project) -> Result<u8, String> {
-    let all_items = todoist::items_for_project(config, project)?;
-    let count = items::filter_not_in_future(all_items, config)?.len();
+/// Gets the number of tasks for a project that are not in the future
+fn count_processable_tasks(config: &Config, project: &Project) -> Result<u8, String> {
+    let all_tasks = todoist::tasks_for_project(config, project)?;
+    let count = tasks::filter_not_in_future(all_tasks, config)?.len();
 
     Ok(count as u8)
 }
@@ -121,25 +121,25 @@ pub fn rename(config: Config, project: &Project) -> Result<String, String> {
     remove(&mut config, project)
 }
 
-/// Get the next item by priority and save its id to config
+/// Get the next task by priority and save its id to config
 pub fn next(config: Config, project: &Project) -> Result<String, String> {
-    match fetch_next_item(&config, project) {
-        Ok(Some((item, remaining))) => {
-            config.set_next_id(&item.id).save()?;
-            let item_string = item.fmt(&config, FormatType::Single);
-            Ok(format!("{item_string}\n{remaining} task(s) remaining"))
+    match fetch_next_task(&config, project) {
+        Ok(Some((task, remaining))) => {
+            config.set_next_id(&task.id).save()?;
+            let task_string = task.fmt(&config, FormatType::Single);
+            Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
-        Ok(None) => Ok(color::green_string("No items on list")),
+        Ok(None) => Ok(color::green_string("No tasks on list")),
         Err(e) => Err(e),
     }
 }
 
-fn fetch_next_item(config: &Config, project: &Project) -> Result<Option<(Item, usize)>, String> {
-    let items = todoist::items_for_project(config, project)?;
-    let filtered_items = items::filter_not_in_future(items, config)?;
-    let items = items::sort_by_value(filtered_items, config);
+fn fetch_next_task(config: &Config, project: &Project) -> Result<Option<(Task, usize)>, String> {
+    let tasks = todoist::tasks_for_project(config, project)?;
+    let filtered_tasks = tasks::filter_not_in_future(tasks, config)?;
+    let tasks = tasks::sort_by_value(filtered_tasks, config);
 
-    Ok(items.first().map(|item| (item.to_owned(), items.len())))
+    Ok(tasks.first().map(|task| (task.to_owned(), tasks.len())))
 }
 
 /// Removes all projects from config that don't exist in Todoist
@@ -247,13 +247,13 @@ fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, St
     }
 }
 
-/// Get next items and give an interactive prompt for completing them one by one
-pub fn process_items(config: Config, project: &Project) -> Result<String, String> {
-    let items = todoist::items_for_project(&config, project)?;
-    let items = items::filter_not_in_future(items, &config)?;
-    for item in items {
-        config.set_next_id(&item.id).save()?;
-        match handle_item(&config.reload()?, item) {
+/// Get next tasks and give an interactive prompt for completing them one by one
+pub fn process_tasks(config: Config, project: &Project) -> Result<String, String> {
+    let tasks = todoist::tasks_for_project(&config, project)?;
+    let tasks = tasks::filter_not_in_future(tasks, &config)?;
+    for task in tasks {
+        config.set_next_id(&task.id).save()?;
+        match handle_task(&config.reload()?, task) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(color::green_string("Exited")),
@@ -265,18 +265,18 @@ pub fn process_items(config: Config, project: &Project) -> Result<String, String
     )))
 }
 
-fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
+fn handle_task(config: &Config, task: Task) -> Option<Result<String, String>> {
     let options = vec!["complete", "skip", "quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
-    println!("{}", item.fmt(config, FormatType::Single));
+    println!("{}", task.fmt(config, FormatType::Single));
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "complete" {
-                Some(todoist::complete_item(config))
+                Some(todoist::complete_task(config))
             } else if string == "skip" {
-                Some(Ok(color::green_string("item skipped")))
+                Some(Ok(color::green_string("task skipped")))
             } else {
                 None
             }
@@ -286,12 +286,12 @@ fn handle_item(config: &Config, item: Item) -> Option<Result<String, String>> {
 }
 
 // Scheduled that are today and have a time on them (AKA appointments)
-pub fn scheduled_items(config: &Config, project: &Project) -> Result<String, String> {
-    let items = todoist::items_for_project(config, project)?;
-    let filtered_items = items::filter_today_and_has_time(items, config);
+pub fn scheduled_tasks(config: &Config, project: &Project) -> Result<String, String> {
+    let tasks = todoist::tasks_for_project(config, project)?;
+    let filtered_tasks = tasks::filter_today_and_has_time(tasks, config);
 
-    if filtered_items.is_empty() {
-        return Ok(String::from("No scheduled items found"));
+    if filtered_tasks.is_empty() {
+        return Ok(String::from("No scheduled tasks found"));
     }
 
     let mut buffer = String::new();
@@ -300,15 +300,15 @@ pub fn scheduled_items(config: &Config, project: &Project) -> Result<String, Str
         project.name
     )));
 
-    for item in items::sort_by_datetime(filtered_items, config) {
+    for task in tasks::sort_by_datetime(filtered_tasks, config) {
         buffer.push('\n');
-        buffer.push_str(&item.fmt(config, FormatType::List));
+        buffer.push_str(&task.fmt(config, FormatType::List));
     }
     Ok(buffer)
 }
 
-pub fn rename_items(config: &Config, project: &Project) -> Result<String, String> {
-    let project_tasks = todoist::items_for_project(config, project)?;
+pub fn rename_tasks(config: &Config, project: &Project) -> Result<String, String> {
+    let project_tasks = todoist::tasks_for_project(config, project)?;
 
     let selected_task = input::select(
         "Choose a task of the project:",
@@ -325,36 +325,36 @@ pub fn rename_items(config: &Config, project: &Project) -> Result<String, String
         ));
     }
 
-    todoist::update_item_name(config, selected_task, new_task_content)
+    todoist::update_task_name(config, selected_task, new_task_content)
 }
 
-/// All items for a project
-pub fn all_items(config: &Config, project: &Project) -> Result<String, String> {
-    let items = todoist::items_for_project(config, project)?;
+/// All tasks for a project
+pub fn all_tasks(config: &Config, project: &Project) -> Result<String, String> {
+    let tasks = todoist::tasks_for_project(config, project)?;
 
     let mut buffer = String::new();
     buffer.push_str(&color::green_string(&format!("Tasks for {}", project.name)));
 
-    for item in items::sort_by_datetime(items, config) {
+    for task in tasks::sort_by_datetime(tasks, config) {
         buffer.push('\n');
-        buffer.push_str(&item.fmt(config, FormatType::List));
+        buffer.push_str(&task.fmt(config, FormatType::List));
     }
     Ok(buffer)
 }
 
-/// Empty a project by sending items to other projects one at a time
+/// Empty a project by sending tasks to other projects one at a time
 pub fn empty(config: &mut Config, project: &Project) -> Result<String, String> {
-    let items = todoist::items_for_project(config, project)?;
+    let tasks = todoist::tasks_for_project(config, project)?;
 
-    if items.is_empty() {
+    if tasks.is_empty() {
         Ok(color::green_string(&format!(
             "No tasks to empty from {}",
             project.name
         )))
     } else {
         projects::list(config)?;
-        for item in items.iter() {
-            move_item_to_project(config, item.to_owned())?;
+        for task in tasks.iter() {
+            move_task_to_project(config, task.to_owned())?;
         }
         Ok(color::green_string(&format!(
             "Successfully emptied {}",
@@ -363,23 +363,23 @@ pub fn empty(config: &mut Config, project: &Project) -> Result<String, String> {
     }
 }
 
-/// Prioritize all unprioritized items in a project
-pub fn prioritize_items(config: &Config, project: &Project) -> Result<String, String> {
-    let items = todoist::items_for_project(config, project)?;
+/// Prioritize all unprioritized tasks in a project
+pub fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, String> {
+    let tasks = todoist::tasks_for_project(config, project)?;
 
-    let unprioritized_items: Vec<Item> = items
+    let unprioritized_tasks: Vec<Task> = tasks
         .into_iter()
-        .filter(|item| item.priority == Priority::None)
-        .collect::<Vec<Item>>();
+        .filter(|task| task.priority == Priority::None)
+        .collect::<Vec<Task>>();
 
-    if unprioritized_items.is_empty() {
+    if unprioritized_tasks.is_empty() {
         Ok(color::green_string(&format!(
             "No tasks to prioritize in {}",
             project.name
         )))
     } else {
-        for item in unprioritized_items.iter() {
-            items::set_priority(config, item.to_owned())?;
+        for task in unprioritized_tasks.iter() {
+            tasks::set_priority(config, task.to_owned())?;
         }
         Ok(color::green_string(&format!(
             "Successfully prioritized {}",
@@ -388,36 +388,36 @@ pub fn prioritize_items(config: &Config, project: &Project) -> Result<String, St
     }
 }
 
-/// Put dates on all items without dates
+/// Put dates on all tasks without dates
 pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Result<String, String> {
-    let items = todoist::items_for_project(config, project)?;
+    let tasks = todoist::tasks_for_project(config, project)?;
 
-    let filtered_items: Vec<Item> = items
+    let filtered_tasks: Vec<Task> = tasks
         .into_iter()
-        .filter(|item| item.filter(config, &filter) && !item.filter(config, &TaskFilter::Recurring))
-        .collect::<Vec<Item>>();
+        .filter(|task| task.filter(config, &filter) && !task.filter(config, &TaskFilter::Recurring))
+        .collect::<Vec<Task>>();
 
-    if filtered_items.is_empty() {
+    if filtered_tasks.is_empty() {
         Ok(color::green_string(&format!(
             "No tasks to schedule in {}",
             project.name
         )))
     } else {
-        for item in filtered_items.iter() {
-            println!("{}", item.fmt(config, FormatType::Single));
+        for task in filtered_tasks.iter() {
+            println!("{}", task.fmt(config, FormatType::Single));
             let datetime_input = input::datetime(config.mock_select, config.mock_string.clone())?;
             match datetime_input {
                 input::DateTimeInput::Complete => {
-                    let config = config.set_next_id(&item.id);
-                    todoist::complete_item(&config)?
+                    let config = config.set_next_id(&task.id);
+                    todoist::complete_task(&config)?
                 }
                 DateTimeInput::Skip => "Skipped".to_string(),
 
                 input::DateTimeInput::Text(due_string) => {
-                    todoist::update_item_due(config, item.to_owned(), due_string)?
+                    todoist::update_task_due(config, task.to_owned(), due_string)?
                 }
                 input::DateTimeInput::None => {
-                    todoist::update_item_due(config, item.to_owned(), "No Date".to_string())?
+                    todoist::update_task_due(config, task.to_owned(), "No Date".to_string())?
                 }
             };
         }
@@ -428,8 +428,8 @@ pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Resul
     }
 }
 
-pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, String> {
-    println!("{}", item.fmt(config, FormatType::Single));
+pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, String> {
+    println!("{}", task.fmt(config, FormatType::Single));
 
     let options = vec!["Pick project", "Complete", "Skip"]
         .iter()
@@ -443,7 +443,7 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
 
     match selection.as_str() {
         "Complete" => {
-            todoist::complete_item(&config.set_next_id(&item.id))?;
+            todoist::complete_task(&config.set_next_id(&task.id))?;
             Ok(color::green_string("✓"))
         }
         "Skip" => Ok(color::green_string("Skipped")),
@@ -454,7 +454,7 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
             let sections = todoist::sections_for_project(config, &project)?;
             let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
             if section_names.is_empty() {
-                todoist::move_item_to_project(config, item, &project)
+                todoist::move_task_to_project(config, task, &project)
             } else {
                 let section_name =
                     input::select("Select section", section_names, config.mock_select)?;
@@ -463,7 +463,7 @@ pub fn move_item_to_project(config: &Config, item: Item) -> Result<String, Strin
                     .find(|x| x.name == section_name.as_str())
                     .expect("Section does not exist")
                     .id;
-                todoist::move_item_to_section(config, item, section_id)
+                todoist::move_task_to_section(config, task, section_id)
             }
         }
     }
@@ -510,13 +510,13 @@ mod tests {
     }
 
     #[test]
-    fn test_get_next_item() {
+    fn test_get_next_task() {
         let mut server = mockito::Server::new();
         let _mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -543,13 +543,13 @@ mod tests {
     }
 
     #[test]
-    fn test_scheduled_items() {
+    fn test_scheduled_tasks() {
         let mut server = mockito::Server::new();
         let _mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -564,7 +564,7 @@ mod tests {
         let project = binding.first().unwrap();
 
         // valid project
-        let result = scheduled_items(&config_with_timezone, project);
+        let result = scheduled_tasks(&config_with_timezone, project);
         assert_eq!(
             result,
             Ok(format!(
@@ -574,13 +574,13 @@ mod tests {
     }
 
     #[test]
-    fn test_all_items() {
+    fn test_all_tasks() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -595,7 +595,7 @@ mod tests {
         let project = binding.first().unwrap();
 
         assert_eq!(
-            all_items(&config_with_timezone, project),
+            all_tasks(&config_with_timezone, project),
             Ok(format!(
                 "Tasks for myproject\n- Put out recycling\n  Due: {TIME} ↻"
             ))
@@ -633,7 +633,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_item() {
+    fn test_handle_task() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/sync")
@@ -642,24 +642,24 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let item = test::fixtures::item();
+        let task = test::fixtures::task();
         let config = test::fixtures::config()
             .mock_url(server.url())
             .mock_select(0);
-        let result = handle_item(&config, item);
+        let result = handle_task(&config, task);
         let expected = Some(Ok(String::from("✓")));
         assert_eq!(result, expected);
         mock.assert();
     }
 
     #[test]
-    fn test_process_items() {
+    fn test_process_tasks() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let mock2 = server
@@ -678,7 +678,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let result = process_items(config, project);
+        let result = process_tasks(config, project);
         assert_eq!(
             result,
             Ok("There are no more tasks in 'myproject'".to_string())
@@ -729,7 +729,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let mock2 = server
@@ -769,13 +769,13 @@ mod tests {
     }
 
     #[test]
-    fn test_prioritize_items_with_no_items() {
+    fn test_prioritize_tasks_with_no_tasks() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -783,7 +783,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let result = prioritize_items(&config, project);
+        let result = prioritize_tasks(&config, project);
         assert_eq!(
             result,
             Ok(String::from("No tasks to prioritize in myproject"))
@@ -792,22 +792,22 @@ mod tests {
     }
 
     #[test]
-    fn test_move_item_to_project() {
+    fn test_move_task_to_project() {
         let config = test::fixtures::config().mock_select(2);
-        let item = test::fixtures::item();
+        let task = test::fixtures::task();
 
-        let result = move_item_to_project(&config, item);
+        let result = move_task_to_project(&config, task);
         assert_eq!(result, Ok(String::from("Skipped")));
     }
 
     #[test]
-    fn test_rename_items() {
+    fn test_rename_tasks() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let config = test::fixtures::config()
@@ -816,7 +816,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let result = rename_items(&config, project);
+        let result = rename_tasks(&config, project);
         assert_eq!(
             result,
             Ok("The content is the same, no need to change it".to_string())
@@ -830,14 +830,14 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::unscheduled_items())
+            .with_body(test::responses::unscheduled_tasks())
             .create();
 
         let mock2 = server
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::item())
+            .with_body(test::responses::task())
             .create();
 
         let config = test::fixtures::config()

@@ -5,11 +5,11 @@ use serde_json::{json, Number, Value};
 mod request;
 
 use crate::config::Config;
-use crate::items::priority::Priority;
-use crate::items::Item;
 use crate::projects::Project;
 use crate::sections::Section;
-use crate::{items, projects, sections, time};
+use crate::tasks::priority::Priority;
+use crate::tasks::Task;
+use crate::{projects, sections, tasks, time};
 
 // TODOIST URLS
 const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
@@ -19,24 +19,24 @@ pub const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
 
-/// Add a new item to the inbox with natural language support
-pub fn quick_add_item(config: &Config, content: &str) -> Result<Item, String> {
+/// Add a new task to the inbox with natural language support
+pub fn quick_add_task(config: &Config, content: &str) -> Result<Task, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"text": content, "auto_reminder": true});
 
     let json = request::post_todoist_sync(config, url, body)?;
-    items::json_to_item(json)
+    tasks::json_to_task(json)
 }
 
-/// Add item without natural language support but supports additional parameters
-pub fn add_item(
+/// Add Task without natural language support but supports additional parameters
+pub fn add_task(
     config: &Config,
     content: &str,
     project: &Project,
     priority: Priority,
     description: Option<String>,
     due: Option<String>,
-) -> Result<Item, String> {
+) -> Result<Task, String> {
     let url = String::from(REST_V2_TASKS_URL);
     let description = description.unwrap_or_default();
     let mut body: HashMap<String, Value> = HashMap::new();
@@ -60,15 +60,15 @@ pub fn add_item(
     let body = json!(body);
 
     let json = request::post_todoist_rest(config, url, body)?;
-    items::json_to_item(json)
+    tasks::json_to_task(json)
 }
 
-/// Get a vector of all items for a project
-pub fn items_for_project(config: &Config, project: &Project) -> Result<Vec<Item>, String> {
+/// Get a vector of all tasks for a project
+pub fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project.id });
     let json = request::post_todoist_sync(config, url, body)?;
-    items::json_to_items(json)
+    tasks::json_to_tasks(json)
 }
 
 pub fn sections_for_project(config: &Config, project: &Project) -> Result<Vec<Section>, String> {
@@ -83,67 +83,67 @@ pub fn projects(config: &Config) -> Result<Vec<Project>, String> {
     projects::json_to_projects(json)
 }
 
-/// Move an item to a different project
-pub fn move_item_to_project(
+/// Move an task to a different project
+pub fn move_task_to_project(
     config: &Config,
-    item: Item,
+    task: Task,
     project: &Project,
 ) -> Result<String, String> {
-    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": item.id, "project_id": project.id}}]});
+    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project.id}}]});
     let url = String::from(SYNC_URL);
 
     request::post_todoist_sync(config, url, body)?;
     Ok(String::from("✓"))
 }
 
-pub fn move_item_to_section(
+pub fn move_task_to_section(
     config: &Config,
-    item: Item,
+    task: Task,
     section_id: &str,
 ) -> Result<String, String> {
-    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": item.id, "section_id": section_id}}]});
+    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section_id}}]});
     let url = String::from(SYNC_URL);
 
     request::post_todoist_sync(config, url, body)?;
     Ok(String::from("✓"))
 }
 
-/// Update the priority of an item by ID
-pub fn update_item_priority(
+/// Update the priority of an task by ID
+pub fn update_task_priority(
     config: Config,
-    item: Item,
+    task: Task,
     priority: Priority,
 ) -> Result<String, String> {
     let body = json!({ "priority": priority });
-    let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
+    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
     request::post_todoist_rest(&config, url, body)?;
-    // Does not pass back an item
+    // Does not pass back an task
     Ok(String::from("✓"))
 }
 
-/// Update due date for item using natural language
-pub fn update_item_due(config: &Config, item: Item, due_string: String) -> Result<String, String> {
+/// Update due date for task using natural language
+pub fn update_task_due(config: &Config, task: Task, due_string: String) -> Result<String, String> {
     let body = json!({ "due_string": due_string });
-    let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
+    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body)?;
-    // Does not pass back an item
+    // Does not pass back an task
     Ok(String::from("✓"))
 }
 
-/// Update the name of an item by ID
-pub fn update_item_name(config: &Config, item: Item, new_name: String) -> Result<String, String> {
+/// Update the name of an task by ID
+pub fn update_task_name(config: &Config, task: Task, new_name: String) -> Result<String, String> {
     let body = json!({ "content": new_name });
-    let url = format!("{}{}", REST_V2_TASKS_URL, item.id);
+    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body)?;
-    // Does not pass back an item
+    // Does not pass back a task
     Ok(String::from("✓"))
 }
 
-/// Complete the last item returned by "next item"
-pub fn complete_item(config: &Config) -> Result<String, String> {
+/// Complete the last task returned by "next task"
+pub fn complete_task(config: &Config) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": config.next_id}}]});
     let url = String::from(SYNC_URL);
 
@@ -153,33 +153,33 @@ pub fn complete_item(config: &Config) -> Result<String, String> {
         config.clone().clear_next_id().save()?;
     }
 
-    // Does not pass back an item
+    // Does not pass back a task
     Ok(String::from("✓"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::items::priority::Priority;
-    use crate::items::{DateInfo, Item};
+    use crate::tasks::priority::Priority;
+    use crate::tasks::{DateInfo, Task};
     use crate::{test, time};
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_quick_add_item() {
+    fn test_quick_add_task() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/quick/add")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::item())
+            .with_body(test::responses::task())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
 
         assert_eq!(
-            quick_add_item(&config, "testy test"),
-            Ok(Item {
+            quick_add_task(&config, "testy test"),
+            Ok(Task {
                 id: String::from("5149481867"),
                 priority: Priority::None,
                 content: String::from("testy test"),
@@ -194,14 +194,14 @@ mod tests {
     }
 
     #[test]
-    fn should_get_items_for_project() {
+    fn should_get_tasks_for_project() {
         let mut server = mockito::Server::new();
 
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::items())
+            .with_body(test::responses::tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -213,8 +213,8 @@ mod tests {
         let project = binding.first().unwrap();
 
         assert_eq!(
-            items_for_project(&config_with_timezone, &project),
-            Ok(vec![Item {
+            tasks_for_project(&config_with_timezone, &project),
+            Ok(vec![Task {
                 id: String::from("999999"),
                 content: String::from("Put out recycling"),
                 checked: Some(false),
@@ -234,7 +234,7 @@ mod tests {
     }
 
     #[test]
-    fn should_complete_an_item() {
+    fn should_complete_a_task() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/sync")
@@ -247,13 +247,13 @@ mod tests {
             .mock_url(server.url())
             .set_next_id(&"112233".to_string());
 
-        let response = complete_item(&config);
+        let response = complete_task(&config);
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
 
     #[test]
-    fn should_move_an_item() {
+    fn should_move_a_task() {
         let mut server = mockito::Server::new();
 
         let mock = server
@@ -263,7 +263,7 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let item = test::fixtures::item();
+        let task = test::fixtures::task();
         let config = test::fixtures::config().mock_url(server.url());
 
         let config = Config {
@@ -273,16 +273,16 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let response = move_item_to_project(&config, item, project);
+        let response = move_task_to_project(&config, task, project);
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));
     }
 
     #[test]
-    fn should_prioritize_an_item() {
-        let item = test::fixtures::item();
-        let url: &str = &format!("{}{}", "/rest/v2/tasks/", item.id);
+    fn should_prioritize_a_task() {
+        let task = test::fixtures::task();
+        let url: &str = &format!("{}{}", "/rest/v2/tasks/", task.id);
         let mut server = mockito::Server::new();
 
         let mock = server
@@ -294,15 +294,15 @@ mod tests {
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = update_item_priority(config, item, Priority::High);
+        let response = update_task_priority(config, task, Priority::High);
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
 
     #[test]
-    fn should_update_date_on_an_item() {
-        let item = test::fixtures::item();
-        let url: &str = &format!("{}{}", "/rest/v2/tasks/", item.id);
+    fn should_update_date_on_a_task() {
+        let task = test::fixtures::task();
+        let url: &str = &format!("{}{}", "/rest/v2/tasks/", task.id);
         let mut server = mockito::Server::new();
 
         let mock = server
@@ -314,7 +314,7 @@ mod tests {
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = update_item_due(&config, item, "today".to_string());
+        let response = update_task_due(&config, task, "today".to_string());
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

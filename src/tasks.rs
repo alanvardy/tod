@@ -5,18 +5,18 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
 
-pub(crate) mod priority;
+pub mod priority;
 use crate::color;
 use crate::config::Config;
 use crate::projects;
-use crate::{input, items, time, todoist};
-use priority::Priority;
+use crate::tasks::priority::Priority;
+use crate::{input, time, todoist};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
-pub struct Item {
+pub struct Task {
     pub id: String,
     pub content: String,
-    pub priority: priority::Priority,
+    pub priority: Priority,
     pub description: String,
     pub due: Option<DateInfo>,
     /// Only on rest api return value
@@ -26,7 +26,7 @@ pub struct Item {
     pub checked: Option<bool>,
 }
 
-impl Display for Item {
+impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.content)
     }
@@ -41,7 +41,7 @@ pub struct DateInfo {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Body {
-    items: Vec<Item>,
+    items: Vec<Task>,
 }
 
 pub enum FormatType {
@@ -61,7 +61,7 @@ enum DateTimeInfo {
     },
 }
 
-impl Item {
+impl Task {
     pub fn fmt(&self, config: &Config, format: FormatType) -> String {
         let content = match self.priority {
             priority::Priority::Low => color::blue_string(&self.content),
@@ -106,7 +106,7 @@ impl Item {
         format!("{prefix}{content}{description}{due}")
     }
 
-    /// Determines the numeric value of an item for sorting
+    /// Determines the numeric value of an task for sorting
     fn value(&self, config: &Config) -> u32 {
         let date_value: u8 = self.date_value(config);
         let priority_value: u8 = self.priority_value();
@@ -242,49 +242,49 @@ impl Item {
     }
 }
 
-pub fn json_to_items(json: String) -> Result<Vec<Item>, String> {
+pub fn json_to_tasks(json: String) -> Result<Vec<Task>, String> {
     let result: Result<Body, _> = serde_json::from_str(&json);
     match result {
         Ok(body) => Ok(body.items),
-        Err(err) => Err(format!("Could not parse response for item: {err:?}")),
+        Err(err) => Err(format!("Could not parse response for task: {err:?}")),
     }
 }
 
-pub fn json_to_item(json: String) -> Result<Item, String> {
+pub fn json_to_task(json: String) -> Result<Task, String> {
     match serde_json::from_str(&json) {
-        Ok(item) => Ok(item),
-        Err(err) => Err(format!("Could not parse response for item: {err:?}")),
+        Ok(task) => Ok(task),
+        Err(err) => Err(format!("Could not parse response for task: {err:?}")),
     }
 }
 
-pub fn sort_by_value(mut items: Vec<Item>, config: &Config) -> Vec<Item> {
-    items.sort_by_key(|b| Reverse(b.value(config)));
-    items
+pub fn sort_by_value(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {
+    tasks.sort_by_key(|b| Reverse(b.value(config)));
+    tasks
 }
 
-pub fn sort_by_datetime(mut items: Vec<Item>, config: &Config) -> Vec<Item> {
-    items.sort_by_key(|i| i.datetime(config));
-    items
+pub fn sort_by_datetime(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {
+    tasks.sort_by_key(|i| i.datetime(config));
+    tasks
 }
 
-pub fn filter_not_in_future(items: Vec<Item>, config: &Config) -> Result<Vec<Item>, String> {
-    let items = items
+pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Task>, String> {
+    let tasks = tasks
         .into_iter()
-        .filter(|item| item.is_today(config) || item.has_no_date() || item.is_overdue(config))
+        .filter(|task| task.is_today(config) || task.has_no_date() || task.is_overdue(config))
         .collect();
 
-    Ok(items)
+    Ok(tasks)
 }
 
-pub fn filter_today_and_has_time(items: Vec<Item>, config: &Config) -> Vec<Item> {
-    items
+pub fn filter_today_and_has_time(tasks: Vec<Task>, config: &Config) -> Vec<Task> {
+    tasks
         .into_iter()
-        .filter(|item| item.is_today(config) && item.has_time(config))
+        .filter(|task| task.is_today(config) && task.has_time(config))
         .collect()
 }
 
-pub fn set_priority(config: &Config, item: items::Item) -> Result<String, String> {
-    println!("{}", item.fmt(config, FormatType::Single));
+pub fn set_priority(config: &Config, task: Task) -> Result<String, String> {
+    println!("{}", task.fmt(config, FormatType::Single));
 
     let options = vec![
         Priority::None,
@@ -298,8 +298,8 @@ pub fn set_priority(config: &Config, item: items::Item) -> Result<String, String
         config.mock_select,
     )?;
 
-    let config = config.set_next_id(&item.id);
-    todoist::update_item_priority(config, item, priority)
+    let config = config.set_next_id(&task.id);
+    todoist::update_task_priority(config, task, priority)
 }
 
 #[cfg(test)]
@@ -312,222 +312,222 @@ mod tests {
     fn date_value_can_handle_date() {
         let config = test::fixtures::config();
         // On another day
-        assert_eq!(test::fixtures::item().date_value(&config), 50);
+        assert_eq!(test::fixtures::task().date_value(&config), 50);
 
         // Recurring
-        let item = Item {
+        let task = Task {
             due: Some(DateInfo {
                 is_recurring: true,
-                ..test::fixtures::item().due.unwrap()
+                ..test::fixtures::task().due.unwrap()
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
-        assert_eq!(item.date_value(&config), 0);
+        assert_eq!(task.date_value(&config), 0);
 
         // Overdue
-        let item = Item {
+        let task = Task {
             due: Some(DateInfo {
                 date: String::from("2001-11-13"),
                 is_recurring: true,
                 timezone: Some(String::from("America/Los_Angeles")),
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
-        assert_eq!(item.date_value(&config), 150);
+        assert_eq!(task.date_value(&config), 150);
 
         // No date
-        let item = Item { due: None, ..item };
-        assert_eq!(item.date_value(&config), 80);
+        let task = Task { due: None, ..task };
+        assert_eq!(task.date_value(&config), 80);
     }
 
     #[test]
     fn date_value_can_handle_datetime() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-02-27T19:41:56Z"),
-                ..test::fixtures::item().due.unwrap()
+                ..test::fixtures::task().due.unwrap()
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        assert_eq!(item.date_value(&config), 50);
+        assert_eq!(task.date_value(&config), 50);
     }
 
     #[test]
-    fn can_format_item_with_a_date() {
+    fn can_format_task_with_a_date() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: String::from("2021-08-13"),
-                ..test::fixtures::item().due.unwrap()
+                ..test::fixtures::task().due.unwrap()
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
         assert_eq!(
-            format!("{}", item.fmt(&config, FormatType::Single)),
+            format!("{}", task.fmt(&config, FormatType::Single)),
             "Get gifts for the twins\nDue: 2021-08-13"
         );
     }
 
     #[test]
-    fn can_format_item_with_today() {
+    fn can_format_task_with_today() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: time::today_string(&config),
-                ..test::fixtures::item().due.unwrap()
+                ..test::fixtures::task().due.unwrap()
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
         assert_eq!(
-            format!("{}", item.fmt(&config, FormatType::Single)),
+            format!("{}", task.fmt(&config, FormatType::Single)),
             "Get gifts for the twins\nDue: Today"
         );
     }
 
     #[test]
-    fn value_can_get_the_value_of_an_item() {
+    fn value_can_get_the_value_of_an_task() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
-                ..test::fixtures::item().due.unwrap()
+                ..test::fixtures::task().due.unwrap()
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        assert_matches!(item.datetime(&config), Some(DateTime { .. }));
+        assert_matches!(task.datetime(&config), Some(DateTime { .. }));
     }
 
     #[test]
     fn datetime_works_with_date() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
-                ..test::fixtures::item().due.unwrap()
+                ..test::fixtures::task().due.unwrap()
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        assert_eq!(item.datetime(&config), None);
+        assert_eq!(task.datetime(&config), None);
     }
 
     #[test]
     fn has_no_date_works() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             due: None,
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        assert!(item.has_no_date());
+        assert!(task.has_no_date());
 
-        let item_today = Item {
+        let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
-                ..test::fixtures::item().due.unwrap()
+                ..test::fixtures::task().due.unwrap()
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
-        assert!(!item_today.has_no_date());
+        assert!(!task_today.has_no_date());
     }
 
     #[test]
     fn has_time_works() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             due: None,
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        assert!(!item.has_time(&config));
+        assert!(!task.has_time(&config));
 
-        let item_with_date = Item {
+        let task_with_date = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item.clone()
+            ..task.clone()
         };
-        assert!(!item_with_date.has_time(&config));
+        assert!(!task_with_date.has_time(&config));
 
-        let item_with_datetime = Item {
+        let task_with_datetime = Task {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item
+            ..task
         };
-        assert!(item_with_datetime.has_time(&config));
+        assert!(task_with_datetime.has_time(&config));
     }
 
     #[test]
     fn is_today_works() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             due: None,
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        assert!(!item.is_today(&config));
+        assert!(!task.is_today(&config));
 
-        let item_today = Item {
+        let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
-        assert!(item_today.is_today(&config));
+        assert!(task_today.is_today(&config));
 
-        let item_in_past = Item {
+        let task_in_past = Task {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
-        assert!(!item_in_past.is_today(&config));
+        assert!(!task_in_past.is_today(&config));
     }
 
     #[test]
     fn sort_by_value_works() {
         let config = test::fixtures::config();
-        let today = Item {
+        let today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        let today_recurring = Item {
+        let today_recurring = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
-        let future = Item {
+        let future = Task {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..test::fixtures::item()
+            ..test::fixtures::task()
         };
 
         let input = vec![future.clone(), today_recurring.clone(), today.clone()];
@@ -539,7 +539,7 @@ mod tests {
     #[test]
     fn sort_by_datetime_works() {
         let config = test::fixtures::config();
-        let no_date = Item {
+        let no_date = Task {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
@@ -550,7 +550,7 @@ mod tests {
             is_completed: None,
         };
 
-        let date_not_datetime = Item {
+        let date_not_datetime = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
@@ -559,7 +559,7 @@ mod tests {
             ..no_date.clone()
         };
 
-        let present = Item {
+        let present = Task {
             due: Some(DateInfo {
                 date: String::from("2020-09-06T16:00:00"),
                 is_recurring: false,
@@ -568,7 +568,7 @@ mod tests {
             ..no_date.clone()
         };
 
-        let future = Item {
+        let future = Task {
             due: Some(DateInfo {
                 date: String::from("2035-09-06T16:00:00"),
                 is_recurring: false,
@@ -577,7 +577,7 @@ mod tests {
             ..no_date.clone()
         };
 
-        let past = Item {
+        let past = Task {
             due: Some(DateInfo {
                 date: String::from("2015-09-06T16:00:00"),
                 is_recurring: false,
@@ -601,7 +601,7 @@ mod tests {
     #[test]
     fn is_overdue_works() {
         let config = test::fixtures::config();
-        let item = Item {
+        let task = Task {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
@@ -612,51 +612,51 @@ mod tests {
             is_completed: None,
         };
 
-        assert!(!item.is_overdue(&config));
+        assert!(!task.is_overdue(&config));
 
-        let item_today = Item {
+        let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item.clone()
+            ..task.clone()
         };
-        assert!(!item_today.is_overdue(&config));
+        assert!(!task_today.is_overdue(&config));
 
-        let item_future = Item {
+        let task_future = Task {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item.clone()
+            ..task.clone()
         };
-        assert!(!item_future.is_overdue(&config));
+        assert!(!task_future.is_overdue(&config));
 
-        let item_today = Item {
+        let task_today = Task {
             due: Some(DateInfo {
                 date: String::from("2020-12-20"),
                 is_recurring: false,
                 timezone: None,
             }),
-            ..item
+            ..task
         };
-        assert!(item_today.is_overdue(&config));
+        assert!(task_today.is_overdue(&config));
     }
 
     #[test]
-    fn json_to_items_works() {
+    fn json_to_tasks_works() {
         let json = String::from("2{.e");
-        let error_text = String::from("Could not parse response for item: Error(\"invalid type: integer `2`, expected struct Body\", line: 1, column: 1)");
-        assert_eq!(json_to_items(json), Err(error_text));
+        let error_text = String::from("Could not parse response for task: Error(\"invalid type: integer `2`, expected struct Body\", line: 1, column: 1)");
+        assert_eq!(json_to_tasks(json), Err(error_text));
     }
 
     #[test]
-    fn json_to_item_works() {
+    fn json_to_task_works() {
         let json = String::from("2{.e");
-        let error_text = String::from("Could not parse response for item: Error(\"invalid type: integer `2`, expected struct Item\", line: 1, column: 1)");
-        assert_eq!(json_to_item(json), Err(error_text));
+        let error_text = String::from("Could not parse response for task: Error(\"invalid type: integer `2`, expected struct Task\", line: 1, column: 1)");
+        assert_eq!(json_to_task(json), Err(error_text));
     }
 
     #[test]
@@ -669,19 +669,19 @@ mod tests {
 
     #[test]
     fn test_set_priority() {
-        let item = test::fixtures::item();
+        let task = test::fixtures::task();
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/rest/v2/tasks/222")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::item())
+            .with_body(test::responses::task())
             .create();
         let config = test::fixtures::config()
             .mock_select(1)
             .mock_url(server.url());
 
-        let result = set_priority(&config, item);
+        let result = set_priority(&config, task);
         assert_eq!(result, Ok("✓".to_string()));
         mock.assert();
     }

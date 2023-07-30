@@ -5,16 +5,16 @@ extern crate clap;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use config::Config;
-use items::priority::Priority;
 use projects::Project;
+use tasks::priority::Priority;
 
 mod cargo;
 mod color;
 mod config;
 mod input;
-mod items;
 mod projects;
 mod sections;
+mod tasks;
 mod test;
 mod time;
 mod todoist;
@@ -175,7 +175,7 @@ fn cmd() -> Command {
 fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
     let config = fetch_config(matches)?;
 
-    todoist::quick_add_item(&config, &text)?;
+    todoist::quick_add_task(&config, &text)?;
     Ok(color::green_string("✓"))
 }
 
@@ -190,7 +190,7 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let description = fetch_description(matches);
     let due = fetch_due(matches);
 
-    todoist::add_item(&config, &content, &project, priority, description, due)?;
+    todoist::add_task(&config, &content, &project, priority, description, due)?;
 
     Ok(color::green_string("✓"))
 }
@@ -200,7 +200,7 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::rename_items(&config, &project)
+    projects::rename_tasks(&config, &project)
 }
 #[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
@@ -208,9 +208,9 @@ fn task_list(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
 
     if has_flag(matches, "scheduled") {
-        projects::scheduled_items(&config, &project)
+        projects::scheduled_tasks(&config, &project)
     } else {
-        projects::all_items(&config, &project)
+        projects::all_tasks(&config, &project)
     }
 }
 
@@ -226,7 +226,7 @@ fn task_next(matches: &ArgMatches) -> Result<String, String> {
 fn task_complete(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     match config.next_id {
-        Some(_) => todoist::complete_item(&config),
+        Some(_) => todoist::complete_task(&config),
         None => Err("There is nothing to complete. Try to mark a task as 'next'.".to_string()),
     }
 }
@@ -269,7 +269,7 @@ fn project_process(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::process_items(config, &project)
+    projects::process_tasks(config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -292,7 +292,7 @@ fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::prioritize_items(&config, &project)
+    projects::prioritize_tasks(&config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]

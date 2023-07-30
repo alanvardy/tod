@@ -21,7 +21,7 @@ A tiny todoist CLI program. Takes simple input and dumps it in your inbox or ano
     - [Usage Examples](#usage-examples)
     - [Shell script examples](#shell-script-examples)
       - [Sort, schedule, prioritize, and process tasks](#sort-schedule-prioritize-and-process-tasks)
-  - [How item priority is determined](#how-item-priority-is-determined)
+  - [How task priority is determined](#how-task-priority-is-determined)
   - [Disabling spinners](#disabling-spinners)
   - [Why I made this](#why-i-made-this)
   - [Related projects](#related-projects)
@@ -184,16 +184,16 @@ tod tasks list --project work
 tod version check || cargo install tod --force
 ```
 
-## How item priority is determined
+## How task priority is determined
 
-Items are ranked by points and the first is returned, the points are the sum of the following:
+Tasks are ranked by points and the first is returned, the points are the sum of the following:
 
-  - Item is overdue: 150
+  - Task is overdue: 150
   - The date is today with no time: 100
   - The date is today with time in next or last 15 min: 200
   - No date: 80
   - Not recurring: 50
-  - Item has no priority: 2
+  - Task has no priority: 2
   - Priority 1: 1
   - Priority 2: 3
   - Priority 3: 4

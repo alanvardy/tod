@@ -200,7 +200,7 @@ fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::rename_tasks(&config, &project)
+    projects::rename_task(&config, &project)
 }
 #[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
@@ -219,7 +219,7 @@ fn task_next(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
 
-    projects::next(config, &project)
+    projects::next_task(config, &project)
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -227,7 +227,9 @@ fn task_complete(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     match config.next_id {
         Some(_) => todoist::complete_task(&config),
-        None => Err("There is nothing to complete. Try to mark a task as 'next'.".to_string()),
+        None => {
+            Err("There is nothing to complete. A task must first be marked as 'next'.".to_string())
+        }
     }
 }
 

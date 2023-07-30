@@ -122,7 +122,7 @@ pub fn rename(config: Config, project: &Project) -> Result<String, String> {
 }
 
 /// Get the next task by priority and save its id to config
-pub fn next(config: Config, project: &Project) -> Result<String, String> {
+pub fn next_task(config: Config, project: &Project) -> Result<String, String> {
     match fetch_next_task(&config, project) {
         Ok(Some((task, remaining))) => {
             config.set_next_id(&task.id).save()?;
@@ -307,7 +307,7 @@ pub fn scheduled_tasks(config: &Config, project: &Project) -> Result<String, Str
     Ok(buffer)
 }
 
-pub fn rename_tasks(config: &Config, project: &Project) -> Result<String, String> {
+pub fn rename_task(config: &Config, project: &Project) -> Result<String, String> {
     let project_tasks = todoist::tasks_for_project(config, project)?;
 
     let selected_task = input::select(
@@ -535,7 +535,7 @@ mod tests {
         config_with_timezone.clone().create().unwrap();
 
         assert_eq!(
-            next(config_with_timezone, project),
+            next_task(config_with_timezone, project),
             Ok(format!(
                 "Put out recycling\nDue: {TIME} ↻\n1 task(s) remaining"
             ))
@@ -816,7 +816,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let result = rename_tasks(&config, project);
+        let result = rename_task(&config, project);
         assert_eq!(
             result,
             Ok("The content is the same, no need to change it".to_string())

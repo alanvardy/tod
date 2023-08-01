@@ -224,3 +224,8 @@ Some points around my general strategy:
 ## Contributing
 
 Contributions are welcome, just please open up an issue before putting too much work into a PR.
+
+## Setting up for development
+
+You will need to install tarpaulin with `cargo install cargo-tarpaulin` before running `./test.sh` locally.
+

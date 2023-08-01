@@ -196,7 +196,6 @@ fn filter_missing_projects(config: &Config, projects: Vec<Project>) -> Vec<Proje
         .projects
         .clone()
         .unwrap_or_default()
-        .clone()
         .into_iter()
         .filter(|p| !project_ids.contains(&p.id))
         .collect()

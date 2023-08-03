@@ -2,12 +2,11 @@
 
 [![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod) [![codecov](https://codecov.io/gh/alanvardy/tod/branch/main/graph/badge.svg?token=9FBJK1SU0K)](https://codecov.io/gh/alanvardy/tod) [![Crates.io](https://img.shields.io/crates/v/tod.svg)](https://crates.io/crates/tod)
 
-A tiny todoist CLI program. Takes simple input and dumps it in your inbox or another project. Takes advantage of natural language processing to assign due dates, tags, etc.
+A tiny Todoist CLI program. Takes simple input and dumps it in your inbox or another project. Takes advantage of natural language processing to assign due dates, tags, etc.
 
 ![Tod](tod.gif)
 
 ## Table of Contents
-
 
 <!--toc:start-->
 - [Tod](#tod)
@@ -21,19 +20,29 @@ A tiny todoist CLI program. Takes simple input and dumps it in your inbox or ano
     - [Usage Examples](#usage-examples)
     - [Shell script examples](#shell-script-examples)
       - [Sort, schedule, prioritize, and process tasks](#sort-schedule-prioritize-and-process-tasks)
+    - [Update Tod only if it is out of date](#update-tod-only-if-it-is-out-of-date)
   - [How task priority is determined](#how-task-priority-is-determined)
-  - [Disabling spinners](#disabling-spinners)
   - [Why I made this](#why-i-made-this)
-  - [Related projects](#related-projects)
   - [Contributing](#contributing)
+    - [Setting up for development](#setting-up-for-development)
+  - [Configuration](#configuration)
+    - [Location](#location)
+    - [Values](#values)
+      - [last_version_check](#lastversioncheck)
+      - [mock_select](#mockselect)
+      - [mock_string](#mockstring)
+      - [mock_url](#mockurl)
+      - [next_id](#nextid)
+      - [path](#path)
+      - [spinners](#spinners)
+      - [timezone](#timezone)
+      - [token](#token)
+      - [vecprojects](#vecprojects)
+  - [Related projects](#related-projects)
 <!--toc:end-->
 
 
-Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on the first run, and your data in JSON format in `$XDG_CONFIG_HOME/tod.cfg`. This defaults to:
-
-- `~/.config/tod.cfg` on Linux
-- `~/Library/Application Support/tod.cfg` on Mac
-- No idea about Windows, sorry!
+Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on the first run
 
 ## Installation
 
@@ -198,34 +207,150 @@ Tasks are ranked by points and the first is returned, the points are the sum of 
   - Priority 2: 3
   - Priority 3: 4
 
-## Disabling spinners
-
-Find the line in your `tod.cfg` that reads `"spinners": null` and change the value to false.
-
 ## Why I made this
 
 I am a developer who uses Todoist to reduce stress and cognitive overhead, by delegating things that a machine does well to a machine. This CLI application scratches some very specific itches for me, and I hope that it may be of use to others as well!
 
 Some points around my general strategy:
 
-- Do one thing at a time, multi-tasking is an illusion (see `tod project process`)
+- Do one thing at a time, multitasking is an illusion (see `tod project process`)
 - Capture all tasks immediately with the inbox and add detail later (see `tod project empty`, `schedule`, and `prioritize`)
-- Make all your tasks "actions", concrete tasks that can be acted on. Add phone numbers, hyperlinks etc to your tasks
+- Make all your tasks "actions", concrete tasks that can be acted on. Add phone numbers, hyperlinks etc. to your tasks
 - Batch process like things as infrequently as possible to lower context switching, i.e. clear your email inbox once per day, spam once per week.
 - Remember that the objective is to **get the important things done with less friction**, not just get more things done.
-- Further to the above point, make sure to leave yourself margin. It is in the spaces between the periouds work that we recover and get our best ideas.
-- Less projects are better than more projects
+- Further to the above point, make sure to leave yourself margin. It is in the spaces between the periods work that we recover and get our best ideas.
+- Fewer projects are better than more projects
 - Use projects as "modes" where you only work in one at a time
+
+## Contributing
+
+Contributions are welcome, just please open up an issue before putting too much work into a PR. If you would like clarification on any tickets, be sure to ask! I also enjoy supporting people newer to Rust and am happy to review PRs and give pointers.
+
+### Setting up for development
+
+You will need to install tarpaulin with `cargo install cargo-tarpaulin` before running `./test.sh` locally.
+
+## Configuration
+
+### Location
+
+ Data is stored in JSON format in `$XDG_CONFIG_HOME/tod.cfg`. This defaults to:
+
+- `~/.config/tod.cfg` on Linux
+- `~/Library/Application Support/tod.cfg` on Mac
+- No idea about Windows, sorry!
+
+### Values
+
+#### last_version_check
+
+```
+  type: nullable string
+  default: null
+  possible_values: any string in format YYYY-MM-DD
+```
+
+Holds a string date, i.e. `"2023-08-30"` representing the last time crates.io was checked for the latest `tod` version. Tod will check crates.io a maximum of once per day.
+
+#### mock_select
+
+```
+  type: nullable non-negative integer
+  default: null
+  possible values: any integer 0 or greater
+```
+
+Used in test only, instead of displaying a select picker in test instead the zero-based number will be used to choose the item.
+
+#### mock_string
+
+```
+  type: nullable string
+  default: null
+  possible values: any string
+```
+
+Used in test only, instead of displaying a text in test instead the string will be returned.
+
+#### mock_url
+
+```
+  type: nullable string
+  default: null
+  possible values: any URL
+```
+
+Used in test only, gives the location of the mock server so that external APIs are not used in test.
+
+#### next_id
+
+```
+  type: nullable string
+  default: null
+  possible values: null or any positive integer in string form
+```
+
+When `task next` is executed the ID is stored in this field. When `task complete` is run the field is set back to `null`
+
+
+#### path
+
+```
+  type: string
+  default: $XDG_CONFIG_HOME/tod.cfg
+  possible values: Any path
+```
+
+Location of the `tod` configuration file
+
+#### spinners
+
+```
+  type: nullable boolean
+  default: null
+  possible values: null, true, or false
+```
+
+Controls whether the spinner is displayed when an API call occurs. Useful for cases where the terminal output is captured. `null` is considered the same as `true`. 
+
+You can also use the environment variable `DISABLE_SPINNER` to turn them off.
+
+```bash
+  DISABLE_SPINNER=1 tod task create
+```
+
+#### timezone
+
+```
+  type: string
+  default: No default
+  possible values: Any timezone string i.e. "Canada/Pacific"
+```
+
+You will be prompted for timezone on first run
+
+#### token
+
+```
+  type: string
+  default: No default
+  possible values: Any valid token
+```
+
+You will be prompted for your [Todoist API token](https://todoist.com/prefs/integrations) on first run
+
+
+#### vecprojects
+
+```
+  type: Nullable array of objects
+  default: null
+  possible values: List of project objects from the Todoist API
+```
+
+Projects are stored locally in config to help save on API requests and speed up actions taken. Manage this with the `project` subcommands. The strange naming is because `projects` was used in previous versions of `tod`.
 
 ## Related projects
 
 - [Alfred Workflow](https://github.com/stacksjb/AlfredTodWorkflow)
-
-## Contributing
-
-Contributions are welcome, just please open up an issue before putting too much work into a PR.
-
-## Setting up for development
-
-You will need to install tarpaulin with `cargo install cargo-tarpaulin` before running `./test.sh` locally.
 

@@ -265,7 +265,7 @@ pub fn process_tasks(config: Config, project: &Project) -> Result<String, String
 }
 
 fn handle_task(config: &Config, task: Task) -> Option<Result<String, String>> {
-    let options = vec!["complete", "skip", "quit"]
+    let options = ["complete", "skip", "quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -430,7 +430,7 @@ pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Resul
 pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, String> {
     println!("{}", task.fmt(config, FormatType::Single));
 
-    let options = vec!["Pick project", "Complete", "Skip"]
+    let options = ["Pick project", "Complete", "Skip"]
         .iter()
         .map(|o| o.to_string())
         .collect::<Vec<String>>();

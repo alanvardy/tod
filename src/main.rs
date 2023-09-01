@@ -456,6 +456,11 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Project, Strin
     if projects.is_empty() {
         return Err(NO_PROJECTS_ERR.to_string());
     }
+
+    if projects.len() == 1 {
+        return Ok(projects.first().unwrap().clone());
+    }
+
     match project_content {
         Some(project_name) => projects
             .iter()

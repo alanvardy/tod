@@ -4,6 +4,7 @@
 
 - Add details about configuration file
 - Fix `spinners` config check
+- Don't prompt for project when there is only one project in configuration file, just use it.
 
 ## 2023-07-30 v0.5.0
 

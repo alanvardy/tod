@@ -33,6 +33,7 @@ pub fn add_task(
     config: &Config,
     content: &str,
     project: &Project,
+    section: Option<&Section>,
     priority: Priority,
     description: Option<String>,
     due: Option<String>,
@@ -55,6 +56,10 @@ pub fn add_task(
         } else {
             body.insert("due_string".to_owned(), Value::String(date));
         }
+    }
+
+    if let Some(section) = section {
+        body.insert("section_id".to_owned(), Value::String(section.id.clone()));
     }
 
     let body = json!(body);
@@ -99,9 +104,9 @@ pub fn move_task_to_project(
 pub fn move_task_to_section(
     config: &Config,
     task: Task,
-    section_id: &str,
+    section: &Section,
 ) -> Result<String, String> {
-    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section_id}}]});
+    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section.id}}]});
     let url = String::from(SYNC_URL);
 
     request::post_todoist_sync(config, url, body)?;
@@ -160,7 +165,7 @@ pub fn complete_task(config: &Config) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tasks::priority::Priority;
+    use crate::tasks::priority::{self, Priority};
     use crate::tasks::{DateInfo, Task};
     use crate::{test, time};
     use pretty_assertions::assert_eq;
@@ -179,6 +184,46 @@ mod tests {
 
         assert_eq!(
             quick_add_task(&config, "testy test"),
+            Ok(Task {
+                id: String::from("5149481867"),
+                priority: Priority::None,
+                content: String::from("testy test"),
+                checked: Some(false),
+                description: String::from(""),
+                due: None,
+                is_deleted: Some(false),
+                is_completed: None,
+            })
+        );
+        mock.assert();
+    }
+
+    #[test]
+    fn test_add_task() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/rest/v2/tasks/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::task())
+            .create();
+
+        let config = test::fixtures::config().mock_url(server.url());
+
+        let project = test::fixtures::project();
+
+        let priority = priority::Priority::None;
+        let section = test::fixtures::section();
+        assert_eq!(
+            add_task(
+                &config,
+                "New task",
+                &project,
+                Some(&section),
+                priority,
+                None,
+                None
+            ),
             Ok(Task {
                 id: String::from("5149481867"),
                 priority: Priority::None,
@@ -213,7 +258,7 @@ mod tests {
         let project = binding.first().unwrap();
 
         assert_eq!(
-            tasks_for_project(&config_with_timezone, &project),
+            tasks_for_project(&config_with_timezone, project),
             Ok(vec![Task {
                 id: String::from("999999"),
                 content: String::from("Put out recycling"),

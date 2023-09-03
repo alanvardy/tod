@@ -457,12 +457,11 @@ pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, Strin
             } else {
                 let section_name =
                     input::select("Select section", section_names, config.mock_select)?;
-                let section_id = &sections
+                let section = &sections
                     .iter()
                     .find(|x| x.name == section_name.as_str())
-                    .expect("Section does not exist")
-                    .id;
-                todoist::move_task_to_section(config, task, section_id)
+                    .expect("Section does not exist");
+                todoist::move_task_to_section(config, task, section)
             }
         }
     }

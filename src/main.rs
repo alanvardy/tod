@@ -189,8 +189,32 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
     let description = fetch_description(matches);
     let due = fetch_due(matches);
+    let sections = todoist::sections_for_project(&config, &project)?;
+    let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
+    if section_names.is_empty() {
+        todoist::add_task(
+            &config,
+            &content,
+            &project,
+            None,
+            priority,
+            description,
+            due,
+        )?;
+    } else {
+        let section_name = input::select("Select section", section_names, config.mock_select)?;
+        let section = &sections.iter().find(|x| x.name == section_name.as_str());
 
-    todoist::add_task(&config, &content, &project, priority, description, due)?;
+        todoist::add_task(
+            &config,
+            &content,
+            &project,
+            section.to_owned(),
+            priority,
+            description,
+            due,
+        )?;
+    }
 
     Ok(color::green_string("✓"))
 }

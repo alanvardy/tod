@@ -1,8 +1,10 @@
 use std::env;
 
 use reqwest::blocking::Client;
+use reqwest::blocking::Response;
 use reqwest::header::AUTHORIZATION;
 use reqwest::header::CONTENT_TYPE;
+use serde_json::json;
 use spinners::Spinner;
 use spinners::Spinners;
 use uuid::Uuid;
@@ -36,12 +38,7 @@ pub fn post_todoist_sync(
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-
-    if response.status().is_success() {
-        Ok(response.text().or(Err("Could not read response text"))?)
-    } else {
-        Err(format!("Error: {:#?}", response))
-    }
+    handle_response(response, "POST", url, body)
 }
 
 /// Post to Todoist via REST api
@@ -68,12 +65,7 @@ pub fn post_todoist_rest(
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-
-    if response.status().is_success() {
-        Ok(response.text().or(Err("Could not read response text"))?)
-    } else {
-        Err(format!("Error: {:#?}", response))
-    }
+    handle_response(response, "POST", url, body)
 }
 
 // Combine get and post into one function
@@ -93,11 +85,26 @@ pub fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> 
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
+    handle_response(response, "GET", url, json!({}))
+}
 
+fn handle_response(
+    response: Response,
+    method: &str,
+    url: String,
+    body: serde_json::Value,
+) -> Result<String, String> {
     if response.status().is_success() {
         Ok(response.text().or(Err("Could not read response text"))?)
     } else {
-        Err(format!("Error: {:#?}", response))
+        Err(format!(
+            "
+            method: {method}
+            url: {url}
+            body: {body}
+            Error: {:?}",
+            response
+        ))
     }
 }
 

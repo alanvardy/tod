@@ -3,6 +3,7 @@ pub mod fixtures {
 
     use crate::config::{self, Config};
     use crate::projects::Project;
+    use crate::sections::Section;
     use crate::tasks::{DateInfo, Task};
 
     pub fn task() -> Task {
@@ -64,6 +65,15 @@ pub mod fixtures {
             view_style: "List".to_string(),
             url: "www.google.com".to_string(),
             parent_id: None,
+        }
+    }
+
+    pub fn section() -> Section {
+        Section {
+            id: String::from("123"),
+            project_id: String::from("456"),
+            order: 0,
+            name: String::from("Cool stuff"),
         }
     }
 }

@@ -34,6 +34,7 @@ A tiny Todoist CLI program. Takes simple input and dumps it in your inbox or ano
       - [mock_url](#mockurl)
       - [next_id](#nextid)
       - [path](#path)
+      - [natural_language_only](#naturallanguageonly)
       - [spinners](#spinners)
       - [timezone](#timezone)
       - [token](#token)

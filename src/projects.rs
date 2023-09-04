@@ -404,7 +404,11 @@ pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Resul
     } else {
         for task in filtered_tasks.iter() {
             println!("{}", task.fmt(config, FormatType::Single));
-            let datetime_input = input::datetime(config.mock_select, config.mock_string.clone())?;
+            let datetime_input = input::datetime(
+                config.mock_select,
+                config.mock_string.clone(),
+                config.natural_language_only,
+            )?;
             match datetime_input {
                 input::DateTimeInput::Complete => {
                     let config = config.set_next_id(&task.id);

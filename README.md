@@ -303,6 +303,16 @@ When `task next` is executed the ID is stored in this field. When `task complete
 
 Location of the `tod` configuration file
 
+#### natural_language_only
+
+```
+  type: nullable boolean
+  default: null
+  possible values: null, true, or false
+```
+
+If true, the datetime selection in `project schedule` will go straight to natural language input.
+
 #### spinners
 
 ```

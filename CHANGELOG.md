@@ -6,6 +6,7 @@
 - Fix `spinners` config check
 - Don't prompt for project when there is only one project in configuration file, just use it.
 - `task create` asks for section when project has sections
+- Add a `natural_language_only` option to config
 
 ## 2023-07-30 v0.5.0
 

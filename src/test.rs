@@ -47,6 +47,7 @@ pub mod fixtures {
             mock_url: None,
             mock_string: None,
             mock_select: None,
+            natural_language_only: None,
             spinners: Some(true),
         }
     }

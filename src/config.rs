@@ -21,12 +21,15 @@ pub struct Config {
     /// The ID of the next task
     pub next_id: Option<String>,
     pub timezone: Option<String>,
+    /// The last time we checked crates.io for the version
     pub last_version_check: Option<String>,
     pub mock_url: Option<String>,
     pub mock_string: Option<String>,
     pub mock_select: Option<usize>,
-    // Whether spinners are enabled
+    /// Whether spinners are enabled
     pub spinners: Option<bool>,
+    /// Goes straight to natural language input in datetime selection
+    pub natural_language_only: Option<bool>,
 }
 
 impl Config {
@@ -136,6 +139,7 @@ impl Config {
             timezone: None,
             spinners: Some(true),
             mock_url: None,
+            natural_language_only: None,
             mock_string: None,
             mock_select: None,
             projects: Some(Vec::new()),
@@ -337,6 +341,7 @@ mod tests {
                 spinners: Some(true),
                 last_version_check: None,
                 timezone: None,
+                natural_language_only: None,
                 mock_url: None,
                 mock_string: None,
                 mock_select: None,
@@ -362,6 +367,7 @@ mod tests {
                 spinners: Some(true),
                 last_version_check: None,
                 timezone: None,
+                natural_language_only: None,
                 mock_url: None,
                 mock_string: None,
                 mock_select: None,

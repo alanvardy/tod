@@ -12,22 +12,38 @@ pub enum DateTimeInput {
 pub fn datetime(
     mock_select: Option<usize>,
     mock_string: Option<String>,
+    natural_language_only: Option<bool>,
 ) -> Result<DateTimeInput, String> {
-    let options = vec![
-        "Pick Date",
-        "Natural Language",
-        "No Date",
-        "Skip",
-        "Complete",
-    ];
-    let description = "Set a due date";
-    let selection = select(description, options, mock_select)?;
+    let selection = if natural_language_only.unwrap_or_default() {
+        "Natural Language"
+    } else {
+        let options = vec![
+            "Pick Date",
+            "Natural Language",
+            "No Date",
+            "Skip",
+            "Complete",
+        ];
+        let description = "Set a due date";
+        select(description, options, mock_select)?
+    };
 
     match selection {
         "Natural Language" => {
-            let entry = string("Enter datetime in natural language", mock_string)?;
+            let entry = string(
+                "Enter datetime in natural language, or one of:\n[none (n), skip (s), complete (c)]",
+                mock_string,
+            )?;
 
-            Ok(DateTimeInput::Text(entry))
+            match entry.as_str() {
+                "none" => Ok(DateTimeInput::None),
+                "n" => Ok(DateTimeInput::None),
+                "complete" => Ok(DateTimeInput::Complete),
+                "c" => Ok(DateTimeInput::Complete),
+                "skip" => Ok(DateTimeInput::Skip),
+                "s" => Ok(DateTimeInput::Skip),
+                _ => Ok(DateTimeInput::Text(entry)),
+            }
         }
         "Pick Date" => {
             let string = DateSelect::new("Select Date")

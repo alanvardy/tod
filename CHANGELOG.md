@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-09-04 v0.5.1
+
 - Add details about configuration file
 - Fix `spinners` config check
 - Don't prompt for project when there is only one project in configuration file, just use it.

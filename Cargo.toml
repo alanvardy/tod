@@ -33,5 +33,5 @@ rayon = "1.7.0"
 pad = "0.1.6"
 
 [dev-dependencies]
-mockito = "1.1.0"
+mockito = "1.1.1"
 pretty_assertions = "1.4.0"

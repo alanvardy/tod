@@ -110,7 +110,7 @@ jobs:
           toolchain: stable
           override: true
       - run: cargo install cargo-tarpaulin || true
-      - run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
+      - run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1
 

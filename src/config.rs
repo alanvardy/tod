@@ -28,6 +28,8 @@ pub struct Config {
     pub mock_select: Option<usize>,
     /// Whether spinners are enabled
     pub spinners: Option<bool>,
+    /// Don't ask for sections
+    pub no_sections: Option<bool>,
     /// Goes straight to natural language input in datetime selection
     pub natural_language_only: Option<bool>,
 }
@@ -139,6 +141,7 @@ impl Config {
             timezone: None,
             spinners: Some(true),
             mock_url: None,
+            no_sections: None,
             natural_language_only: None,
             mock_string: None,
             mock_select: None,
@@ -337,6 +340,7 @@ mod tests {
                 token: String::new(),
                 projects: Some(Vec::new()),
                 path: config.clone().unwrap().path,
+                no_sections: None,
                 next_id: None,
                 spinners: Some(true),
                 last_version_check: None,
@@ -364,6 +368,7 @@ mod tests {
                 projects: Some(Vec::new()),
                 path: config.clone().unwrap().path,
                 next_id: None,
+                no_sections: None,
                 spinners: Some(true),
                 last_version_check: None,
                 timezone: None,

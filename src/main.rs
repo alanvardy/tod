@@ -190,7 +190,7 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
     let description = fetch_description(matches);
     let due = fetch_due(matches);
-    let section = if has_flag(matches, "nosection") {
+    let section = if has_flag(matches, "nosection") || config.no_sections.unwrap_or_default() {
         None
     } else {
         let sections = todoist::sections_for_project(&config, &project)?;

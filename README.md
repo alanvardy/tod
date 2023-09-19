@@ -314,6 +314,16 @@ Location of the `tod` configuration file
 
 If true, the datetime selection in `project schedule` will go straight to natural language input.
 
+#### no_sections
+
+```
+  type: nullable boolean
+  default: null
+  possible values: null, true, or false
+```
+
+If true will not prompt for a section whenever possible
+
 #### spinners
 
 ```

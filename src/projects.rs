@@ -456,7 +456,7 @@ pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, Strin
 
             let sections = todoist::sections_for_project(config, &project)?;
             let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
-            if section_names.is_empty() {
+            if section_names.is_empty() || config.no_sections.unwrap_or_default() {
                 todoist::move_task_to_project(config, task, &project)
             } else {
                 let section_name =

@@ -44,6 +44,7 @@ pub mod fixtures {
             next_id: None,
             timezone: Some(String::from("US/Pacific")),
             last_version_check: None,
+            no_sections: None,
             mock_url: None,
             mock_string: None,
             mock_select: None,

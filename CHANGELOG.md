@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add `nosection` flag to `task create`
+- Add `No section` option to section selection
 
 ## 2023-09-04 v0.5.1
 
@@ -90,7 +91,7 @@
 
 ## 2023-04-08 v0.3.8
 
-- Left some `dbg!` statements in the code
+- Removed some `dbg!` statements accidentally left in the code
 
 ## 2023-04-08 v0.3.7
 

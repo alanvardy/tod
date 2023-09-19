@@ -33,7 +33,7 @@ pub fn add_task(
     config: &Config,
     content: &str,
     project: &Project,
-    section: Option<&Section>,
+    section: Option<Section>,
     priority: Priority,
     description: Option<String>,
     due: Option<String>,
@@ -219,7 +219,7 @@ mod tests {
                 &config,
                 "New task",
                 &project,
-                Some(&section),
+                Some(section),
                 priority,
                 None,
                 None

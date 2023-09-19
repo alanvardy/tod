@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `nosection` flag to `task create`
+
 ## 2023-09-04 v0.5.1
 
 - Add details about configuration file
@@ -88,7 +90,7 @@
 
 ## 2023-04-08 v0.3.8
 
-- Left some `dbg!` statements in the code like a doofus
+- Left some `dbg!` statements in the code
 
 ## 2023-04-08 v0.3.7
 
@@ -170,7 +172,7 @@
 
 ## 2021-10-23 v0.2.8
 
-- Fix timezone for formatted datetimes
+- Fix timezone for formatted date times
 
 ## 2021-10-18 v0.2.7
 

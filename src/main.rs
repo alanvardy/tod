@@ -110,7 +110,8 @@ fn cmd() -> Command {
                          .arg(content_arg())
                          .arg(description_arg())
                          .arg(due_arg())
-                         .arg(project_arg()),
+                         .arg(project_arg())
+                         .arg(flag_arg("nosection", 's',  "Do not prompt for section")),
                        Command::new("edit").about("Edit an exising task's content")
                          .arg(config_arg())
                          .arg(project_arg()),
@@ -189,32 +190,31 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let project = fetch_project(matches, &config)?;
     let description = fetch_description(matches);
     let due = fetch_due(matches);
-    let sections = todoist::sections_for_project(&config, &project)?;
-    let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
-    if section_names.is_empty() {
-        todoist::add_task(
-            &config,
-            &content,
-            &project,
-            None,
-            priority,
-            description,
-            due,
-        )?;
+    let section = if has_flag(matches, "nosection") {
+        None
     } else {
-        let section_name = input::select("Select section", section_names, config.mock_select)?;
-        let section = &sections.iter().find(|x| x.name == section_name.as_str());
+        let sections = todoist::sections_for_project(&config, &project)?;
+        let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
+        if section_names.is_empty() {
+            None
+        } else {
+            let section_name = input::select("Select section", section_names, config.mock_select)?;
+            sections
+                .iter()
+                .find(|x| x.name == section_name.as_str())
+                .map(|s| s.to_owned())
+        }
+    };
 
-        todoist::add_task(
-            &config,
-            &content,
-            &project,
-            section.to_owned(),
-            priority,
-            description,
-            due,
-        )?;
-    }
+    todoist::add_task(
+        &config,
+        &content,
+        &project,
+        section,
+        priority,
+        description,
+        due,
+    )?;
 
     Ok(color::green_string("✓"))
 }

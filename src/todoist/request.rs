@@ -163,7 +163,7 @@ mod tests {
             ..config
         };
         let response = maybe_start_spinner(&config);
-        assert!(matches!(response, None));
+        assert!(response.is_none());
 
         // null spinner
         let config = Config {

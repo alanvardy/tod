@@ -194,10 +194,11 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
         None
     } else {
         let sections = todoist::sections_for_project(&config, &project)?;
-        let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
+        let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
         if section_names.is_empty() {
             None
         } else {
+            section_names.insert(0, "No section".to_string());
             let section_name = input::select("Select section", section_names, config.mock_select)?;
             sections
                 .iter()

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-09-18 v0.5.2
+
 - Add `nosection` flag to `task create`
 - Add `No section` option to section selection
 - Add `no_sections` config option

@@ -40,6 +40,7 @@ A tiny Todoist CLI program. Takes simple input and dumps it in your inbox or ano
       - [timezone](#timezone)
       - [token](#token)
       - [vecprojects](#vecprojects)
+      - [verbose](#verbose)
   - [Related projects](#related-projects)
 <!--toc:end-->
 
@@ -371,6 +372,16 @@ You will be prompted for your [Todoist API token](https://todoist.com/prefs/inte
 ```
 
 Projects are stored locally in config to help save on API requests and speed up actions taken. Manage this with the `project` subcommands. The strange naming is because `projects` was used in previous versions of `tod`.
+
+#### verbose
+
+```
+  type: nullable boolean
+  default: null
+  possible values: null, true, or false
+```
+
+Outputs additional information in console to assist with debugging.
 
 ## Related projects
 

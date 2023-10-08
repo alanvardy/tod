@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add verbose flag
+- BREAKING CHANGE changed character for `overdue` from `v` to `u`
+
 ## 2023-09-18 v0.5.2
 
 - Add `nosection` flag to `task create`

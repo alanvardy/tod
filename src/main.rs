@@ -111,16 +111,20 @@ fn cmd() -> Command {
                          .arg(description_arg())
                          .arg(due_arg())
                          .arg(project_arg())
-                         .arg(flag_arg("nosection", 's',  "Do not prompt for section")),
+                         .arg(flag_arg("nosection", 's',  "Do not prompt for section"))
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing")),
                        Command::new("edit").about("Edit an exising task's content")
                          .arg(config_arg())
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                          .arg(project_arg()),
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
                          .arg(project_arg())
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                          .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today and have a time")),
                        Command::new("next").about("Get the next task by priority")
                          .arg(config_arg())
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                          .arg(project_arg()),
                        Command::new("complete").about("Complete the last task fetched with the next command")
                          .arg(config_arg())
@@ -131,28 +135,36 @@ fn cmd() -> Command {
                    .subcommand_required(true)
                    .subcommands([
                        Command::new("list").about("List all projects in config")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                          .arg(config_arg()),
                        Command::new("remove").about("Remove a project from config (not Todoist)")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg())
                          .arg(flag_arg("auto", 'a',  "Remove all projects from config that are not in Todoist"))
                          .arg(flag_arg("all", 'l',  "Remove all projects from config"))
                         .arg(project_arg()),
                        Command::new("rename").about("Rename a project in config (not Todoist)")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg())
                         .arg(project_arg()),
                        Command::new("empty").about("Empty a project by putting tasks in other projects")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg())
                         .arg(project_arg()),
                        Command::new("schedule").about("Assign dates to all tasks individually")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg())
-                         .arg(flag_arg("overdue", 'v',  "Only schedule overdue tasks"))
+                         .arg(flag_arg("overdue", 'u',  "Only schedule overdue tasks"))
                         .arg(project_arg()),
                        Command::new("prioritize").about("Give every task a priority")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg())
                         .arg(project_arg()),
                        Command::new("import").about("Get projects from Todoist and prompt to add to config")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg()),
                        Command::new("process").about("Complete all tasks that are due today or undated in a project individually in priority order")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg())
                         .arg(project_arg())
                 ]
@@ -163,6 +175,7 @@ fn cmd() -> Command {
                    .subcommand_required(true)
                    .subcommands([
                        Command::new("check").about("Check to see if tod is on the latest version, returns exit code 1 if out of date")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                          .arg(config_arg()),
                 ]
                     )
@@ -445,7 +458,9 @@ fn has_flag(matches: &ArgMatches, id: &'static str) -> bool {
 fn fetch_config(matches: &ArgMatches) -> Result<Config, String> {
     let config_path = matches.get_one::<String>("config").map(|s| s.to_owned());
 
-    config::get_or_create(config_path)?
+    let verbose = has_flag(matches, "verbose");
+
+    config::get_or_create(config_path, verbose)?
         .check_for_timezone()?
         .check_for_latest_version()
 }

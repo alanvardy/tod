@@ -29,6 +29,13 @@ pub fn post_todoist_sync(
     let token = &config.token;
 
     let spinner = maybe_start_spinner(config);
+    if config.verbose.unwrap_or_default() {
+        println!(
+            "
+            POST {request_url}
+            body: {body}"
+        )
+    }
     let response = Client::new()
         .post(request_url)
         .header(CONTENT_TYPE, "application/json")
@@ -55,6 +62,14 @@ pub fn post_todoist_rest(
     let authorization: &str = &format!("Bearer {token}");
     let spinner = maybe_start_spinner(config);
 
+    if config.verbose.unwrap_or_default() {
+        println!(
+            "
+            POST {request_url}
+            body: {body}"
+        )
+    }
+
     let response = Client::new()
         .post(request_url)
         .header(CONTENT_TYPE, "application/json")
@@ -77,6 +92,9 @@ pub fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> 
     let request_url = format!("{base_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
     let spinner = maybe_start_spinner(config);
+    if config.verbose.unwrap_or_default() {
+        println!("GET {request_url}")
+    }
     let response = Client::new()
         .get(request_url)
         .header(CONTENT_TYPE, "application/json")

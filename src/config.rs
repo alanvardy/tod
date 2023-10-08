@@ -28,6 +28,7 @@ pub struct Config {
     pub mock_select: Option<usize>,
     /// Whether spinners are enabled
     pub spinners: Option<bool>,
+    pub verbose: Option<bool>,
     /// Don't ask for sections
     pub no_sections: Option<bool>,
     /// Goes straight to natural language input in datetime selection
@@ -145,6 +146,7 @@ impl Config {
             natural_language_only: None,
             mock_string: None,
             mock_select: None,
+            verbose: None,
             projects: Some(Vec::new()),
         })
     }
@@ -200,9 +202,30 @@ impl Config {
             ..self.clone()
         }
     }
+
+    fn set_verbosity(self, verbose: bool) -> Config {
+        match (self.verbose, verbose) {
+            (_, true) => Config {
+                verbose: Some(true),
+                ..self
+            },
+            (Some(true), false) => Config {
+                verbose: Some(true),
+                ..self
+            },
+            (Some(false), false) => Config {
+                verbose: Some(false),
+                ..self
+            },
+            (None, false) => Config {
+                verbose: Some(false),
+                ..self
+            },
+        }
+    }
 }
 
-pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
+pub fn get_or_create(config_path: Option<String>, verbose: bool) -> Result<Config, String> {
     let path: String = match config_path {
         None => generate_path()?,
         Some(path) => path.trim().to_owned(),
@@ -218,6 +241,7 @@ pub fn get_or_create(config_path: Option<String>) -> Result<Config, String> {
             Config::new(&token)?.create()
         }
     }
+    .map(|config| config.set_verbosity(verbose))
 }
 
 pub fn generate_path() -> Result<String, String> {
@@ -333,7 +357,7 @@ mod tests {
         assert_eq!(created_config, loaded_config);
 
         // get_or_create (create)
-        let config = get_or_create(None);
+        let config = get_or_create(None, false);
         assert_eq!(
             config,
             Ok(Config {
@@ -347,6 +371,7 @@ mod tests {
                 timezone: None,
                 natural_language_only: None,
                 mock_url: None,
+                verbose: Some(false),
                 mock_string: None,
                 mock_select: None,
             })
@@ -359,7 +384,7 @@ mod tests {
             .create()
             .unwrap();
 
-        let config = get_or_create(None);
+        let config = get_or_create(None, false);
 
         assert_eq!(
             config,
@@ -373,6 +398,7 @@ mod tests {
                 last_version_check: None,
                 timezone: None,
                 natural_language_only: None,
+                verbose: Some(false),
                 mock_url: None,
                 mock_string: None,
                 mock_select: None,

@@ -129,6 +129,11 @@ pub fn update_task_priority(
 
 /// Update due date for task using natural language
 pub fn update_task_due(config: &Config, task: Task, due_string: String) -> Result<String, String> {
+    let due_string = if task.is_recurring() {
+        format!("{} starting {due_string}", task.due.unwrap().string)
+    } else {
+        due_string
+    };
     let body = json!({ "due_string": due_string });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
@@ -268,6 +273,7 @@ mod tests {
                     date: format!("{}T23:59:00Z", time::today_string(&config_with_timezone)),
                     is_recurring: true,
                     timezone: None,
+                    string: String::from("every other mon at 16:30"),
                 }),
                 priority: Priority::Medium,
                 is_deleted: Some(false),

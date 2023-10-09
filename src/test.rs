@@ -16,6 +16,7 @@ pub mod fixtures {
                 date: String::from("2061-11-13"),
                 is_recurring: false,
                 timezone: Some(String::from("America/Los_Angeles")),
+                string: String::from("Every 2 weeks"),
             }),
             priority: crate::tasks::priority::Priority::Medium,
             is_deleted: None,

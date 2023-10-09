@@ -36,6 +36,7 @@ impl Display for Task {
 pub struct DateInfo {
     pub date: String,
     pub is_recurring: bool,
+    pub string: String,
     pub timezone: Option<String>,
 }
 
@@ -194,7 +195,6 @@ impl Task {
         match filter {
             projects::TaskFilter::Unscheduled => self.has_no_date() || self.is_overdue(config),
             projects::TaskFilter::Overdue => self.is_overdue(config),
-            projects::TaskFilter::Recurring => self.is_recurring(),
         }
     }
 
@@ -226,7 +226,7 @@ impl Task {
     }
 
     /// Returns true if it is a recurring task
-    fn is_recurring(&self) -> bool {
+    pub fn is_recurring(&self) -> bool {
         match self.due {
             None => false,
             Some(DateInfo { is_recurring, .. }) => is_recurring,
@@ -330,6 +330,7 @@ mod tests {
                 date: String::from("2001-11-13"),
                 is_recurring: true,
                 timezone: Some(String::from("America/Los_Angeles")),
+                string: String::from("Every 2 weeks"),
             }),
             ..test::fixtures::task()
         };
@@ -453,6 +454,7 @@ mod tests {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
+                string: String::from("Every 2 weeks"),
             }),
             ..task.clone()
         };
@@ -463,6 +465,7 @@ mod tests {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: false,
                 timezone: None,
+                string: String::from("Every 2 weeks"),
             }),
             ..task
         };
@@ -483,6 +486,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..test::fixtures::task()
@@ -494,6 +498,7 @@ mod tests {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: false,
                 timezone: None,
+                string: String::from("Every 2 weeks"),
             }),
             ..test::fixtures::task()
         };
@@ -508,6 +513,7 @@ mod tests {
                 date: time::today_string(&config),
                 is_recurring: false,
                 timezone: None,
+                string: String::from("Every 2 weeks"),
             }),
             ..test::fixtures::task()
         };
@@ -516,6 +522,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..test::fixtures::task()
@@ -525,6 +532,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..test::fixtures::task()
@@ -554,6 +562,7 @@ mod tests {
             due: Some(DateInfo {
                 date: time::today_string(&config),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..no_date.clone()
@@ -563,6 +572,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2020-09-06T16:00:00"),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..no_date.clone()
@@ -571,6 +581,7 @@ mod tests {
         let future = Task {
             due: Some(DateInfo {
                 date: String::from("2035-09-06T16:00:00"),
+                string: String::from("Every 2 weeks"),
                 is_recurring: false,
                 timezone: None,
             }),
@@ -581,6 +592,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2015-09-06T16:00:00"),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..no_date.clone()
@@ -617,6 +629,7 @@ mod tests {
         let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config),
+                string: String::from("Every 2 weeks"),
                 is_recurring: false,
                 timezone: None,
             }),
@@ -628,6 +641,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..task.clone()
@@ -638,6 +652,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2020-12-20"),
                 is_recurring: false,
+                string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..task

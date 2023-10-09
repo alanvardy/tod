@@ -5,6 +5,7 @@
 - Add `verbose` flag
 - BREAKING CHANGE changed character for `overdue` from `v` to `u`
 - Put single quotes around project names when printing them in terminal.
+- Add the ability to `project schedule` recurring tasks.
 
 ## 2023-09-18 v0.5.2
 

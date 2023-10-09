@@ -33,8 +33,6 @@ pub enum TaskFilter {
     Unscheduled,
     /// Date or datetime is before today
     Overdue,
-    /// Is a recurring task
-    Recurring,
 }
 
 impl Display for Project {
@@ -396,7 +394,7 @@ pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Resul
 
     let filtered_tasks: Vec<Task> = tasks
         .into_iter()
-        .filter(|task| task.filter(config, &filter) && !task.filter(config, &TaskFilter::Recurring))
+        .filter(|task| task.filter(config, &filter))
         .collect::<Vec<Task>>();
 
     if filtered_tasks.is_empty() {

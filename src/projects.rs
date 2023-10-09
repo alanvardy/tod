@@ -160,7 +160,7 @@ pub fn remove_auto(config: &mut Config) -> Result<String, String> {
         .map(|p| p.name.clone())
         .collect::<Vec<String>>()
         .join(", ");
-    let message = format!("Auto removed: {project_names}");
+    let message = format!("Auto removed: '{project_names}'");
     Ok(color::green_string(&message))
 }
 
@@ -295,7 +295,7 @@ pub fn scheduled_tasks(config: &Config, project: &Project) -> Result<String, Str
 
     let mut buffer = String::new();
     buffer.push_str(&color::green_string(&format!(
-        "Schedule for {}",
+        "Schedule for '{}'",
         project.name
     )));
 
@@ -332,7 +332,10 @@ pub fn all_tasks(config: &Config, project: &Project) -> Result<String, String> {
     let tasks = todoist::tasks_for_project(config, project)?;
 
     let mut buffer = String::new();
-    buffer.push_str(&color::green_string(&format!("Tasks for {}", project.name)));
+    buffer.push_str(&color::green_string(&format!(
+        "Tasks for '{}'",
+        project.name
+    )));
 
     for task in tasks::sort_by_datetime(tasks, config) {
         buffer.push('\n');
@@ -347,7 +350,7 @@ pub fn empty(config: &mut Config, project: &Project) -> Result<String, String> {
 
     if tasks.is_empty() {
         Ok(color::green_string(&format!(
-            "No tasks to empty from {}",
+            "No tasks to empty from '{}'",
             project.name
         )))
     } else {
@@ -356,7 +359,7 @@ pub fn empty(config: &mut Config, project: &Project) -> Result<String, String> {
             move_task_to_project(config, task.to_owned())?;
         }
         Ok(color::green_string(&format!(
-            "Successfully emptied {}",
+            "Successfully emptied '{}'",
             project.name
         )))
     }
@@ -373,7 +376,7 @@ pub fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, St
 
     if unprioritized_tasks.is_empty() {
         Ok(color::green_string(&format!(
-            "No tasks to prioritize in {}",
+            "No tasks to prioritize in '{}'",
             project.name
         )))
     } else {
@@ -381,7 +384,7 @@ pub fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, St
             tasks::set_priority(config, task.to_owned())?;
         }
         Ok(color::green_string(&format!(
-            "Successfully prioritized {}",
+            "Successfully prioritized '{}'",
             project.name
         )))
     }
@@ -398,7 +401,7 @@ pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Resul
 
     if filtered_tasks.is_empty() {
         Ok(color::green_string(&format!(
-            "No tasks to schedule in {}",
+            "No tasks to schedule in '{}'",
             project.name
         )))
     } else {
@@ -425,7 +428,7 @@ pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Resul
             };
         }
         Ok(color::green_string(&format!(
-            "Successfully scheduled tasks in {}",
+            "Successfully scheduled tasks in '{}'",
             project.name
         )))
     }
@@ -570,7 +573,7 @@ mod tests {
         assert_eq!(
             result,
             Ok(format!(
-                "Schedule for myproject\n- Put out recycling\n  Due: {TIME} ↻"
+                "Schedule for 'myproject'\n- Put out recycling\n  Due: {TIME} ↻"
             ))
         );
     }
@@ -599,7 +602,7 @@ mod tests {
         assert_eq!(
             all_tasks(&config_with_timezone, project),
             Ok(format!(
-                "Tasks for myproject\n- Put out recycling\n  Due: {TIME} ↻"
+                "Tasks for 'myproject'\n- Put out recycling\n  Due: {TIME} ↻"
             ))
         );
         mock.assert();
@@ -705,7 +708,7 @@ mod tests {
             .unwrap();
 
         let result = remove_auto(&mut config);
-        let expected: Result<String, String> = Ok(String::from("Auto removed: myproject"));
+        let expected: Result<String, String> = Ok(String::from("Auto removed: 'myproject'"));
         assert_eq!(result, expected);
         mock.assert();
         let projects = config.projects.clone().unwrap_or_default();
@@ -763,7 +766,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
         let result = empty(&mut config, project);
-        assert_eq!(result, Ok(String::from("Successfully emptied myproject")));
+        assert_eq!(result, Ok(String::from("Successfully emptied 'myproject'")));
         mock.expect(2);
         mock2.assert();
         mock3.assert();
@@ -788,7 +791,7 @@ mod tests {
         let result = prioritize_tasks(&config, project);
         assert_eq!(
             result,
-            Ok(String::from("No tasks to prioritize in myproject"))
+            Ok(String::from("No tasks to prioritize in 'myproject'"))
         );
         mock.assert();
     }
@@ -852,7 +855,7 @@ mod tests {
         let result = schedule(&config, project, TaskFilter::Unscheduled);
         assert_eq!(
             result,
-            Ok("Successfully scheduled tasks in myproject".to_string())
+            Ok("Successfully scheduled tasks in 'myproject'".to_string())
         );
 
         let config = config.mock_select(2);
@@ -860,7 +863,10 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
         let result = schedule(&config, project, TaskFilter::Overdue);
-        assert_eq!(result, Ok("No tasks to schedule in myproject".to_string()));
+        assert_eq!(
+            result,
+            Ok("No tasks to schedule in 'myproject'".to_string())
+        );
 
         let config = config.mock_select(3);
 
@@ -869,7 +875,7 @@ mod tests {
         let result = schedule(&config, project, TaskFilter::Unscheduled);
         assert_eq!(
             result,
-            Ok("Successfully scheduled tasks in myproject".to_string())
+            Ok("Successfully scheduled tasks in 'myproject'".to_string())
         );
         mock.expect(2);
         mock2.expect(2);

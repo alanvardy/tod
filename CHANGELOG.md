@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- Add verbose flag
+- Add `verbose` flag
 - BREAKING CHANGE changed character for `overdue` from `v` to `u`
+- Put single quotes around project names when printing them in terminal.
 
 ## 2023-09-18 v0.5.2
 

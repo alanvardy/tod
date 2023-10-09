@@ -33,6 +33,8 @@ pub enum TaskFilter {
     Unscheduled,
     /// Date or datetime is before today
     Overdue,
+    /// Is a repeating task
+    Recurring,
 }
 
 impl Display for Project {
@@ -389,13 +391,27 @@ pub fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, St
 }
 
 /// Put dates on all tasks without dates
-pub fn schedule(config: &Config, project: &Project, filter: TaskFilter) -> Result<String, String> {
+pub fn schedule(
+    config: &Config,
+    project: &Project,
+    filter: TaskFilter,
+    skip_recurring: bool,
+) -> Result<String, String> {
     let tasks = todoist::tasks_for_project(config, project)?;
 
-    let filtered_tasks: Vec<Task> = tasks
-        .into_iter()
-        .filter(|task| task.filter(config, &filter))
-        .collect::<Vec<Task>>();
+    let filtered_tasks: Vec<Task> = if skip_recurring {
+        tasks
+            .into_iter()
+            .filter(|task| {
+                task.filter(config, &filter) && !task.filter(config, &TaskFilter::Recurring)
+            })
+            .collect::<Vec<Task>>()
+    } else {
+        tasks
+            .into_iter()
+            .filter(|task| task.filter(config, &filter))
+            .collect::<Vec<Task>>()
+    };
 
     if filtered_tasks.is_empty() {
         Ok(color::green_string(&format!(
@@ -850,7 +866,7 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = schedule(&config, project, TaskFilter::Unscheduled);
+        let result = schedule(&config, project, TaskFilter::Unscheduled, false);
         assert_eq!(
             result,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
@@ -860,7 +876,7 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = schedule(&config, project, TaskFilter::Overdue);
+        let result = schedule(&config, project, TaskFilter::Overdue, false);
         assert_eq!(
             result,
             Ok("No tasks to schedule in 'myproject'".to_string())
@@ -870,7 +886,13 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = schedule(&config, project, TaskFilter::Unscheduled);
+        let result = schedule(&config, project, TaskFilter::Unscheduled, false);
+        assert_eq!(
+            result,
+            Ok("Successfully scheduled tasks in 'myproject'".to_string())
+        );
+
+        let result = schedule(&config, project, TaskFilter::Unscheduled, true);
         assert_eq!(
             result,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())

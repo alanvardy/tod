@@ -153,6 +153,7 @@ fn cmd() -> Command {
                         .arg(project_arg()),
                        Command::new("schedule").about("Assign dates to all tasks individually")
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
+                         .arg(flag_arg("skip-recurring", 's',  "Don't re-schedule recurring tasks that are overdue"))
                         .arg(config_arg())
                          .arg(flag_arg("overdue", 'u',  "Only schedule overdue tasks"))
                         .arg(project_arg()),
@@ -339,13 +340,14 @@ fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
 fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let project = fetch_project(matches, &config)?;
+    let skip_recurring = has_flag(matches, "skip-recurring");
     let filter = if has_flag(matches, "overdue") {
         projects::TaskFilter::Overdue
     } else {
         projects::TaskFilter::Unscheduled
     };
 
-    projects::schedule(&config, &project, filter)
+    projects::schedule(&config, &project, filter, skip_recurring)
 }
 
 // --- VERSION ---

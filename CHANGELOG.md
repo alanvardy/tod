@@ -7,6 +7,7 @@
 - Put single quotes around project names when printing them in terminal.
 - Add the ability to `project schedule` recurring tasks.
 - Add `skip-recurring` flag to `project schedule`.
+- Display due string when formatting task
 
 ## 2023-09-18 v0.5.2
 

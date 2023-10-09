@@ -556,7 +556,7 @@ mod tests {
         assert_eq!(
             next_task(config_with_timezone, project),
             Ok(format!(
-                "Put out recycling\nDue: {TIME} ↻\n1 task(s) remaining"
+                "Put out recycling\nDue: {TIME} ↻ (every other mon at 16:30)\n1 task(s) remaining"
             ))
         );
     }
@@ -587,7 +587,7 @@ mod tests {
         assert_eq!(
             result,
             Ok(format!(
-                "Schedule for 'myproject'\n- Put out recycling\n  Due: {TIME} ↻"
+                "Schedule for 'myproject'\n- Put out recycling\n  Due: {TIME} ↻ (every other mon at 16:30)"
             ))
         );
     }
@@ -616,7 +616,7 @@ mod tests {
         assert_eq!(
             all_tasks(&config_with_timezone, project),
             Ok(format!(
-                "Tasks for 'myproject'\n- Put out recycling\n  Due: {TIME} ↻"
+                "Tasks for 'myproject'\n- Put out recycling\n  Due: {TIME} ↻ (every other mon at 16:30)"
             ))
         );
         mock.assert();

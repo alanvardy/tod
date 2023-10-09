@@ -55,10 +55,12 @@ enum DateTimeInfo {
     Date {
         date: NaiveDate,
         is_recurring: bool,
+        string: String,
     },
     DateTime {
         datetime: DateTime<Tz>,
         is_recurring: bool,
+        string: String,
     },
 }
 
@@ -81,8 +83,16 @@ impl Task {
             _ => format!("\n{buffer}{}", self.description),
         };
         let due = match &self.datetimeinfo(config) {
-            Ok(DateTimeInfo::Date { date, is_recurring }) => {
-                let recurring_icon = if *is_recurring { " ↻" } else { "" };
+            Ok(DateTimeInfo::Date {
+                date,
+                is_recurring,
+                string,
+            }) => {
+                let recurring_icon = if *is_recurring {
+                    format!(" ↻ ({string})")
+                } else {
+                    String::new()
+                };
                 let date_string = time::format_date(date, config);
 
                 format!("\n{buffer}Due: {date_string}{recurring_icon}")
@@ -90,8 +100,13 @@ impl Task {
             Ok(DateTimeInfo::DateTime {
                 datetime,
                 is_recurring,
+                string,
             }) => {
-                let recurring_icon = if *is_recurring { " ↻" } else { "" };
+                let recurring_icon = if *is_recurring {
+                    format!(" ↻ ({string})")
+                } else {
+                    String::new()
+                };
                 let datetime_string = time::format_datetime(datetime, config);
 
                 format!("\n{buffer}Due: {datetime_string}{recurring_icon}")
@@ -119,7 +134,9 @@ impl Task {
     fn date_value(&self, config: &Config) -> u8 {
         match &self.datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => 80,
-            Ok(DateTimeInfo::Date { date, is_recurring }) => {
+            Ok(DateTimeInfo::Date {
+                date, is_recurring, ..
+            }) => {
                 let today_value = if *date == time::today_date(config) {
                     100
                 } else {
@@ -132,6 +149,7 @@ impl Task {
             Ok(DateTimeInfo::DateTime {
                 datetime,
                 is_recurring,
+                ..
             }) => {
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
                 let duration = *datetime - time::now(config);
@@ -177,16 +195,24 @@ impl Task {
         match self.clone().due {
             None => Ok(DateTimeInfo::NoDateTime),
             Some(DateInfo {
-                date, is_recurring, ..
+                date,
+                is_recurring,
+                string,
+                ..
             }) if date.len() == 10 => Ok(DateTimeInfo::Date {
                 date: time::date_from_str(&date, tz)?,
                 is_recurring,
+                string,
             }),
             Some(DateInfo {
-                date, is_recurring, ..
+                date,
+                is_recurring,
+                string,
+                ..
             }) => Ok(DateTimeInfo::DateTime {
                 datetime: time::datetime_from_str(&date, tz)?,
                 is_recurring,
+                string,
             }),
         }
     }

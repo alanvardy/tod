@@ -195,6 +195,7 @@ impl Task {
         match filter {
             projects::TaskFilter::Unscheduled => self.has_no_date() || self.is_overdue(config),
             projects::TaskFilter::Overdue => self.is_overdue(config),
+            projects::TaskFilter::Recurring => self.is_recurring(),
         }
     }
 

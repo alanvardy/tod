@@ -193,6 +193,7 @@ mod tests {
                 id: String::from("5149481867"),
                 priority: Priority::None,
                 content: String::from("testy test"),
+                labels: vec![],
                 checked: Some(false),
                 description: String::from(""),
                 due: None,
@@ -234,6 +235,7 @@ mod tests {
                 priority: Priority::None,
                 content: String::from("testy test"),
                 checked: Some(false),
+                labels: vec![],
                 description: String::from(""),
                 due: None,
                 is_deleted: Some(false),
@@ -268,6 +270,7 @@ mod tests {
                 id: String::from("999999"),
                 content: String::from("Put out recycling"),
                 checked: Some(false),
+                labels: vec![],
                 description: String::from(""),
                 due: Some(DateInfo {
                     date: format!("{}T23:59:00Z", time::today_string(&config_with_timezone)),

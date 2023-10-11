@@ -18,6 +18,7 @@ pub struct Task {
     pub content: String,
     pub priority: Priority,
     pub description: String,
+    pub labels: Vec<String>,
     pub due: Option<DateInfo>,
     /// Only on rest api return value
     pub is_completed: Option<bool>,
@@ -82,6 +83,9 @@ impl Task {
             "" => String::from(""),
             _ => format!("\n{buffer}{}", self.description),
         };
+
+        let due_icon = color::purple_string("!");
+        let recurring_icon = color::purple_string("↻");
         let due = match &self.datetimeinfo(config) {
             Ok(DateTimeInfo::Date {
                 date,
@@ -89,13 +93,13 @@ impl Task {
                 string,
             }) => {
                 let recurring_icon = if *is_recurring {
-                    format!(" ↻ ({string})")
+                    format!(" {recurring_icon} {string}")
                 } else {
                     String::new()
                 };
                 let date_string = time::format_date(date, config);
 
-                format!("\n{buffer}Due: {date_string}{recurring_icon}")
+                format!("\n{buffer}{due_icon} {date_string}{recurring_icon}")
             }
             Ok(DateTimeInfo::DateTime {
                 datetime,
@@ -103,13 +107,13 @@ impl Task {
                 string,
             }) => {
                 let recurring_icon = if *is_recurring {
-                    format!(" ↻ ({string})")
+                    format!(" {recurring_icon} {string}")
                 } else {
                     String::new()
                 };
                 let datetime_string = time::format_datetime(datetime, config);
 
-                format!("\n{buffer}Due: {datetime_string}{recurring_icon}")
+                format!("\n{buffer}{due_icon} {datetime_string}{recurring_icon}")
             }
             Ok(DateTimeInfo::NoDateTime) => String::from(""),
             Err(string) => string.clone(),
@@ -119,7 +123,14 @@ impl Task {
             FormatType::List => String::from("- "),
             FormatType::Single => String::from(""),
         };
-        format!("{prefix}{content}{description}{due}")
+
+        let labels = if self.labels.is_empty() {
+            String::new()
+        } else {
+            format!(" {} {}", color::purple_string("@"), self.labels.join(" "))
+        };
+
+        format!("{prefix}{content}{description}{due}{labels}\n")
     }
 
     /// Determines the numeric value of an task for sorting
@@ -396,7 +407,7 @@ mod tests {
 
         assert_eq!(
             format!("{}", task.fmt(&config, FormatType::Single)),
-            "Get gifts for the twins\nDue: 2021-08-13"
+            "Get gifts for the twins\n! 2021-08-13 @ computer\n"
         );
     }
 
@@ -414,7 +425,7 @@ mod tests {
 
         assert_eq!(
             format!("{}", task.fmt(&config, FormatType::Single)),
-            "Get gifts for the twins\nDue: Today"
+            "Get gifts for the twins\n! Today @ computer\n"
         );
     }
 
@@ -580,6 +591,7 @@ mod tests {
             checked: None,
             description: String::from(""),
             due: None,
+            labels: vec![String::from("computer")],
             priority: Priority::Medium,
             is_deleted: None,
             is_completed: None,
@@ -645,6 +657,7 @@ mod tests {
             content: String::from("Get gifts for the twins"),
             checked: None,
             description: String::from(""),
+            labels: vec![String::from("computer")],
             due: None,
             priority: Priority::Medium,
             is_deleted: None,

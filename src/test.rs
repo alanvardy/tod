@@ -11,6 +11,7 @@ pub mod fixtures {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
+            labels: vec![String::from("computer")],
             description: String::from(""),
             due: Some(DateInfo {
                 date: String::from("2061-11-13"),

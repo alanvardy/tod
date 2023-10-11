@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add labels to formatted tasks
+- Improve task formatting
+
 ## 2023-10-09 v0.5.3
 
 - Add `verbose` flag

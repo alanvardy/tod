@@ -81,6 +81,10 @@ fn main() {
             Some(("import", m)) => project_import(m),
             _ => unreachable!(),
         },
+        Some(("filter", filter_matches)) => match filter_matches.subcommand() {
+            Some(("label", m)) => filter_label(m),
+            _ => unreachable!(),
+        },
         Some(("version", version_matches)) => match version_matches.subcommand() {
             Some(("check", m)) => version_check(m),
             _ => unreachable!(),
@@ -192,6 +196,18 @@ fn cmd() -> Command {
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(config_arg())
                         .arg(project_arg())
+                ]
+                    ),
+            Command::new("filter")
+                   .arg_required_else_help(true)
+                   .propagate_version(true)
+                   .subcommand_required(true)
+                   .subcommands([
+                       Command::new("label").about("Iterate through tasks and apply labels from defined choices")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
+                        .arg(filter_arg())
+                        .arg(label_arg())
+                         .arg(config_arg()),
                 ]
                     ),
             Command::new("version")
@@ -395,6 +411,18 @@ fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     projects::schedule(&config, &project, filter, skip_recurring)
 }
 
+// --- FILTER ---
+
+#[cfg(not(tarpaulin_include))]
+fn filter_label(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    let labels = fetch_labels(matches, &config)?;
+    match fetch_filter(matches, &config)? {
+        Flag::Filter(filter) => filters::label(&config, &filter, labels),
+        _ => unreachable!(),
+    }
+}
+
 // --- VERSION ---
 
 #[cfg(not(tarpaulin_include))]
@@ -504,6 +532,17 @@ fn filter_arg() -> Arg {
         .help("Filter string https://todoist.com/help/articles/205248842")
 }
 
+#[cfg(not(tarpaulin_include))]
+fn label_arg() -> Arg {
+    Arg::new("labels")
+        .short('l')
+        .long("labels")
+        .num_args(1..)
+        .required(false)
+        .value_name("LABEL1 LABEL2")
+        .help("List of labels to choose from, to be applied to each entry")
+}
+
 // --- VALUE HELPERS ---
 
 /// Checks if the flag was used
@@ -597,6 +636,31 @@ fn fetch_project_or_filter(matches: &ArgMatches, config: &Config) -> Result<Flag
                 FlagOptions::Project => fetch_project(matches, config),
                 FlagOptions::Filter => fetch_filter(matches, config),
             }
+        }
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+fn fetch_labels(matches: &ArgMatches, config: &Config) -> Result<Vec<String>, String> {
+    match matches.get_many::<String>("labels") {
+        None => {
+            let labels = input::string(
+                "Enter labels separated by spaces: ",
+                config.mock_string.clone(),
+            )?
+            .split(' ')
+            .map(|s| s.to_owned())
+            .collect();
+
+            Ok(labels)
+        }
+        Some(items) => {
+            let labels = items
+                .into_iter()
+                .map(|s| s.to_owned())
+                .collect::<Vec<String>>();
+
+            Ok(labels)
         }
     }
 }

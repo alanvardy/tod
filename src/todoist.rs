@@ -136,6 +136,18 @@ pub fn update_task_priority(
     Ok(String::from("✓"))
 }
 
+/// Add a label to task by ID
+pub fn add_task_label(config: &Config, task: Task, label: String) -> Result<String, String> {
+    let mut labels = task.labels;
+    labels.push(label);
+    let body = json!({ "labels": labels});
+    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+
+    request::post_todoist_rest(config, url, body)?;
+    // Does not pass back an task
+    Ok(String::from("✓"))
+}
+
 /// Update due date for task using natural language
 pub fn update_task_due(config: &Config, task: Task, due_string: String) -> Result<String, String> {
     let due_string = if task.is_recurring() {

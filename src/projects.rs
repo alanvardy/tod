@@ -767,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rename_tasks() {
+    fn test_rename_task() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")

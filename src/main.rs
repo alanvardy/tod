@@ -138,6 +138,7 @@ fn cmd() -> Command {
                        Command::new("edit").about("Edit an exising task's content")
                          .arg(config_arg())
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
+                         .arg(filter_arg())
                          .arg(project_arg()),
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
@@ -146,6 +147,7 @@ fn cmd() -> Command {
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing")),
                        Command::new("next").about("Get the next task by priority")
                          .arg(config_arg())
+                         .arg(filter_arg())
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                          .arg(project_arg()),
                        Command::new("complete").about("Complete the last task fetched with the next command")
@@ -262,12 +264,10 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = match fetch_project(matches, &config)? {
-        Flag::Project(project) => project,
-        _ => unreachable!(),
-    };
-
-    projects::rename_task(&config, &project)
+    match fetch_project_or_filter(matches, &config)? {
+        Flag::Project(project) => projects::rename_task(&config, &project),
+        Flag::Filter(filter) => filters::rename_task(&config, filter),
+    }
 }
 #[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
@@ -282,12 +282,10 @@ fn task_list(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn task_next(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = match fetch_project(matches, &config)? {
-        Flag::Project(project) => project,
-        _ => unreachable!(),
-    };
-
-    projects::next_task(config, &project)
+    match fetch_project(matches, &config)? {
+        Flag::Project(project) => projects::next_task(config, &project),
+        Flag::Filter(filter) => filters::next_task(config, &filter),
+    }
 }
 
 #[cfg(not(tarpaulin_include))]

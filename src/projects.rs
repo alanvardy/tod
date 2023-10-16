@@ -284,28 +284,6 @@ fn handle_task(config: &Config, task: Task) -> Option<Result<String, String>> {
     }
 }
 
-// Scheduled that are today and have a time on them (AKA appointments)
-pub fn scheduled_tasks(config: &Config, project: &Project) -> Result<String, String> {
-    let tasks = todoist::tasks_for_project(config, project)?;
-    let filtered_tasks = tasks::filter_today_and_has_time(tasks, config);
-
-    if filtered_tasks.is_empty() {
-        return Ok(String::from("No scheduled tasks found"));
-    }
-
-    let mut buffer = String::new();
-    buffer.push_str(&color::green_string(&format!(
-        "Schedule for '{}'",
-        project.name
-    )));
-
-    for task in tasks::sort_by_datetime(filtered_tasks, config) {
-        buffer.push('\n');
-        buffer.push_str(&task.fmt(config, FormatType::List));
-    }
-    Ok(buffer)
-}
-
 pub fn rename_task(config: &Config, project: &Project) -> Result<String, String> {
     let project_tasks = todoist::tasks_for_project(config, project)?;
 
@@ -535,7 +513,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
+            .with_body(test::responses::post_tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -562,44 +540,13 @@ mod tests {
     }
 
     #[test]
-    fn test_scheduled_tasks() {
-        let mut server = mockito::Server::new();
-        let _mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
-            .create();
-
-        let config = test::fixtures::config().mock_url(server.url());
-
-        let config_with_timezone = Config {
-            timezone: Some(String::from("US/Pacific")),
-            mock_url: Some(server.url()),
-            ..config
-        };
-
-        let binding = config_with_timezone.projects.clone().unwrap_or_default();
-        let project = binding.first().unwrap();
-
-        // valid project
-        let result = scheduled_tasks(&config_with_timezone, project);
-        assert_eq!(
-            result,
-            Ok(format!(
-                "Schedule for 'myproject'\n- Put out recycling\n  ! {TIME} ↻ every other mon at 16:30\n"
-            ))
-        );
-    }
-
-    #[test]
     fn test_all_tasks() {
         let mut server = mockito::Server::new();
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
+            .with_body(test::responses::post_tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -678,7 +625,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
+            .with_body(test::responses::post_tasks())
             .create();
 
         let mock2 = server
@@ -748,7 +695,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
+            .with_body(test::responses::post_tasks())
             .create();
 
         let mock2 = server
@@ -794,7 +741,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
+            .with_body(test::responses::post_tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -826,7 +773,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
+            .with_body(test::responses::post_tasks())
             .create();
 
         let config = test::fixtures::config()

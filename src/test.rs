@@ -117,7 +117,7 @@ pub mod responses {
         )
     }
 
-    pub fn tasks() -> String {
+    pub fn post_tasks() -> String {
         format!(
             "{{\
         \"items\":\
@@ -152,6 +152,43 @@ pub mod responses {
                 }}
             ]
         }}",
+            time::today_string(&fixtures::config())
+        )
+    }
+    pub fn rest_tasks() -> String {
+        format!(
+            "
+            [
+                {{\
+                \"added_by_uid\":44444444,\
+                \"assigned_by_uid\":null,\
+                \"checked\":false,\
+                \"child_order\":-5,\
+                \"collapsed\":false,\
+                \"content\":\"Put out recycling\",\
+                \"date_added\":\"2021-06-15T13:01:28Z\",\
+                \"date_completed\":null,\
+                \"description\":\"\",\
+                \"due\":{{\
+                \"date\":\"{}T23:59:00Z\",\
+                \"is_recurring\":true,\
+                \"lang\":\"en\",\
+                \"string\":\"every other mon at 16:30\",\
+                \"timezone\":null}},\
+                \"id\":\"999999\",\
+                \"is_deleted\":false,\
+                \"labels\":[],\
+                \"note_count\":0,\
+                \"parent_id\":null,\
+                \"priority\":3,\
+                \"project_id\":22222222,\
+                \"responsible_uid\":null,\
+                \"section_id\":333333333,\
+                \"sync_id\":null,\
+                \"user_id\":111111111\
+                }}
+            ]
+        ",
             time::today_string(&fixtures::config())
         )
     }

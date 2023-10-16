@@ -270,22 +270,20 @@ impl Task {
             Some(DateInfo { is_recurring, .. }) => is_recurring,
         }
     }
-
-    /// Returns true when it is a datetime, otherwise false
-    fn has_time(&self, config: &Config) -> bool {
-        matches!(
-            self.clone().datetimeinfo(config),
-            Ok(DateTimeInfo::DateTime { .. })
-        )
-    }
 }
 
-pub fn json_to_tasks(json: String) -> Result<Vec<Task>, String> {
+pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, String> {
     let result: Result<Body, _> = serde_json::from_str(&json);
     match result {
         Ok(body) => Ok(body.items),
         Err(err) => Err(format!("Could not parse response for task: {err:?}")),
     }
+}
+
+pub fn rest_json_to_tasks(json: String) -> Result<Vec<Task>, String> {
+    let result: Result<Vec<Task>, String> = serde_json::from_str(&json).map_err(|e| e.to_string());
+
+    result
 }
 
 pub fn json_to_task(json: String) -> Result<Task, String> {
@@ -312,13 +310,6 @@ pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Tas
         .collect();
 
     Ok(tasks)
-}
-
-pub fn filter_today_and_has_time(tasks: Vec<Task>, config: &Config) -> Vec<Task> {
-    tasks
-        .into_iter()
-        .filter(|task| task.is_today(config) && task.has_time(config))
-        .collect()
 }
 
 pub fn set_priority(config: &Config, task: Task) -> Result<String, String> {
@@ -475,39 +466,6 @@ mod tests {
             ..test::fixtures::task()
         };
         assert!(!task_today.has_no_date());
-    }
-
-    #[test]
-    fn has_time_works() {
-        let config = test::fixtures::config();
-        let task = Task {
-            due: None,
-            ..test::fixtures::task()
-        };
-
-        assert!(!task.has_time(&config));
-
-        let task_with_date = Task {
-            due: Some(DateInfo {
-                date: time::today_string(&config),
-                is_recurring: false,
-                timezone: None,
-                string: String::from("Every 2 weeks"),
-            }),
-            ..task.clone()
-        };
-        assert!(!task_with_date.has_time(&config));
-
-        let task_with_datetime = Task {
-            due: Some(DateInfo {
-                date: String::from("2021-09-06T16:00:00"),
-                is_recurring: false,
-                timezone: None,
-                string: String::from("Every 2 weeks"),
-            }),
-            ..task
-        };
-        assert!(task_with_datetime.has_time(&config));
     }
 
     #[test]
@@ -704,7 +662,7 @@ mod tests {
     fn json_to_tasks_works() {
         let json = String::from("2{.e");
         let error_text = String::from("Could not parse response for task: Error(\"invalid type: integer `2`, expected struct Body\", line: 1, column: 1)");
-        assert_eq!(json_to_tasks(json), Err(error_text));
+        assert_eq!(sync_json_to_tasks(json), Err(error_text));
     }
 
     #[test]

@@ -4,13 +4,15 @@
 
 - Add labels to formatted tasks
 - Improve task formatting
+- Add `filter` flag to `task list`
+- Remove `scheduled` flag from `task list`, the `filter` flag covers this use case now. Use `today & !no time`.
 
 ## 2023-10-09 v0.5.3
 
 - Add `verbose` flag
 - BREAKING CHANGE changed character flag for `overdue` from `v` to `u`
 - Put single quotes around project names when printing them in terminal.
-- Add the ability to `project schedule` recurring tasks.
+- Re-enable `project schedule` for recurring tasks.
 - Add `skip-recurring` flag to `project schedule`.
 - Display due string when formatting task
 

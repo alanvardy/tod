@@ -3,6 +3,8 @@
 extern crate matches;
 extern crate clap;
 
+use std::fmt::Display;
+
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use config::Config;
 use projects::Project;
@@ -11,6 +13,7 @@ use tasks::priority::Priority;
 mod cargo;
 mod color;
 mod config;
+mod filters;
 mod input;
 mod projects;
 mod sections;
@@ -25,6 +28,25 @@ const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
 
 const NO_PROJECTS_ERR: &str = "No projects in config. Add projects with `tod project import`";
+
+enum Flag {
+    Project(Project),
+    Filter(String),
+}
+
+enum FlagOptions {
+    Project,
+    Filter,
+}
+
+impl Display for FlagOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FlagOptions::Project => write!(f, "Project"),
+            FlagOptions::Filter => write!(f, "Filter"),
+        }
+    }
+}
 
 #[cfg(not(tarpaulin_include))]
 fn main() {
@@ -120,8 +142,8 @@ fn cmd() -> Command {
                        Command::new("list").about("List all tasks in a project")
                          .arg(config_arg())
                          .arg(project_arg())
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                         .arg(flag_arg("scheduled", 's',  "Only list tasks that are scheduled for today and have a time")),
+                         .arg(filter_arg())
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing")),
                        Command::new("next").about("Get the next task by priority")
                          .arg(config_arg())
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
@@ -201,7 +223,10 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
     let content = fetch_string(matches, &config, "content", "Content")?;
     let priority = fetch_priority(matches, &config)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
     let description = fetch_description(matches);
     let due = fetch_due(matches);
     let section = if has_flag(matches, "nosection") || config.no_sections.unwrap_or_default() {
@@ -237,26 +262,30 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn task_edit(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
 
     projects::rename_task(&config, &project)
 }
 #[cfg(not(tarpaulin_include))]
 fn task_list(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
 
-    if has_flag(matches, "scheduled") {
-        projects::scheduled_tasks(&config, &project)
-    } else {
-        projects::all_tasks(&config, &project)
+    match fetch_project_or_filter(matches, &config)? {
+        Flag::Project(project) => projects::all_tasks(&config, &project),
+        Flag::Filter(filter) => filters::all_tasks(&config, &filter),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
 fn task_next(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
 
     projects::next_task(config, &project)
 }
@@ -290,7 +319,10 @@ fn project_remove(matches: &ArgMatches) -> Result<String, String> {
         (true, false) => projects::remove_all(&mut config),
         (false, true) => projects::remove_auto(&mut config),
         (false, false) => {
-            let project = fetch_project(matches, &config)?;
+            let project = match fetch_project(matches, &config)? {
+                Flag::Project(project) => project,
+                _ => unreachable!(),
+            };
             projects::remove(&mut config, &project)
         }
         (_, _) => Err(String::from("Incorrect flags provided")),
@@ -300,7 +332,10 @@ fn project_remove(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn project_rename(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
 
     projects::rename(config, &project)
 }
@@ -308,7 +343,10 @@ fn project_rename(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn project_process(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
 
     projects::process_tasks(config, &project)
 }
@@ -323,7 +361,10 @@ fn project_import(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn project_empty(matches: &ArgMatches) -> Result<String, String> {
     let mut config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
 
     projects::empty(&mut config, &project)
 }
@@ -331,7 +372,10 @@ fn project_empty(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
 
     projects::prioritize_tasks(&config, &project)
 }
@@ -339,7 +383,10 @@ fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    let project = fetch_project(matches, &config)?;
+    let project = match fetch_project(matches, &config)? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
     let skip_recurring = has_flag(matches, "skip-recurring");
     let filter = if has_flag(matches, "overdue") {
         projects::TaskFilter::Overdue
@@ -448,6 +495,17 @@ fn project_arg() -> Arg {
         .help("The project into which the task will be added")
 }
 
+#[cfg(not(tarpaulin_include))]
+fn filter_arg() -> Arg {
+    Arg::new("filter")
+        .short('f')
+        .long("filter")
+        .num_args(1)
+        .required(false)
+        .value_name("FILTER_STRING")
+        .help("Filter string https://todoist.com/help/articles/205248842")
+}
+
 // --- VALUE HELPERS ---
 
 /// Checks if the flag was used
@@ -492,7 +550,7 @@ fn fetch_string(
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Project, String> {
+fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Flag, String> {
     let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
     let projects = config.projects.clone().unwrap_or_default();
     if projects.is_empty() {
@@ -500,7 +558,7 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Project, Strin
     }
 
     if projects.len() == 1 {
-        return Ok(projects.first().unwrap().clone());
+        return Ok(Flag::Project(projects.first().unwrap().clone()));
     }
 
     match project_content {
@@ -509,9 +567,39 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Project, Strin
             .find(|p| p.name == project_name.as_str())
             .map_or_else(
                 || Err("Could not find project in config".to_string()),
-                |p| Ok(p.to_owned()),
+                |p| Ok(Flag::Project(p.to_owned())),
             ),
-        None => input::select("Select project", projects, config.mock_select),
+        None => input::select("Select project", projects, config.mock_select).map(Flag::Project),
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+fn fetch_filter(matches: &ArgMatches, config: &Config) -> Result<Flag, String> {
+    match matches.get_one::<String>("filter").map(|s| s.to_owned()) {
+        Some(string) => Ok(Flag::Filter(string)),
+        None => {
+            let string = input::string("Enter a filter:", config.mock_string.clone())?;
+            Ok(Flag::Filter(string))
+        }
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+fn fetch_project_or_filter(matches: &ArgMatches, config: &Config) -> Result<Flag, String> {
+    let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
+    let filter_content = matches.get_one::<String>("filter").map(|s| s.to_owned());
+
+    match (project_content, filter_content) {
+        (Some(_), None) => fetch_project(matches, config),
+        (None, Some(_)) => fetch_filter(matches, config),
+        (Some(_), Some(_)) => Err("Must select project OR filter".to_string()),
+        (None, None) => {
+            let options = vec![FlagOptions::Project, FlagOptions::Filter];
+            match input::select("Select Project or Filter:", options, config.mock_select)? {
+                FlagOptions::Project => fetch_project(matches, config),
+                FlagOptions::Filter => fetch_filter(matches, config),
+            }
+        }
     }
 }
 

@@ -73,7 +73,16 @@ pub fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project.id });
     let json = request::post_todoist_sync(config, url, body)?;
-    tasks::json_to_tasks(json)
+    tasks::sync_json_to_tasks(json)
+}
+
+pub fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>, String> {
+    use urlencoding::encode;
+
+    let encoded = encode(filter);
+    let url = format!("{REST_V2_TASKS_URL}?filter={encoded}");
+    let json = request::get_todoist_rest(config, url)?;
+    tasks::rest_json_to_tasks(json)
 }
 
 pub fn sections_for_project(config: &Config, project: &Project) -> Result<Vec<Section>, String> {
@@ -253,7 +262,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks())
+            .with_body(test::responses::post_tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());

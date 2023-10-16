@@ -8,6 +8,7 @@ pub enum DateTimeInput {
     Complete,
     Text(String),
 }
+
 /// Get datetime input from user
 pub fn datetime(
     mock_select: Option<usize>,

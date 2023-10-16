@@ -6,6 +6,8 @@
 - Improve task formatting
 - Add `filter` flag to `task list`
 - Remove `scheduled` flag from `task list`, the `filter` flag covers this use case now. Use `today & !no time`.
+- Add `filter` flag to `task edit` and `task next`
+- Add `filter label`
 
 ## 2023-10-09 v0.5.3
 

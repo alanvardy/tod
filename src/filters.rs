@@ -47,6 +47,26 @@ pub fn rename_task(config: &Config, filter: String) -> Result<String, String> {
     todoist::update_task_name(config, selected_task, new_task_content)
 }
 
+pub fn label(config: &Config, filter: &str, labels: Vec<String>) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter)?;
+    for task in tasks {
+        label_task(config, task, &labels)?;
+    }
+    Ok(color::green_string(&format!(
+        "There are no more tasks for filter: '{filter}'"
+    )))
+}
+
+fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result<String, String> {
+    let label = input::select(
+        &format!("Select label for {task}:"),
+        labels.to_owned(),
+        config.mock_select,
+    )?;
+
+    todoist::add_task_label(config, task, label)
+}
+
 /// Get the next task by priority and save its id to config
 pub fn next_task(config: Config, filter: &str) -> Result<String, String> {
     match fetch_next_task(&config, filter) {
@@ -155,5 +175,46 @@ mod tests {
                 "Put out recycling\n! {TIME} ↻ every other mon at 16:30\n\n1 task(s) remaining"
             ))
         );
+    }
+    #[test]
+    fn test_label() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::rest_tasks())
+            .create();
+
+        let mock2 = server
+            .mock("POST", "/rest/v2/tasks/999999")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::rest_tasks())
+            .create();
+
+        let config = test::fixtures::config().mock_url(server.url());
+
+        let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
+
+        let config_with_timezone = Config {
+            timezone: Some(String::from("US/Pacific")),
+            path: format!("{config_dir}/test3"),
+            mock_url: Some(server.url()),
+            mock_select: Some(0),
+            ..config
+        };
+
+        config_with_timezone.clone().create().unwrap();
+
+        let filter = String::from("today");
+        let labels = vec![String::from("thing")];
+
+        assert_eq!(
+            label(&config_with_timezone, &filter, labels),
+            Ok(String::from("There are no more tasks for filter: 'today'"))
+        );
+        mock.assert();
+        mock2.assert();
     }
 }

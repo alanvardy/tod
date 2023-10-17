@@ -1,7 +1,7 @@
 use crate::{
     color,
     config::Config,
-    input,
+    input::{self, DateTimeInput},
     tasks::{self, FormatType, Task},
     todoist,
 };
@@ -122,6 +122,61 @@ fn handle_task(config: &Config, task: Task) -> Option<Result<String, String>> {
     }
 }
 
+/// Prioritize all unprioritized tasks in a project
+pub fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter)?;
+
+    if tasks.is_empty() {
+        Ok(color::green_string(&format!(
+            "No tasks to prioritize in '{filter}'"
+        )))
+    } else {
+        for task in tasks.iter() {
+            tasks::set_priority(config, task.to_owned())?;
+        }
+        Ok(color::green_string(&format!(
+            "Successfully prioritized '{filter}'"
+        )))
+    }
+}
+
+/// Put dates on all tasks without dates
+pub fn schedule(config: &Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter)?;
+
+    if tasks.is_empty() {
+        Ok(color::green_string(&format!(
+            "No tasks to schedule in '{filter}'"
+        )))
+    } else {
+        for task in tasks.iter() {
+            println!("{}", task.fmt(config, FormatType::Single));
+            let datetime_input = input::datetime(
+                config.mock_select,
+                config.mock_string.clone(),
+                config.natural_language_only,
+            )?;
+            match datetime_input {
+                input::DateTimeInput::Complete => {
+                    let config = config.set_next_id(&task.id);
+                    todoist::complete_task(&config)?
+                }
+                DateTimeInput::Skip => "Skipped".to_string(),
+
+                input::DateTimeInput::Text(due_string) => {
+                    todoist::update_task_due(config, task.to_owned(), due_string)?
+                }
+                input::DateTimeInput::None => {
+                    todoist::update_task_due(config, task.to_owned(), "No Date".to_string())?
+                }
+            };
+        }
+        Ok(color::green_string(&format!(
+            "Successfully scheduled tasks in '{filter}'"
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,7 +193,7 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::rest_tasks())
+            .with_body(test::responses::get_tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -167,7 +222,7 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::rest_tasks())
+            .with_body(test::responses::get_tasks())
             .create();
 
         let config = test::fixtures::config()
@@ -188,7 +243,7 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::rest_tasks())
+            .with_body(test::responses::get_tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -219,14 +274,14 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::rest_tasks())
+            .with_body(test::responses::get_tasks())
             .create();
 
         let mock2 = server
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::rest_tasks())
+            .with_body(test::responses::get_tasks())
             .create();
 
         let config = test::fixtures::config().mock_url(server.url());
@@ -261,7 +316,7 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::rest_tasks())
+            .with_body(test::responses::get_tasks())
             .create();
 
         let mock2 = server
@@ -283,6 +338,74 @@ mod tests {
             result,
             Ok("There are no more tasks for filter: 'today'".to_string())
         );
+        mock.assert();
+        mock2.assert();
+    }
+
+    #[test]
+    fn test_schedule() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::get_unscheduled_tasks())
+            .create();
+
+        let mock2 = server
+            .mock("POST", "/rest/v2/tasks/999999")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::task())
+            .create();
+
+        let config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(1)
+            .mock_string("tod");
+
+        let filter = String::from("today");
+        let result = schedule(&config, &filter);
+        assert_eq!(
+            result,
+            Ok("Successfully scheduled tasks in 'today'".to_string())
+        );
+
+        let config = config.mock_select(2);
+
+        let filter = String::from("today");
+        let result = schedule(&config, &filter);
+        assert_eq!(
+            result,
+            Ok("Successfully scheduled tasks in 'today'".to_string())
+        );
+
+        mock.expect(2);
+        mock2.expect(2);
+    }
+    #[test]
+    fn test_prioritize_tasks() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::get_tasks())
+            .create();
+        let mock2 = server
+            .mock("POST", "/rest/v2/tasks/999999")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::get_tasks())
+            .create();
+
+        let config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(1);
+
+        let filter = String::from("today");
+        let result = prioritize_tasks(&config, &filter);
+        assert_eq!(result, Ok(String::from("Successfully prioritized 'today'")));
         mock.assert();
         mock2.assert();
     }

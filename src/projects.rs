@@ -796,7 +796,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::unscheduled_tasks())
+            .with_body(test::responses::post_unscheduled_tasks())
             .create();
 
         let mock2 = server

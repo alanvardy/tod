@@ -155,7 +155,7 @@ pub mod responses {
             time::today_string(&fixtures::config())
         )
     }
-    pub fn rest_tasks() -> String {
+    pub fn get_tasks() -> String {
         format!(
             "
             [
@@ -193,7 +193,7 @@ pub mod responses {
         )
     }
 
-    pub fn unscheduled_tasks() -> String {
+    pub fn post_unscheduled_tasks() -> String {
         String::from(
             "{\
         \"items\":\
@@ -223,6 +223,38 @@ pub mod responses {
                 }
             ]
         }",
+        )
+    }
+
+    pub fn get_unscheduled_tasks() -> String {
+        String::from(
+            "
+            [
+                {\
+                \"added_by_uid\":44444444,\
+                \"assigned_by_uid\":null,\
+                \"checked\":false,\
+                \"child_order\":-5,\
+                \"collapsed\":false,\
+                \"content\":\"Put out recycling\",\
+                \"date_added\":\"2021-06-15T13:01:28Z\",\
+                \"date_completed\":null,\
+                \"description\":\"\",\
+                \"due\":null,\
+                \"id\":\"999999\",\
+                \"is_deleted\":false,\
+                \"labels\":[],\
+                \"note_count\":0,\
+                \"parent_id\":null,\
+                \"priority\":3,\
+                \"project_id\":22222222,\
+                \"responsible_uid\":null,\
+                \"section_id\":333333333,\
+                \"sync_id\":null,\
+                \"user_id\":111111111\
+                }
+            ]
+        ",
         )
     }
 

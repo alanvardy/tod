@@ -100,6 +100,7 @@ Usage: tod [OPTIONS] [COMMAND]
 Commands:
   task     
   project  
+  filter
   version  
   help     Print this message or the help of the given subcommand(s)
 

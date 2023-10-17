@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2023-10-16 v0.5.5
+
+- Fix `schedule` and `prioritize` (they were asking for projects rather than filters)
+
 ## 2023-10-16 v0.5.4
 
 - Add labels to formatted tasks

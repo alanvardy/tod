@@ -450,7 +450,7 @@ fn filter_process(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn filter_prioritize(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    match fetch_project(matches, &config)? {
+    match fetch_filter(matches, &config)? {
         Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter),
         _ => unreachable!(),
     }
@@ -459,7 +459,7 @@ fn filter_prioritize(matches: &ArgMatches) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn filter_schedule(matches: &ArgMatches) -> Result<String, String> {
     let config = fetch_config(matches)?;
-    match fetch_project(matches, &config)? {
+    match fetch_filter(matches, &config)? {
         Flag::Filter(filter) => filters::schedule(&config, &filter),
         _ => unreachable!(),
     }

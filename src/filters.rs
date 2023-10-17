@@ -86,6 +86,42 @@ fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)
 
     Ok(tasks.first().map(|task| (task.to_owned(), tasks.len())))
 }
+
+/// Get next tasks and give an interactive prompt for completing them one by one
+pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(&config, filter)?;
+    for task in tasks {
+        config.set_next_id(&task.id).save()?;
+        match handle_task(&config.reload()?, task) {
+            Some(Ok(_)) => (),
+            Some(Err(e)) => return Err(e),
+            None => return Ok(color::green_string("Exited")),
+        }
+    }
+    Ok(color::green_string(&format!(
+        "There are no more tasks for filter: '{filter}'"
+    )))
+}
+fn handle_task(config: &Config, task: Task) -> Option<Result<String, String>> {
+    let options = ["complete", "skip", "quit"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    println!("{}", task.fmt(config, FormatType::Single));
+    match input::select("Select an option", options, config.mock_select) {
+        Ok(string) => {
+            if string == "complete" {
+                Some(todoist::complete_task(config))
+            } else if string == "skip" {
+                Some(Ok(color::green_string("task skipped")))
+            } else {
+                None
+            }
+        }
+        Err(e) => Some(Err(e)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,6 +249,39 @@ mod tests {
         assert_eq!(
             label(&config_with_timezone, &filter, labels),
             Ok(String::from("There are no more tasks for filter: 'today'"))
+        );
+        mock.assert();
+        mock2.assert();
+    }
+
+    #[test]
+    fn test_process_tasks() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::rest_tasks())
+            .create();
+
+        let mock2 = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sync())
+            .create();
+
+        let config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0)
+            .create()
+            .unwrap();
+        let filter = String::from("today");
+
+        let result = process_tasks(config, &filter);
+        assert_eq!(
+            result,
+            Ok("There are no more tasks for filter: 'today'".to_string())
         );
         mock.assert();
         mock2.assert();

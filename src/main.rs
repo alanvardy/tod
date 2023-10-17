@@ -83,6 +83,7 @@ fn main() {
         },
         Some(("filter", filter_matches)) => match filter_matches.subcommand() {
             Some(("label", m)) => filter_label(m),
+            Some(("process", m)) => filter_process(m),
             _ => unreachable!(),
         },
         Some(("version", version_matches)) => match version_matches.subcommand() {
@@ -207,6 +208,10 @@ fn cmd() -> Command {
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(filter_arg())
                         .arg(label_arg())
+                         .arg(config_arg()),
+                       Command::new("process").about("Iterate through tasks and complete them individually in priority order")
+                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
+                        .arg(filter_arg())
                          .arg(config_arg()),
                 ]
                     ),
@@ -423,6 +428,14 @@ fn filter_label(matches: &ArgMatches) -> Result<String, String> {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
+fn filter_process(matches: &ArgMatches) -> Result<String, String> {
+    let config = fetch_config(matches)?;
+    match fetch_filter(matches, &config)? {
+        Flag::Filter(filter) => filters::process_tasks(config, &filter),
+        _ => unreachable!(),
+    }
+}
 // --- VERSION ---
 
 #[cfg(not(tarpaulin_include))]

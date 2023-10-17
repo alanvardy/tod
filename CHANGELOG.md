@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-10-16 v0.5.4
+
 - Add labels to formatted tasks
 - Improve task formatting
 - Add `filter` flag to `task list`

@@ -250,6 +250,7 @@ fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, St
 pub fn process_tasks(config: Config, project: &Project) -> Result<String, String> {
     let tasks = todoist::tasks_for_project(&config, project)?;
     let tasks = tasks::filter_not_in_future(tasks, &config)?;
+    let tasks = tasks::sort_by_value(tasks, &config);
     for task in tasks {
         config.set_next_id(&task.id).save()?;
         match handle_task(&config.reload()?, task) {

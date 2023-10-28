@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Improve formatting when labelling tasks
+- Sort tasks by value when processing
+
 ## 2023-10-16 v0.5.5
 
 - Fix `schedule` and `prioritize` (they were asking for projects rather than filters)

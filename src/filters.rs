@@ -58,11 +58,8 @@ pub fn label(config: &Config, filter: &str, labels: Vec<String>) -> Result<Strin
 }
 
 fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result<String, String> {
-    let label = input::select(
-        &format!("Select label for {task}:"),
-        labels.to_owned(),
-        config.mock_select,
-    )?;
+    println!("{}", task.fmt(config, FormatType::Single));
+    let label = input::select("Select label", labels.to_owned(), config.mock_select)?;
 
     todoist::add_task_label(config, task, label)
 }
@@ -90,6 +87,7 @@ fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)
 /// Get next tasks and give an interactive prompt for completing them one by one
 pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> {
     let tasks = todoist::tasks_for_filter(&config, filter)?;
+    let tasks = tasks::sort_by_value(tasks, &config);
     for task in tasks {
         config.set_next_id(&task.id).save()?;
         match handle_task(&config.reload()?, task) {

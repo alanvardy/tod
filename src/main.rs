@@ -115,6 +115,7 @@ fn cmd() -> Command {
         .arg_required_else_help(true)
         .propagate_version(true)
         .arg(config_arg())
+        .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
         .arg(
             Arg::new("quickadd")
                 .short('q')
@@ -125,7 +126,7 @@ fn cmd() -> Command {
                 .value_parser(clap::value_parser!(String))
                 .help(
                     "Create a new task with natural language processing.",
-                ),
+                )
         )
         .subcommands([
             Command::new("task")

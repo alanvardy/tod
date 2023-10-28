@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2023-10-27 v0.5.6
+
 - Improve formatting when labelling tasks
 - Sort tasks by value when processing
 

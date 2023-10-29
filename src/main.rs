@@ -138,6 +138,7 @@ fn cmd() -> Command {
                          .arg(config_arg())
                          .arg(priority_arg())
                          .arg(content_arg())
+                        .arg(labels_arg())
                          .arg(description_arg())
                          .arg(due_arg())
                          .arg(project_arg())
@@ -210,7 +211,7 @@ fn cmd() -> Command {
                        Command::new("label").about("Iterate through tasks and apply labels from defined choices")
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
                         .arg(filter_arg())
-                        .arg(label_arg())
+                        .arg(labels_arg())
                          .arg(config_arg()),
                        Command::new("process").about("Iterate through tasks and complete them individually in priority order")
                          .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
@@ -263,6 +264,7 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
     };
     let description = fetch_description(matches);
     let due = fetch_due(matches);
+    let labels = fetch_labels(matches, &config)?;
     let section = if has_flag(matches, "nosection") || config.no_sections.unwrap_or_default() {
         None
     } else {
@@ -288,6 +290,7 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
         priority,
         description,
         due,
+        labels,
     )?;
 
     Ok(color::green_string("✓"))
@@ -575,7 +578,7 @@ fn filter_arg() -> Arg {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn label_arg() -> Arg {
+fn labels_arg() -> Arg {
     Arg::new("labels")
         .short('l')
         .long("labels")

@@ -29,6 +29,7 @@ pub fn quick_add_task(config: &Config, content: &str) -> Result<Task, String> {
 }
 
 /// Add Task without natural language support but supports additional parameters
+#[allow(clippy::too_many_arguments)]
 pub fn add_task(
     config: &Config,
     content: &str,
@@ -37,6 +38,7 @@ pub fn add_task(
     priority: Priority,
     description: Option<String>,
     due: Option<String>,
+    labels: Vec<String>,
 ) -> Result<Task, String> {
     let url = String::from(REST_V2_TASKS_URL);
     let description = description.unwrap_or_default();
@@ -50,6 +52,9 @@ pub fn add_task(
         "priority".to_owned(),
         Value::Number(Number::from(priority.to_integer())),
     );
+    let labels = labels.iter().map(|l| Value::String(l.to_owned())).collect();
+    body.insert("labels".to_owned(), Value::Array(labels));
+
     if let Some(date) = due {
         if time::is_date(&date) || time::is_datetime(&date) {
             body.insert("due_date".to_owned(), Value::String(date));
@@ -249,7 +254,8 @@ mod tests {
                 Some(section),
                 priority,
                 None,
-                None
+                None,
+                vec![]
             ),
             Ok(Task {
                 id: String::from("5149481867"),

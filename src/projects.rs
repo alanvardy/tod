@@ -474,7 +474,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     /// Need to adjust this value forward or back an hour when timezone changes
-    const TIME: &str = "16:59";
+    const TIME: &str = "15:59";
 
     #[test]
     fn should_add_and_remove_projects() {

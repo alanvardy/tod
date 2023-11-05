@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## 2023-11-05 v0.5.7
+
 - Add `labels` argument to `task create`
+- Fix reversed priorities on `task create`
 
 ## 2023-10-27 v0.5.6
 

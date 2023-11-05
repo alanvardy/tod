@@ -674,10 +674,10 @@ mod tests {
 
     #[test]
     fn test_to_integer() {
-        assert_eq!(Priority::None.to_integer(), 4);
-        assert_eq!(Priority::Low.to_integer(), 3);
-        assert_eq!(Priority::Medium.to_integer(), 2);
-        assert_eq!(Priority::High.to_integer(), 1);
+        assert_eq!(Priority::None.to_integer(), 1);
+        assert_eq!(Priority::Low.to_integer(), 2);
+        assert_eq!(Priority::Medium.to_integer(), 3);
+        assert_eq!(Priority::High.to_integer(), 4);
     }
 
     #[test]

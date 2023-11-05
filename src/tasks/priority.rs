@@ -24,10 +24,10 @@ impl Display for Priority {
 impl Priority {
     pub fn to_integer(&self) -> u8 {
         match self {
-            Priority::None => 4,
-            Priority::Low => 3,
-            Priority::Medium => 2,
-            Priority::High => 1,
+            Priority::None => 1,
+            Priority::Low => 2,
+            Priority::Medium => 3,
+            Priority::High => 4,
         }
     }
 

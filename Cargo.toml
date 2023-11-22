@@ -25,7 +25,7 @@ chrono = "0.4.31"
 chrono-tz = "0.8.4"
 colored = "2.0.4"
 clap = "4.4.8"
-spinners = "4.1.0"
+spinners = "4.1.1"
 inquire = { version = "0.6.2", features = ["date"] }
 serde_repr = "0.1.17"
 rand = "0.8.5"

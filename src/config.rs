@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
 use std::io::{Read, Write};
+use std::env;
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -256,6 +257,21 @@ pub fn generate_path() -> Result<String, String> {
         Ok(format!("tests/{random_string}.testcfg"))
     } else {
         Ok(format!("{config_directory}/tod.cfg"))
+    }
+}
+
+/// Checks if the config path contains the user home directory alias "~"
+/// and expands it to a full absolute path
+/// e.g., "~/.config/tod.cfg" --> "/home/user/.config/tod.cfg"
+fn alias_check(config_path: &mut String) -> {
+    let alias = config_path.find('~');
+
+    match alias {
+        Some(alias) => {
+            let home = env::home_dir().unwrap();
+            config_path.replace_range(..alias+1, home.to_str().unwrap());
+        }
+        None => _,
     }
 }
 

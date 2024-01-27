@@ -263,7 +263,7 @@ pub fn generate_path() -> Result<String, String> {
 /// Checks if the config path contains the user home directory alias "~"
 /// and expands it to a full absolute path
 /// e.g., "~/.config/tod.cfg" --> "/home/user/.config/tod.cfg"
-fn alias_check(config_path: &mut String) -> {
+fn alias_check(config_path: &mut String) {
     let alias = config_path.find('~');
 
     match alias {
@@ -271,7 +271,7 @@ fn alias_check(config_path: &mut String) -> {
             let home = env::home_dir().unwrap();
             config_path.replace_range(..alias+1, home.to_str().unwrap());
         }
-        None => _,
+        _ => (),
     }
 }
 

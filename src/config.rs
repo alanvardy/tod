@@ -266,12 +266,9 @@ pub fn generate_path() -> Result<String, String> {
 fn alias_check(config_path: &mut String) {
     let alias = config_path.find('~');
 
-    match alias {
-        Some(alias) => {
-            let home = env::home_dir().unwrap();
-            config_path.replace_range(..alias+1, home.to_str().unwrap());
-        }
-        _ => (),
+    if let Some(path) = alias {
+        let home = env::home_dir().unwrap();
+        config_path.replace_range(..path+1, home.to_str().unwrap());
     }
 }
 

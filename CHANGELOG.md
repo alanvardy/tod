@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improve timezone parsing to handle offsets
+
 ## 2023-11-05 v0.5.7
 
 - Add `labels` argument to `task create`

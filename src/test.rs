@@ -152,7 +152,7 @@ pub mod responses {
                 }}
             ]
         }}",
-            time::today_string(&fixtures::config())
+            time::today_string(&fixtures::config()).unwrap()
         )
     }
     pub fn get_tasks() -> String {
@@ -189,7 +189,7 @@ pub mod responses {
                 }}
             ]
         ",
-            time::today_string(&fixtures::config())
+            time::today_string(&fixtures::config()).unwrap()
         )
     }
 

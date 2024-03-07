@@ -24,7 +24,7 @@ regex = "1"
 chrono = "0.4.34"
 chrono-tz = "0.8.6"
 colored = "2.1.0"
-clap = "4.5.1"
+clap = "4.5.2"
 spinners = "4.1.1"
 inquire = { version = "0.7.0", features = ["date"] }
 serde_repr = "0.1.18"

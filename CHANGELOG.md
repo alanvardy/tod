@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024-03-07 v0.5.8
+
 - Improve timezone parsing to handle offsets
 
 ## 2023-11-05 v0.5.7

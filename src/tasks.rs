@@ -97,7 +97,7 @@ impl Task {
                 } else {
                     String::new()
                 };
-                let date_string = time::format_date(date, config);
+                let date_string = time::format_date(date, config).unwrap_or_default();
 
                 format!("\n{buffer}{due_icon} {date_string}{recurring_icon}")
             }
@@ -111,7 +111,7 @@ impl Task {
                 } else {
                     String::new()
                 };
-                let datetime_string = time::format_datetime(datetime, config);
+                let datetime_string = time::format_datetime(datetime, config).unwrap_or_default();
 
                 format!("\n{buffer}{due_icon} {datetime_string}{recurring_icon}")
             }
@@ -148,12 +148,16 @@ impl Task {
             Ok(DateTimeInfo::Date {
                 date, is_recurring, ..
             }) => {
-                let today_value = if *date == time::today_date(config) {
+                let today_value = if *date == time::today_date(config).unwrap_or_default() {
                     100
                 } else {
                     0
                 };
-                let overdue_value = if self.is_overdue(config) { 150 } else { 0 };
+                let overdue_value = if self.is_overdue(config).unwrap_or_default() {
+                    150
+                } else {
+                    0
+                };
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
                 today_value + overdue_value + recurring_value
             }
@@ -163,8 +167,13 @@ impl Task {
                 ..
             }) => {
                 let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
-                let duration = *datetime - time::now(config);
-                match duration.num_minutes() {
+
+                let duration = match time::now(config) {
+                    Ok(tz) => (*datetime - tz).num_minutes(),
+                    _ => 0,
+                };
+
+                match duration {
                     -15..=15 => 200 + recurring_value,
                     _ => recurring_value,
                 }
@@ -193,15 +202,15 @@ impl Task {
     /// Converts the JSON date representation into Date or Datetime
     fn datetimeinfo(&self, config: &Config) -> Result<DateTimeInfo, String> {
         let tz = match (self.clone().due, config.clone().timezone) {
-            (None, Some(tz_string)) => time::timezone_from_str(&Some(tz_string)),
+            (None, Some(tz_string)) => time::timezone_from_str(&Some(tz_string))?,
             (None, None) => Tz::UTC,
-            (Some(DateInfo { timezone: None, .. }), Some(tz_string)) => time::timezone_from_str(&Some(tz_string)),
+            (Some(DateInfo { timezone: None, .. }), Some(tz_string)) => time::timezone_from_str(&Some(tz_string))?,
             (Some(DateInfo { timezone: None, .. }), None) => Tz::UTC,
             (Some(DateInfo {
                 timezone: Some(tz_string),
                 ..
                 // Remove the Some here
-            }), _) => time::timezone_from_str(&Some(tz_string)),
+            }), _) => time::timezone_from_str(&Some(tz_string))?,
         };
         match self.clone().due {
             None => Ok(DateTimeInfo::NoDateTime),
@@ -230,8 +239,10 @@ impl Task {
 
     pub fn filter(&self, config: &Config, filter: &projects::TaskFilter) -> bool {
         match filter {
-            projects::TaskFilter::Unscheduled => self.has_no_date() || self.is_overdue(config),
-            projects::TaskFilter::Overdue => self.is_overdue(config),
+            projects::TaskFilter::Unscheduled => {
+                self.has_no_date() || self.is_overdue(config).unwrap_or_default()
+            }
+            projects::TaskFilter::Overdue => self.is_overdue(config).unwrap_or_default(),
             projects::TaskFilter::Recurring => self.is_recurring(),
         }
     }
@@ -241,26 +252,30 @@ impl Task {
     }
 
     // Returns true if the datetime is today and there is a time
-    fn is_today(&self, config: &Config) -> bool {
-        match self.datetimeinfo(config) {
+    fn is_today(&self, config: &Config) -> Result<bool, String> {
+        let boolean = match self.datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
-            Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(config),
+            Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(config)?,
             Ok(DateTimeInfo::DateTime { datetime, .. }) => {
-                time::datetime_is_today(datetime, config)
+                time::datetime_is_today(datetime, config)?
             }
             Err(_) => false,
-        }
+        };
+
+        Ok(boolean)
     }
 
-    fn is_overdue(&self, config: &Config) -> bool {
-        match self.clone().datetimeinfo(config) {
+    fn is_overdue(&self, config: &Config) -> Result<bool, String> {
+        let boolean = match self.clone().datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
-            Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date, config),
+            Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date, config)?,
             Ok(DateTimeInfo::DateTime { datetime, .. }) => {
-                time::is_date_in_past(datetime.date_naive(), config)
+                time::is_date_in_past(datetime.date_naive(), config)?
             }
             Err(_) => false,
-        }
+        };
+
+        Ok(boolean)
     }
 
     /// Returns true if it is a recurring task
@@ -306,7 +321,11 @@ pub fn sort_by_datetime(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {
 pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Task>, String> {
     let tasks = tasks
         .into_iter()
-        .filter(|task| task.is_today(config) || task.has_no_date() || task.is_overdue(config))
+        .filter(|task| {
+            task.is_today(config).unwrap_or_default()
+                || task.has_no_date()
+                || task.is_overdue(config).unwrap_or_default()
+        })
         .collect();
 
     Ok(tasks)
@@ -408,7 +427,7 @@ mod tests {
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 ..test::fixtures::task().due.unwrap()
             }),
             ..test::fixtures::task()
@@ -439,7 +458,7 @@ mod tests {
         let config = test::fixtures::config();
         let task = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 ..test::fixtures::task().due.unwrap()
             }),
             ..test::fixtures::task()
@@ -460,7 +479,7 @@ mod tests {
 
         let task_today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 ..test::fixtures::task().due.unwrap()
             }),
             ..test::fixtures::task()
@@ -476,18 +495,18 @@ mod tests {
             ..test::fixtures::task()
         };
 
-        assert!(!task.is_today(&config));
+        assert!(!task.is_today(&config).unwrap());
 
         let task_today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
             ..test::fixtures::task()
         };
-        assert!(task_today.is_today(&config));
+        assert!(task_today.is_today(&config).unwrap());
 
         let task_in_past = Task {
             due: Some(DateInfo {
@@ -498,7 +517,7 @@ mod tests {
             }),
             ..test::fixtures::task()
         };
-        assert!(!task_in_past.is_today(&config));
+        assert!(!task_in_past.is_today(&config).unwrap());
     }
 
     #[test]
@@ -506,7 +525,7 @@ mod tests {
         let config = test::fixtures::config();
         let today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 is_recurring: false,
                 timezone: None,
                 string: String::from("Every 2 weeks"),
@@ -516,7 +535,7 @@ mod tests {
 
         let today_recurring = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
                 timezone: None,
@@ -557,7 +576,7 @@ mod tests {
 
         let date_not_datetime = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
                 timezone: None,
@@ -622,18 +641,18 @@ mod tests {
             is_completed: None,
         };
 
-        assert!(!task.is_overdue(&config));
+        assert!(!task.is_overdue(&config).unwrap());
 
         let task_today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config),
+                date: time::today_string(&config).unwrap(),
                 string: String::from("Every 2 weeks"),
                 is_recurring: false,
                 timezone: None,
             }),
             ..task.clone()
         };
-        assert!(!task_today.is_overdue(&config));
+        assert!(!task_today.is_overdue(&config).unwrap());
 
         let task_future = Task {
             due: Some(DateInfo {
@@ -644,7 +663,7 @@ mod tests {
             }),
             ..task.clone()
         };
-        assert!(!task_future.is_overdue(&config));
+        assert!(!task_future.is_overdue(&config).unwrap());
 
         let task_today = Task {
             due: Some(DateInfo {
@@ -655,7 +674,7 @@ mod tests {
             }),
             ..task
         };
-        assert!(task_today.is_overdue(&config));
+        assert!(task_today.is_overdue(&config).unwrap());
     }
 
     #[test]

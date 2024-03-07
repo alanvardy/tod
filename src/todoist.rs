@@ -300,7 +300,10 @@ mod tests {
                 labels: vec![],
                 description: String::from(""),
                 due: Some(DateInfo {
-                    date: format!("{}T23:59:00Z", time::today_string(&config_with_timezone)),
+                    date: format!(
+                        "{}T23:59:00Z",
+                        time::today_string(&config_with_timezone).unwrap()
+                    ),
                     is_recurring: true,
                     timezone: None,
                     string: String::from("every other mon at 16:30"),

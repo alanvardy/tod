@@ -56,11 +56,11 @@ impl Config {
     pub fn check_for_latest_version(self: Config) -> Result<Config, String> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
-            last_version_check: Some(time::today_string(&self)),
+            last_version_check: Some(time::today_string(&self)?),
             ..self.clone()
         };
 
-        if last_version != Some(time::today_string(&self)) {
+        if last_version != Some(time::today_string(&self)?) {
             match cargo::compare_versions(self) {
                 Ok(Version::Dated(version)) => {
                     println!(

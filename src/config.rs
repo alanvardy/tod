@@ -1,6 +1,7 @@
 use crate::cargo::Version;
 use crate::projects::Project;
 use crate::{cargo, color, input, time, todoist, VERSION};
+use homedir::get_my_home;
 use chrono_tz::TZ_VARIANTS;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
@@ -259,6 +260,19 @@ pub fn generate_path() -> Result<String, String> {
     }
 }
 
+/// Checks if the config path contains the user home directory alias "~"
+/// and expands it to a full absolute path
+/// e.g., "~/.config/tod.cfg" --> "/home/user/.config/tod.cfg"
+fn maybe_expand_homedir(config_path: &mut String) {
+    let first = config_path.chars().nth(0).unwrap();
+
+
+    if first == '~' {
+        let home = get_my_home().unwrap().unwrap();
+        config_path.replace_range(..1, home.to_str().unwrap());
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -409,5 +423,16 @@ mod tests {
 
     fn delete_config(path: &str) {
         assert_matches!(fs::remove_file(path), Ok(_));
+    }
+
+
+    #[test]
+    fn test_expand_homedir() {
+        let mut s: String = String::from("~/Documents/");
+        let or: String = String::from("~/Documents/");
+
+        maybe_expand_homedir(&mut s);
+
+        assert_ne!(s, or);
     }
 }

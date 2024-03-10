@@ -60,6 +60,10 @@ Options:
 # Quickly create a task
 tod -q Buy more milk today
 
+# You can use Todoist syntax with the quickadd (q) command
+# See https://todoist.com/help/articles/use-task-quick-add-in-todoist-va4Lhpzz for more details
+tod -q Buy more milk today // with a description
+
 # Create a new task (you will be prompted for content and project)
 tod task create
 

@@ -88,9 +88,10 @@ fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)
 pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> {
     let tasks = todoist::tasks_for_filter(&config, filter)?;
     let tasks = tasks::sort_by_value(tasks, &config);
+    let mut task_count = tasks.len() as i32;
     for task in tasks {
         config.set_next_id(&task.id).save()?;
-        match handle_task(&config.reload()?, task) {
+        match handle_task(&config.reload()?, task, &mut task_count) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(color::green_string("Exited")),
@@ -100,12 +101,20 @@ pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> 
         "There are no more tasks for filter: '{filter}'"
     )))
 }
-fn handle_task(config: &Config, task: Task) -> Option<Result<String, String>> {
+fn handle_task(
+    config: &Config,
+    task: Task,
+    task_count: &mut i32,
+) -> Option<Result<String, String>> {
     let options = ["complete", "skip", "quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
-    println!("{}", task.fmt(config, FormatType::Single));
+    println!(
+        "{}{task_count} task(s) remaining",
+        task.fmt(config, FormatType::Single)
+    );
+    *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "complete" {

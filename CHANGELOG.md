@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2024-03-10 v0.5.9
+
+- Add tasks remaining counter to `process` subcommands
+
 ## 2024-03-07 v0.5.8
 
 - Improve timezone parsing to handle offsets

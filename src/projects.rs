@@ -251,9 +251,10 @@ pub fn process_tasks(config: Config, project: &Project) -> Result<String, String
     let tasks = todoist::tasks_for_project(&config, project)?;
     let tasks = tasks::filter_not_in_future(tasks, &config)?;
     let tasks = tasks::sort_by_value(tasks, &config);
+    let mut task_count = tasks.len() as i32;
     for task in tasks {
         config.set_next_id(&task.id).save()?;
-        match handle_task(&config.reload()?, task) {
+        match handle_task(&config.reload()?, task, &mut task_count) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(color::green_string("Exited")),
@@ -265,12 +266,20 @@ pub fn process_tasks(config: Config, project: &Project) -> Result<String, String
     )))
 }
 
-fn handle_task(config: &Config, task: Task) -> Option<Result<String, String>> {
+fn handle_task(
+    config: &Config,
+    task: Task,
+    task_count: &mut i32,
+) -> Option<Result<String, String>> {
     let options = ["complete", "skip", "quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
-    println!("{}", task.fmt(config, FormatType::Single));
+    println!(
+        "{}{task_count} task(s) remaining",
+        task.fmt(config, FormatType::Single)
+    );
+    *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "complete" {
@@ -613,7 +622,8 @@ mod tests {
         let config = test::fixtures::config()
             .mock_url(server.url())
             .mock_select(0);
-        let result = handle_task(&config, task);
+        let mut task_count = 3;
+        let result = handle_task(&config, task, &mut task_count);
         let expected = Some(Ok(String::from("✓")));
         assert_eq!(result, expected);
         mock.assert();

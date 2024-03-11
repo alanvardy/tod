@@ -22,3 +22,7 @@ cargo install tod
 
 - [Alfred Workflow](https://github.com/stacksjb/AlfredTodWorkflow)
 
+## Other CLI projects by Alan Vardy
+
+- [lnr - Linear CLI](https://github.com/alanvardy/lnr)
+- [gpto - OpenAI CLI](https://github.com/alanvardy/gpto)

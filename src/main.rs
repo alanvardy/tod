@@ -13,6 +13,7 @@ use tasks::priority::Priority;
 mod cargo;
 mod color;
 mod config;
+mod debug;
 mod filters;
 mod input;
 mod projects;
@@ -369,7 +370,10 @@ fn project_rename(matches: &ArgMatches) -> Result<String, String> {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
-
+    debug::print(
+        &config,
+        format!("Calling projects::rename with project:\n{project}"),
+    );
     projects::rename(config, &project)
 }
 

@@ -48,6 +48,14 @@ pub fn yellow_string(str: &str) -> String {
     String::from(str).yellow().to_string()
 }
 
+pub fn debug_string(str: &str) -> String {
+    if cfg!(test) {
+        return normal_string(str);
+    }
+
+    String::from(str).bright_blue().on_yellow().to_string()
+}
+
 pub fn normal_string(str: &str) -> String {
     String::from(str).normal().to_string()
 }

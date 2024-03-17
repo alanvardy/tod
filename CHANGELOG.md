@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow custom sorting of tasks through config
+
 ## 2024-03-10 v0.5.9
 
 - Add tasks remaining counter to `process` subcommands

@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod fixtures {
 
-    use crate::config::{self, Config};
+    use crate::config::{self, Config, SortValue};
     use crate::projects::Project;
     use crate::sections::Section;
     use crate::tasks::{DateInfo, Task};
@@ -28,6 +28,7 @@ pub mod fixtures {
     pub fn config() -> Config {
         Config {
             token: String::from("alreadycreated"),
+            sort_value: Some(SortValue::default()),
             projects: Some(vec![Project {
                 id: "123".to_string(),
                 name: "myproject".to_string(),

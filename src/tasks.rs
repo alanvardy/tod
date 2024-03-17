@@ -8,6 +8,7 @@ use std::fmt::Display;
 pub mod priority;
 use crate::color;
 use crate::config::Config;
+use crate::config::SortValue;
 use crate::projects;
 use crate::tasks::priority::Priority;
 use crate::{input, time, todoist};
@@ -136,29 +137,42 @@ impl Task {
     /// Determines the numeric value of an task for sorting
     fn value(&self, config: &Config) -> u32 {
         let date_value: u8 = self.date_value(config);
-        let priority_value: u8 = self.priority_value();
+        let priority_value: u8 = self.priority_value(config);
 
         date_value as u32 + priority_value as u32
     }
 
     /// Return the value of the due field
     fn date_value(&self, config: &Config) -> u8 {
+        let SortValue {
+            no_due_date,
+            today,
+            overdue,
+            now,
+            not_recurring,
+            ..
+        } = config.sort_value.clone().unwrap_or_default();
+
         match &self.datetimeinfo(config) {
-            Ok(DateTimeInfo::NoDateTime) => 80,
+            Ok(DateTimeInfo::NoDateTime) => no_due_date,
             Ok(DateTimeInfo::Date {
                 date, is_recurring, ..
             }) => {
                 let today_value = if *date == time::today_date(config).unwrap_or_default() {
-                    100
+                    today
                 } else {
                     0
                 };
                 let overdue_value = if self.is_overdue(config).unwrap_or_default() {
-                    150
+                    overdue
                 } else {
                     0
                 };
-                let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
+                let recurring_value = if is_recurring.to_owned() {
+                    0
+                } else {
+                    not_recurring
+                };
                 today_value + overdue_value + recurring_value
             }
             Ok(DateTimeInfo::DateTime {
@@ -166,7 +180,11 @@ impl Task {
                 is_recurring,
                 ..
             }) => {
-                let recurring_value = if is_recurring.to_owned() { 0 } else { 50 };
+                let recurring_value = if is_recurring.to_owned() {
+                    0
+                } else {
+                    not_recurring
+                };
 
                 let duration = match time::now(config) {
                     Ok(tz) => (*datetime - tz).num_minutes(),
@@ -174,11 +192,11 @@ impl Task {
                 };
 
                 match duration {
-                    -15..=15 => 200 + recurring_value,
+                    -15..=15 => now + recurring_value,
                     _ => recurring_value,
                 }
             }
-            Err(_) => 50,
+            Err(_) => not_recurring,
         }
     }
 
@@ -190,12 +208,19 @@ impl Task {
         }
     }
 
-    fn priority_value(&self) -> u8 {
+    fn priority_value(&self, config: &Config) -> u8 {
+        let SortValue {
+            priority_none,
+            priority_low,
+            priority_medium,
+            priority_high,
+            ..
+        } = config.sort_value.clone().unwrap_or_default();
         match &self.priority {
-            Priority::None => 2,
-            Priority::Low => 1,
-            Priority::Medium => 3,
-            Priority::High => 4,
+            Priority::None => priority_none,
+            Priority::Low => priority_low,
+            Priority::Medium => priority_medium,
+            Priority::High => priority_high,
         }
     }
 

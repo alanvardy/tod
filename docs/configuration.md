@@ -110,6 +110,36 @@ If true, the datetime selection in `project schedule` will go straight to natura
 
 If true will not prompt for a section whenever possible
 
+## sort_value
+
+Tasks are ranked by points and the first is returned, the points are the sum of the following:
+
+  - Task is overdue: 150
+  - The date is today with no time: 100
+  - The date is today with time in next or last 15 min: 200
+  - No date: 80
+  - Not recurring: 50
+  - Task has no priority: 2
+  - Priority 1: 1
+  - Priority 2: 3
+  - Priority 3: 4
+
+Defaults:
+
+```
+  {
+    "no_due_date": 80,
+    "not_recurring": 50,
+    "now": 200,
+    "overdue": 150,
+    "priority_high": 4,
+    "priority_low": 1,
+    "priority_medium": 3,
+    "priority_none": 2,
+    "today": 100
+  },
+```
+
 ### spinners
 
 ```

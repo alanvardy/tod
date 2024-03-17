@@ -33,8 +33,39 @@ pub struct Config {
     pub no_sections: Option<bool>,
     /// Goes straight to natural language input in datetime selection
     pub natural_language_only: Option<bool>,
+    pub sort_value: Option<SortValue>,
 }
 
+// Determining how
+#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct SortValue {
+    /// Task has one of these priorities
+    pub priority_none: u8,
+    pub priority_low: u8,
+    pub priority_medium: u8,
+    pub priority_high: u8,
+    pub no_due_date: u8,
+    pub not_recurring: u8,
+    pub today: u8,
+    pub overdue: u8,
+    /// Happens now plus or minus 15min
+    pub now: u8,
+}
+impl Default for SortValue {
+    fn default() -> Self {
+        SortValue {
+            priority_none: 2,
+            priority_low: 1,
+            priority_medium: 3,
+            priority_high: 4,
+            no_due_date: 80,
+            overdue: 150,
+            not_recurring: 50,
+            today: 100,
+            now: 200,
+        }
+    }
+}
 impl Config {
     pub fn reload_projects(self: &mut Config) -> Result<String, String> {
         let all_projects = todoist::projects(self)?;
@@ -130,7 +161,16 @@ impl Config {
             .read_to_string(&mut json)
             .or(Err("Could not read to string"))?;
 
-        serde_json::from_str::<Config>(&json).map_err(|_| format!("Could not parse JSON:\n{json}"))
+        let config = serde_json::from_str::<Config>(&json)
+            .map_err(|_| format!("Could not parse JSON:\n{json}"))?;
+
+        match config.sort_value {
+            None => Ok(Config {
+                sort_value: Some(SortValue::default()),
+                ..config
+            }),
+            Some(_) => Ok(config),
+        }
     }
 
     pub fn new(token: &str) -> Result<Config, String> {
@@ -139,6 +179,7 @@ impl Config {
             token: String::from(token),
             next_id: None,
             last_version_check: None,
+            sort_value: Some(SortValue::default()),
             timezone: None,
             spinners: Some(true),
             mock_url: None,
@@ -367,6 +408,7 @@ mod tests {
                 no_sections: None,
                 next_id: None,
                 spinners: Some(true),
+                sort_value: Some(SortValue::default()),
                 last_version_check: None,
                 timezone: None,
                 natural_language_only: None,
@@ -392,6 +434,7 @@ mod tests {
                 token: String::new(),
                 projects: Some(Vec::new()),
                 path: config.clone().unwrap().path,
+                sort_value: Some(SortValue::default()),
                 next_id: None,
                 no_sections: None,
                 spinners: Some(true),

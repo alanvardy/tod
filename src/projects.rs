@@ -117,8 +117,8 @@ pub fn rename(config: Config, project: &Project) -> Result<String, String> {
         name: new_name,
         ..project.clone()
     };
-    add(&mut config, &new_project)?;
-    remove(&mut config, project)
+    remove(&mut config, project)?;
+    add(&mut config, &new_project)
 }
 
 /// Get the next task by priority and save its id to config

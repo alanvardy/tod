@@ -122,18 +122,3 @@ tod tasks list --project work
 ```bash
 tod version check || cargo install tod --force
 ```
-
-## How task priority is determined
-
-Tasks are ranked by points and the first is returned, the points are the sum of the following:
-
-  - Task is overdue: 150
-  - The date is today with no time: 100
-  - The date is today with time in next or last 15 min: 200
-  - No date: 80
-  - Not recurring: 50
-  - Task has no priority: 2
-  - Priority 1: 1
-  - Priority 2: 3
-  - Priority 3: 4
-

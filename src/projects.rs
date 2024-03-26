@@ -271,7 +271,7 @@ fn handle_task(
     task: Task,
     task_count: &mut i32,
 ) -> Option<Result<String, String>> {
-    let options = ["complete", "skip", "quit"]
+    let options = ["Complete", "Skip", "Delete", "Quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -282,10 +282,13 @@ fn handle_task(
     *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
-            if string == "complete" {
+            if string == "Complete" {
                 Some(todoist::complete_task(config))
-            } else if string == "skip" {
-                Some(Ok(color::green_string("task skipped")))
+            } else if string == "Delete" {
+                Some(todoist::delete_task(config, &task))
+            } else if string == "Skip" {
+                Some(Ok(color::green_string("Task skipped")))
+                // The quit clause
             } else {
                 None
             }
@@ -443,7 +446,7 @@ pub fn schedule(
 pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, String> {
     println!("{}", task.fmt(config, FormatType::Single));
 
-    let options = ["Pick project", "Complete", "Skip"]
+    let options = ["Pick project", "Complete", "Skip", "Delete"]
         .iter()
         .map(|o| o.to_string())
         .collect::<Vec<String>>();
@@ -456,6 +459,10 @@ pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, Strin
     match selection.as_str() {
         "Complete" => {
             todoist::complete_task(&config.set_next_id(&task.id))?;
+            Ok(color::green_string("✓"))
+        }
+        "Delete" => {
+            todoist::delete_task(config, &task)?;
             Ok(color::green_string("✓"))
         }
         "Skip" => Ok(color::green_string("Skipped")),

@@ -6,6 +6,7 @@
 - Don't `empty` subtasks
 - Add delete option to `empty` and `process`
 - Stopped overwriting verbose in config when using `verbose` flag
+- Print task durations
 
 ## 2024-03-17 v0.5.10
 

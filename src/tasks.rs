@@ -27,6 +27,7 @@ pub struct Task {
     pub is_deleted: Option<bool>,
     /// only on sync api return value
     pub checked: Option<bool>,
+    pub duration: Option<Duration>,
 }
 
 impl Display for Task {
@@ -43,9 +44,23 @@ pub struct DateInfo {
     pub timezone: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct Duration {
+    pub amount: u8,
+    pub unit: Unit,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct Body {
     items: Vec<Task>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub enum Unit {
+    #[serde(rename(deserialize = "minute"))]
+    Minute,
+    #[serde(rename(deserialize = "day"))]
+    Day,
 }
 
 pub enum FormatType {
@@ -115,7 +130,23 @@ impl Task {
                 };
                 let datetime_string = time::format_datetime(datetime, config).unwrap_or_default();
 
-                format!("\n{buffer}{due_icon} {datetime_string}{recurring_icon}")
+                let duration_string = match self.duration {
+                    None => String::new(),
+                    Some(Duration {
+                        amount: 1,
+                        unit: Unit::Day,
+                    }) => String::from(" for 1 day"),
+                    Some(Duration {
+                        amount,
+                        unit: Unit::Day,
+                    }) => format!(" for {amount} days"),
+                    Some(Duration {
+                        amount,
+                        unit: Unit::Minute,
+                    }) => format!(" for {amount} min"),
+                };
+
+                format!("\n{buffer}{due_icon} {datetime_string}{duration_string}{recurring_icon}")
             }
             Ok(DateTimeInfo::NoDateTime) => String::from(""),
             Err(string) => string.clone(),
@@ -594,6 +625,10 @@ mod tests {
             checked: None,
             parent_id: None,
             description: String::from(""),
+            duration: Some(Duration {
+                amount: 123,
+                unit: Unit::Minute,
+            }),
             due: None,
             labels: vec![String::from("computer")],
             priority: Priority::Medium,
@@ -660,6 +695,7 @@ mod tests {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
+            duration: None,
             parent_id: None,
             description: String::from(""),
             labels: vec![String::from("computer")],

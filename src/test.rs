@@ -11,6 +11,7 @@ pub mod fixtures {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
+            duration: None,
             parent_id: None,
             labels: vec![String::from("computer")],
             description: String::from(""),
@@ -106,6 +107,10 @@ pub mod responses {
         \"datetime\": \"2016-09-01T12:00:00.000000Z\",
         \"string\": \"tomorrow at 12\",
         \"timezone\": \"Europe/Moscow\"
+    },
+    \"duration\": {
+        \"unit\": \"minute\",
+        \"amount\": 42
     },
     \"id\": \"2995104339\",
     \"labels\": [\"Food\", \"Shopping\"],

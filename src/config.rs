@@ -220,9 +220,17 @@ impl Config {
     }
 
     pub fn save(&mut self) -> std::result::Result<String, String> {
-        let json = json!(self);
-        let string = serde_json::to_string_pretty(&json).or(Err("Could not convert to JSON"))?;
+        // We don't want to overwrite verbose in the config
+        let config = match Config::load(&self.path) {
+            Ok(Config { verbose, .. }) => Config {
+                verbose,
+                ..self.clone()
+            },
+            _ => self.clone(),
+        };
 
+        let json = json!(config);
+        let string = serde_json::to_string_pretty(&json).or(Err("Could not convert to JSON"))?;
         fs::OpenOptions::new()
             .write(true)
             .read(true)

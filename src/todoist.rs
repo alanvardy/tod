@@ -218,6 +218,7 @@ mod tests {
             Ok(Task {
                 id: String::from("5149481867"),
                 priority: Priority::None,
+                parent_id: None,
                 content: String::from("testy test"),
                 labels: vec![],
                 checked: Some(false),
@@ -260,6 +261,7 @@ mod tests {
             Ok(Task {
                 id: String::from("5149481867"),
                 priority: Priority::None,
+                parent_id: None,
                 content: String::from("testy test"),
                 checked: Some(false),
                 labels: vec![],
@@ -296,6 +298,7 @@ mod tests {
             Ok(vec![Task {
                 id: String::from("999999"),
                 content: String::from("Put out recycling"),
+                parent_id: None,
                 checked: Some(false),
                 labels: vec![],
                 description: String::from(""),

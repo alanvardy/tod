@@ -5,7 +5,7 @@ use crate::config::Config;
 use crate::input::DateTimeInput;
 use crate::tasks::priority::Priority;
 use crate::tasks::{FormatType, Task};
-use crate::{color, input, projects, tasks, todoist};
+use crate::{color, input, tasks, todoist};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -342,7 +342,11 @@ pub fn empty(config: &mut Config, project: &Project) -> Result<String, String> {
             project.name
         )))
     } else {
-        projects::list(config)?;
+        let tasks = tasks
+            .into_iter()
+            .filter(|task| task.parent_id.is_none())
+            .collect::<Vec<Task>>();
+
         for task in tasks.iter() {
             move_task_to_project(config, task.to_owned())?;
         }
@@ -723,13 +727,6 @@ mod tests {
             .with_body(test::responses::sections())
             .create();
 
-        let mock4 = server
-            .mock("GET", "/rest/v2/projects")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::projects())
-            .create();
-
         let mut config = test::fixtures::config()
             .mock_url(server.url())
             .mock_string("newtext")
@@ -742,7 +739,6 @@ mod tests {
         mock.expect(2);
         mock2.assert();
         mock3.assert();
-        mock4.assert();
     }
 
     #[test]

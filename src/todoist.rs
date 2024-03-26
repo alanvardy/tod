@@ -228,6 +228,7 @@ mod tests {
                 id: String::from("5149481867"),
                 priority: Priority::None,
                 parent_id: None,
+                duration: None,
                 content: String::from("testy test"),
                 labels: vec![],
                 checked: Some(false),
@@ -271,6 +272,7 @@ mod tests {
                 id: String::from("5149481867"),
                 priority: Priority::None,
                 parent_id: None,
+                duration: None,
                 content: String::from("testy test"),
                 checked: Some(false),
                 labels: vec![],
@@ -309,6 +311,7 @@ mod tests {
                 content: String::from("Put out recycling"),
                 parent_id: None,
                 checked: Some(false),
+                duration: None,
                 labels: vec![],
                 description: String::from(""),
                 due: Some(DateInfo {

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024-03-26 v0.5.11
+
 - Added more quickadd examples
 - Don't `empty` subtasks
 - Add delete option to `empty` and `process`

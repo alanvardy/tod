@@ -20,6 +20,7 @@ pub struct Task {
     pub priority: Priority,
     pub description: String,
     pub labels: Vec<String>,
+    pub parent_id: Option<String>,
     pub due: Option<DateInfo>,
     /// Only on rest api return value
     pub is_completed: Option<bool>,
@@ -591,6 +592,7 @@ mod tests {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
+            parent_id: None,
             description: String::from(""),
             due: None,
             labels: vec![String::from("computer")],
@@ -658,6 +660,7 @@ mod tests {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
+            parent_id: None,
             description: String::from(""),
             labels: vec![String::from("computer")],
             due: None,

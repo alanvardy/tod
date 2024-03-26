@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added more quickadd examples
+- Don't `empty` subtasks
+
 ## 2024-03-17 v0.5.10
 
 - Allow custom sorting of tasks through config

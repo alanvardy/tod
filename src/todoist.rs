@@ -193,6 +193,15 @@ pub fn complete_task(config: &Config) -> Result<String, String> {
     Ok(String::from("✓"))
 }
 
+pub fn delete_task(config: &Config, task: &Task) -> Result<String, String> {
+    let body = json!({});
+    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+
+    request::delete_todoist_rest(config, url, body)?;
+    // Does not pass back a task
+    Ok(String::from("✓"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

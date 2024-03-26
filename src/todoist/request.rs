@@ -72,6 +72,33 @@ pub fn post_todoist_rest(
     handle_response(response, "POST", url, body)
 }
 
+pub fn delete_todoist_rest(
+    config: &Config,
+    url: String,
+    body: serde_json::Value,
+) -> Result<String, String> {
+    let base_url = get_base_url(config);
+    let token = &config.token;
+
+    let request_url = format!("{base_url}{url}");
+    let authorization: &str = &format!("Bearer {token}");
+    let spinner = maybe_start_spinner(config);
+
+    debug::print(config, format!("DELETE {request_url}\nbody: {body}"));
+
+    let response = Client::new()
+        .delete(request_url)
+        .header(CONTENT_TYPE, "application/json")
+        .header(AUTHORIZATION, authorization)
+        .header("X-Request-Id", new_uuid())
+        .json(&body)
+        .send()
+        .or(Err("Did not get response from server"))?;
+
+    maybe_stop_spinner(spinner);
+    handle_response(response, "DELETE", url, body)
+}
+
 // Combine get and post into one function
 /// Get Todoist via REST api
 pub fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> {

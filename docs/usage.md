@@ -54,7 +54,7 @@ Options:
 ```
 
 
-## Usage Examples
+## Quickadd Usage Examples
 
 ```bash
 # Quickly create a task
@@ -63,6 +63,14 @@ tod -q Buy more milk today
 # You can use Todoist syntax with the quickadd (q) command
 # See https://todoist.com/help/articles/use-task-quick-add-in-todoist-va4Lhpzz for more details
 tod -q Buy more milk today // with a description
+
+# creates a task named "Clean my room" due on Tuesday at 1pm, with Priority of 2
+tod -q Clean my room on tuesday at 1pm p2
+
+# creates a task in the eBay project, an errands label, priority of 2, due tomorrow.
+tod -q Ship UPS Package #eBay @errands p2 tomorrow
+
+## Other Usage Examples
 
 # Create a new task (you will be prompted for content and project)
 tod task create

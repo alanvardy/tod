@@ -251,6 +251,7 @@ pub fn process_tasks(config: Config, project: &Project) -> Result<String, String
     let tasks = todoist::tasks_for_project(&config, project)?;
     let tasks = tasks::filter_not_in_future(tasks, &config)?;
     let tasks = tasks::sort_by_value(tasks, &config);
+    let tasks = tasks::reject_parent_tasks(tasks, &config);
     let mut task_count = tasks.len() as i32;
     for task in tasks {
         config.set_next_id(&task.id).save()?;

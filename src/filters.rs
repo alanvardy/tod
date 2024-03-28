@@ -88,6 +88,7 @@ fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)
 pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> {
     let tasks = todoist::tasks_for_filter(&config, filter)?;
     let tasks = tasks::sort_by_value(tasks, &config);
+    let tasks = tasks::reject_parent_tasks(tasks, &config);
     let mut task_count = tasks.len() as i32;
     for task in tasks {
         config.set_next_id(&task.id).save()?;

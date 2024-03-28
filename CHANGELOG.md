@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2024-03-28 v0.5.12
+
 - Don't `process` child tasks when the parent task is in the future
 - Don't `process` parent tasks when child tasks are still unchecked
 - Disable spinner in test

@@ -388,6 +388,60 @@ pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Tas
     Ok(tasks)
 }
 
+// We don't want to process parent tasks when child tasks are unchecked, or child tasks when they are checked
+// We additionally need to make sure that parent tasks are not in the future
+
+pub fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task> {
+    let parent_ids: Vec<String> = tasks
+        .clone()
+        .into_iter()
+        .filter(|task| task.parent_id.is_some() && !task.checked.unwrap_or_default())
+        .map(|task| task.parent_id.unwrap_or_default())
+        .collect();
+
+    tasks
+        .clone()
+        .into_iter()
+        .filter(|task| {
+            !parent_ids.contains(&task.id)
+                && !task.checked.unwrap_or_default()
+                && !parent_in_future(task.clone(), tasks.clone(), config)
+        })
+        .collect()
+}
+
+// Need to make sure that we are not completing a subtask for a parent task that is in the future
+fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool {
+    let task_ids: Vec<String> = tasks.clone().into_iter().map(|task| task.id).collect();
+
+    match task {
+        Task {
+            parent_id: None, ..
+        } => false,
+        Task {
+            parent_id: Some(parent_id),
+            ..
+        } => {
+            if task_ids.contains(&parent_id) {
+                false
+            } else {
+                // look up id and see if it is in the future
+                match todoist::get_task(config, &parent_id) {
+                    Err(_) => {
+                        println!("Could not fetch task for id: {parent_id}");
+                        false
+                    }
+                    Ok(task) => {
+                        !(task.is_overdue(config).unwrap_or_default()
+                            || task.has_no_date()
+                            || task.is_today(config).unwrap_or_default())
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub fn set_priority(config: &Config, task: Task) -> Result<String, String> {
     println!("{}", task.fmt(config, FormatType::Single));
 

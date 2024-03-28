@@ -28,6 +28,12 @@ pub fn quick_add_task(config: &Config, content: &str) -> Result<Task, String> {
     tasks::json_to_task(json)
 }
 
+pub fn get_task(config: &Config, id: &str) -> Result<Task, String> {
+    let url = format!("{REST_V2_TASKS_URL}{id}");
+    let json = request::get_todoist_rest(config, url)?;
+    tasks::json_to_task(json)
+}
+
 /// Add Task without natural language support but supports additional parameters
 #[allow(clippy::too_many_arguments)]
 pub fn add_task(

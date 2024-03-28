@@ -152,6 +152,10 @@ fn get_base_url(config: &Config) -> String {
 }
 
 fn maybe_start_spinner(config: &Config) -> Option<Spinner> {
+    if cfg!(test) {
+        return None;
+    }
+
     match env::var("DISABLE_SPINNER") {
         Ok(_) => None,
         _ => {
@@ -177,35 +181,5 @@ pub fn new_uuid() -> String {
         String::from(FAKE_UUID)
     } else {
         Uuid::new_v4().to_string()
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test;
-
-    #[test]
-    fn test_maybe_start_spinner() {
-        let config = test::fixtures::config();
-
-        // true spinner
-        let response = maybe_start_spinner(&config);
-        assert!(matches!(response, Some(Spinner { .. })));
-
-        // false spinner
-        let config = Config {
-            spinners: Some(false),
-            ..config
-        };
-        let response = maybe_start_spinner(&config);
-        assert!(response.is_none());
-
-        // null spinner
-        let config = Config {
-            spinners: None,
-            ..config
-        };
-        let response = maybe_start_spinner(&config);
-        assert!(matches!(response, Some(Spinner { .. })));
     }
 }

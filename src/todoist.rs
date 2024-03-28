@@ -186,10 +186,11 @@ pub fn update_task_name(config: &Config, task: Task, new_name: String) -> Result
 
 /// Complete the last task returned by "next task"
 pub fn complete_task(config: &Config) -> Result<String, String> {
-    let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": config.next_id}}]});
-    let url = String::from(SYNC_URL);
+    let id = config.next_id.clone().unwrap_or_default();
+    let url = format!("{REST_V2_TASKS_URL}{id}/close");
+    let body = json!("");
 
-    request::post_todoist_sync(config, url, body)?;
+    request::post_todoist_rest(config, url, body)?;
 
     if !cfg!(test) {
         config.clone().clear_next_id().save()?;
@@ -342,7 +343,7 @@ mod tests {
     fn should_complete_a_task() {
         let mut server = mockito::Server::new();
         let mock = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/rest/v2/tasks/112233/close")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())

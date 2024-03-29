@@ -254,6 +254,7 @@ pub fn process_tasks(config: Config, project: &Project) -> Result<String, String
     let tasks = tasks::reject_parent_tasks(tasks, &config);
     let mut task_count = tasks.len() as i32;
     for task in tasks {
+        println!(" ");
         config.set_next_id(&task.id).save()?;
         match handle_task(&config.reload()?, task, &mut task_count) {
             Some(Ok(_)) => (),

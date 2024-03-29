@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## Unreleased (on main branch only)
+
+## 2024-03-28 v0.5.13
+
+- Add spaces in between tasks in `process` 
+- Show JSON responses when using `verbose` flag
 
 ## 2024-03-28 v0.5.12
 

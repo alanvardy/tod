@@ -32,7 +32,7 @@ pub fn post_todoist_sync(
     let spinner = maybe_start_spinner(config);
     debug::print(config, format!("POST {request_url}\nbody: {body}"));
     let response = Client::new()
-        .post(request_url)
+        .post(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, format!("Bearer {token}"))
         .json(&body)
@@ -40,7 +40,7 @@ pub fn post_todoist_sync(
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(response, "POST", url, body)
+    handle_response(config, response, "POST", url, body)
 }
 
 /// Post to Todoist via REST api
@@ -60,7 +60,7 @@ pub fn post_todoist_rest(
     debug::print(config, format!("POST {request_url}\nbody: {body}"));
 
     let response = Client::new()
-        .post(request_url)
+        .post(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization)
         .header("X-Request-Id", new_uuid())
@@ -69,7 +69,7 @@ pub fn post_todoist_rest(
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(response, "POST", url, body)
+    handle_response(config, response, "POST", url, body)
 }
 
 pub fn delete_todoist_rest(
@@ -87,7 +87,7 @@ pub fn delete_todoist_rest(
     debug::print(config, format!("DELETE {request_url}\nbody: {body}"));
 
     let response = Client::new()
-        .delete(request_url)
+        .delete(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization)
         .header("X-Request-Id", new_uuid())
@@ -96,7 +96,7 @@ pub fn delete_todoist_rest(
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(response, "DELETE", url, body)
+    handle_response(config, response, "DELETE", url, body)
 }
 
 // Combine get and post into one function
@@ -113,24 +113,27 @@ pub fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> 
     }
     debug::print(config, format!("GET {request_url}"));
     let response = Client::new()
-        .get(request_url)
+        .get(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization)
         .send()
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(response, "GET", url, json!({}))
+    handle_response(config, response, "GET", url, json!({}))
 }
 
 fn handle_response(
+    config: &Config,
     response: Response,
     method: &str,
     url: String,
     body: serde_json::Value,
 ) -> Result<String, String> {
     if response.status().is_success() {
-        Ok(response.text().or(Err("Could not read response text"))?)
+        let text = response.text().unwrap_or_default();
+        debug::print(config, format!("{method} {url}\nresponse: {text}"));
+        Ok(text)
     } else {
         Err(format!(
             "

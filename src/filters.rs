@@ -329,7 +329,7 @@ mod tests {
             .create();
 
         let mock2 = server
-            .mock("POST", "/rest/v2/tasks/999999/close")
+            .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())

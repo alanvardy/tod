@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Switch back to Sync API for completing tasks, because REST API doesn't handle subtasks correctly
+
 ## 2024-03-28 v0.5.13
 
 - Add spaces in between tasks in `process` 

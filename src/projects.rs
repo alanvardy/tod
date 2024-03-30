@@ -625,17 +625,16 @@ mod tests {
     fn test_handle_task() {
         let mut server = mockito::Server::new();
         let mock = server
-            .mock("POST", "/rest/v2/tasks/999999/close")
+            .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::sync())
             .create();
 
         let task = test::fixtures::task();
         let config = test::fixtures::config()
             .mock_url(server.url())
-            .mock_select(0)
-            .set_next_id(&"999999".to_string());
+            .mock_select(0);
         let mut task_count = 3;
         let result = handle_task(&config, task, &mut task_count);
         let expected = Some(Ok(String::from("✓")));
@@ -654,10 +653,10 @@ mod tests {
             .create();
 
         let mock2 = server
-            .mock("POST", "/rest/v2/tasks/999999/close")
+            .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::sync())
             .create();
 
         let config = test::fixtures::config()

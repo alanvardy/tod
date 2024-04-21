@@ -17,58 +17,62 @@
 
 A tiny unofficial Todoist client
 
-Usage: tod [OPTIONS] [COMMAND]
+Usage: tod [OPTIONS] <COMMAND>
 
 Commands:
-  task     
-  project  
-  filter
-  version  
+  project  (p) Commands that change projects
+  task     (t) Commands for individual tasks
+  list     (l) Commands for multiple tasks
+  config   (c) Commands around configuration and the app
   help     Print this message or the help of the given subcommand(s)
 
 Options:
-  -o, --config <CONFIGURATION PATH>  Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
-  -q, --quickadd <quickadd>...       Create a new task with natural language processing.
-  -h, --help                         Print help
-  -V, --version                      Print version
-```
+  -v, --verbose          Display additional debug info while processing
+  -c, --config <CONFIG>  Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
+  -h, --help             Print help
+  -V, --version          Print version
+  ```
 
 And also use it to dig into subcommands
 
 ```bash
 > tod task -h
 
+Commands for individual tasks
+
 Usage: tod task <COMMAND>
 
 Commands:
-  create    Create a new task
-  list      List all tasks in a project
-  next      Get the next task by priority
-  complete  Complete the last task fetched with the next command
-  help      Print this message or the help of the given subcommand(s)
+  quick-add  (q) Create a new task using NLP
+  create     (c) Create a new task (without NLP)
+  edit       (e) Edit an existing task's content
+  next       (n) Get the next task by priority
+  complete   (o) Complete the last task fetched with the next command
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help     Print help
-  -V, --version  Print version
-
+  -h, --help  Print help
 ```
 
 
-## Quickadd Usage Examples
+## Usage Examples
 
 ```bash
 # Quickly create a task
-tod -q Buy more milk today
+tod task quick-add --content Buy more milk today
+
+# Quickly create a task with aliases
+tod t q -c Buy more milk today
 
 # You can use Todoist syntax with the quickadd (q) command
 # See https://todoist.com/help/articles/use-task-quick-add-in-todoist-va4Lhpzz for more details
-tod -q Buy more milk today // with a description
+tod t q -c Buy more milk today // with a description
 
 # creates a task named "Clean my room" due on Tuesday at 1pm, with Priority of 2
-tod -q Clean my room on tuesday at 1pm p2
+tod t q -c Clean my room on tuesday at 1pm p2
 
 # creates a task in the eBay project, an errands label, priority of 2, due tomorrow.
-tod -q Ship UPS Package #eBay @errands p2 tomorrow
+tod t q -c Ship UPS Package #eBay @errands p2 tomorrow
 
 ## Other Usage Examples
 
@@ -85,16 +89,13 @@ tod project import
 tod task next
 
 # Go through tasks with an interactive prompt, completing them in order of importance one at a time.
-tod project process
+tod list process
 
 # Complete the last "next task" and get another
 tod task complete && tod task next
 
-# Get your work schedule
-tod tasks list --scheduled --project work
-
 # Get all tasks for work
-tod tasks list --project work
+tod list view --project work
 ```
 
 ## Shell script examples
@@ -107,26 +108,26 @@ tod tasks list --project work
   tod project empty --project inbox && \
   echo "" && \
   echo "=== SCHEDULING DIGITAL ===" && \
-  tod project schedule --project digital && \
+  tod list schedule --project digital && \
   echo "" && \
   echo "=== SCHEDULING PHYSICAL ===" && \
-  tod project schedule --project physical && \
+  tod list schedule --project physical && \
   echo "" && \
   echo "=== PRIORITIZING DIGITAL ===" && \
-  tod project prioritize --project digital && \
+  tod list prioritize --project digital && \
   echo "" && \
   echo "=== PRIORITIZING PHYSICAL ===" && \
-  tod project prioritize --project physical
+  tod list prioritize --project physical
   echo "" && \
   echo "=== PROCESSING DIGITAL ===" && \
-  tod project process --project digital && \
+  tod list process --project digital && \
   echo "" && \
   echo "=== PROCESSING PHYSICAL ===" && \
-  tod project process --project physical;
+  tod list process --project physical;
 ```
 
 ## Update Tod only if it is out of date
 
 ```bash
-tod version check || cargo install tod --force
+tod config check-version || cargo install tod --force
 ```

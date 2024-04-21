@@ -1,4 +1,3 @@
-use clap::ArgMatches;
 use std::fmt::Display;
 
 #[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone, Eq, PartialEq)]
@@ -30,12 +29,15 @@ impl Priority {
             Priority::High => 4,
         }
     }
+}
 
-    pub fn get_from_matches(matches: &ArgMatches) -> Option<Self> {
-        let priority_arg = &matches.get_one::<String>("priority").map(|s| s.to_owned());
-        match priority_arg {
-            None => None,
-            Some(priority) => serde_json::from_str(priority).ok(),
-        }
+pub fn from_integer(priority: &Option<u8>) -> Option<Priority> {
+    match priority {
+        None => None,
+        Some(1) => Some(Priority::None),
+        Some(2) => Some(Priority::Low),
+        Some(3) => Some(Priority::Medium),
+        Some(4) => Some(Priority::High),
+        Some(_) => None,
     }
 }

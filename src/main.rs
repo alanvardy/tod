@@ -5,9 +5,11 @@ extern crate clap;
 
 use std::fmt::Display;
 
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use cargo::Version;
+use clap::{Parser, Subcommand};
 use config::Config;
 use projects::Project;
+use tasks::priority;
 use tasks::priority::Priority;
 
 mod cargo;
@@ -23,12 +25,301 @@ mod test;
 mod time;
 mod todoist;
 
-const APP: &str = "Tod";
+const NAME: &str = "Tod";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
 
 const NO_PROJECTS_ERR: &str = "No projects in config. Add projects with `tod project import`";
+
+#[derive(Parser, Clone)]
+#[command(name = NAME)]
+#[command(version = VERSION)]
+#[command(about = ABOUT, long_about = None)]
+#[command(author = AUTHOR, version)]
+#[command(arg_required_else_help(true))]
+struct Cli {
+    #[arg(short, long, default_value_t = false)]
+    /// Display additional debug info while processing
+    verbose: bool,
+
+    #[arg(short, long)]
+    /// Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
+    config: Option<String>,
+
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+enum Commands {
+    #[command(subcommand)]
+    #[clap(alias = "p")]
+    /// (p) Commands that change projects
+    Project(ProjectCommands),
+
+    #[command(subcommand)]
+    #[clap(alias = "t")]
+    /// (t) Commands for individual tasks
+    Task(TaskCommands),
+
+    #[command(subcommand)]
+    #[clap(alias = "l")]
+    /// (l) Commands for multiple tasks
+    List(ListCommands),
+
+    #[command(subcommand)]
+    #[clap(alias = "c")]
+    /// (c) Commands around configuration and the app
+    Config(ConfigCommands),
+}
+
+// -- PROJECTS --
+
+#[derive(Subcommand, Debug, Clone)]
+enum ProjectCommands {
+    #[clap(alias = "l")]
+    /// (l) List all of the projects in config
+    List(ProjectList),
+
+    #[clap(alias = "r")]
+    /// (r) Remove a project from config (not Todoist)
+    Remove(ProjectRemove),
+
+    #[clap(alias = "n")]
+    /// (n) Rename a project in config (not in Todoist)
+    Rename(ProjectRename),
+
+    #[clap(alias = "i")]
+    /// (i) Get projects from Todoist and prompt to add to config
+    Import(ProjectImport),
+
+    #[clap(alias = "e")]
+    /// (e) Empty a project by putting tasks in other projects"
+    Empty(ProjectEmpty),
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ProjectList {}
+
+#[derive(Parser, Debug, Clone)]
+struct ProjectImport {}
+
+#[derive(Parser, Debug, Clone)]
+struct ProjectRemove {
+    #[arg(short = 'a', long, default_value_t = false)]
+    /// Remove all projects from config that are not in Todoist
+    auto: bool,
+
+    #[arg(short = 'l', long, default_value_t = false)]
+    /// Remove all projects from config
+    all: bool,
+
+    #[arg(short, long)]
+    /// Project to remove
+    project: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ProjectRename {
+    #[arg(short, long)]
+    /// Project to remove
+    project: Option<String>,
+}
+#[derive(Parser, Debug, Clone)]
+struct ProjectEmpty {
+    #[arg(short, long)]
+    /// Project to remove
+    project: Option<String>,
+}
+
+// -- TASKS --
+
+#[derive(Subcommand, Debug, Clone)]
+enum TaskCommands {
+    #[clap(alias = "q")]
+    /// (q) Create a new task using NLP
+    QuickAdd(TaskQuickAdd),
+
+    #[clap(alias = "c")]
+    /// (c) Create a new task (without NLP)
+    Create(TaskCreate),
+
+    #[clap(alias = "e")]
+    /// (e) Edit an existing task's content
+    Edit(TaskEdit),
+
+    #[clap(alias = "n")]
+    /// (n) Get the next task by priority
+    Next(TaskNext),
+
+    #[clap(alias = "o")]
+    /// (o) Complete the last task fetched with the next command
+    Complete(TaskComplete),
+}
+
+#[derive(Parser, Debug, Clone)]
+struct TaskQuickAdd {
+    #[arg(short, long, num_args(1..))]
+    /// Content for task
+    content: Vec<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct TaskCreate {
+    #[arg(short, long)]
+    /// The project into which the task will be added
+    project: Option<String>,
+
+    #[arg(short = 'u', long)]
+    /// Date date in format YYYY-MM-DD, YYYY-MM-DD HH:MM, or natural language
+    due: Option<String>,
+
+    #[arg(short, long, default_value_t = String::new())]
+    /// Description for task
+    description: String,
+
+    #[arg(short, long)]
+    /// Content for task
+    content: Option<String>,
+
+    #[arg(short, long, default_value_t = false)]
+    /// Do not prompt for section
+    no_section: bool,
+
+    #[arg(short = 'r', long)]
+    /// Priority from 1 (without priority) to 4 (highest)
+    priority: Option<u8>,
+
+    #[arg(short, long)]
+    /// List of labels to choose from, to be applied to each entry. Use flag once per label
+    label: Vec<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct TaskEdit {
+    #[arg(short, long)]
+    /// The project containing the task
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the task
+    filter: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct TaskNext {
+    #[arg(short, long)]
+    /// The project containing the task
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the task
+    filter: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct TaskComplete {}
+
+// -- LISTS --
+
+#[derive(Subcommand, Debug, Clone)]
+enum ListCommands {
+    #[clap(alias = "v")]
+    /// (v) View a list of tasks
+    View(ListView),
+
+    #[clap(alias = "c")]
+    /// (c) Complete a list of tasks one by one in priority order
+    Process(ListProcess),
+
+    #[clap(alias = "z")]
+    /// (z) Give every task a priority
+    Prioritize(ListPrioritize),
+
+    #[clap(alias = "l")]
+    /// (l) Iterate through tasks and apply labels from defined choices
+    Label(ListLabel),
+
+    #[clap(alias = "s")]
+    /// (s) Assign dates to all tasks individually
+    Schedule(ListSchedule),
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListView {
+    #[arg(short, long)]
+    /// The project containing the tasks
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the tasks
+    filter: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListProcess {
+    #[arg(short, long)]
+    /// Complete all tasks that are due today or undated in a project individually in priority order
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the tasks
+    filter: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListPrioritize {
+    #[arg(short, long)]
+    /// The project containing the tasks
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the tasks
+    filter: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListLabel {
+    #[arg(short, long)]
+    /// The filter containing the tasks
+    filter: Option<String>,
+
+    #[arg(short, long)]
+    /// Labels to select from
+    label: Vec<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListSchedule {
+    #[arg(short, long)]
+    /// The project containing the tasks
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the tasks
+    filter: Option<String>,
+
+    #[arg(short, long, default_value_t = false)]
+    /// Don't re-schedule recurring tasks that are overdue
+    skip_recurring: bool,
+
+    #[arg(short, long, default_value_t = false)]
+    /// Only schedule overdue tasks
+    overdue: bool,
+}
+
+// -- CONFIG --
+
+#[derive(Subcommand, Debug, Clone)]
+enum ConfigCommands {
+    #[clap(alias = "v")]
+    /// (v) Check to see if tod is on the latest version, returns exit code 1 if out of date
+    CheckVersion(ConfigCheckVersion),
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ConfigCheckVersion {}
 
 enum Flag {
     Project(Project),
@@ -51,49 +342,30 @@ impl Display for FlagOptions {
 
 #[cfg(not(tarpaulin_include))]
 fn main() {
-    let matches = cmd().get_matches();
+    let cli = Cli::parse();
 
-    let result = match matches.subcommand() {
-        None => {
-            let new_task = matches
-                .get_many("quickadd")
-                .map(|values| values.cloned().collect::<Vec<String>>().join(" "));
-            match new_task {
-                None => Err(cmd().render_long_help().to_string()),
-                Some(text) => quickadd(&matches, text),
-            }
+    let result = match &cli.command {
+        Commands::Project(ProjectCommands::List(args)) => project_list(cli.clone(), args),
+        Commands::Project(ProjectCommands::Remove(args)) => project_remove(cli.clone(), args),
+        Commands::Project(ProjectCommands::Rename(args)) => project_rename(cli.clone(), args),
+        Commands::Project(ProjectCommands::Import(args)) => project_import(cli.clone(), args),
+        Commands::Project(ProjectCommands::Empty(args)) => project_empty(cli.clone(), args),
+
+        Commands::Task(TaskCommands::QuickAdd(args)) => task_quick_add(cli.clone(), args),
+        Commands::Task(TaskCommands::Create(args)) => task_create(cli.clone(), args),
+        Commands::Task(TaskCommands::Edit(args)) => task_edit(cli.clone(), args),
+        Commands::Task(TaskCommands::Next(args)) => task_next(cli.clone(), args),
+        Commands::Task(TaskCommands::Complete(args)) => task_complete(cli.clone(), args),
+
+        Commands::List(ListCommands::View(args)) => list_view(cli.clone(), args),
+        Commands::List(ListCommands::Process(args)) => list_process(cli.clone(), args),
+        Commands::List(ListCommands::Prioritize(args)) => list_prioritize(cli.clone(), args),
+        Commands::List(ListCommands::Label(args)) => list_label(cli.clone(), args),
+        Commands::List(ListCommands::Schedule(args)) => list_schedule(cli.clone(), args),
+
+        Commands::Config(ConfigCommands::CheckVersion(args)) => {
+            config_check_version(cli.clone(), args)
         }
-        Some(("task", task_matches)) => match task_matches.subcommand() {
-            Some(("create", m)) => task_create(m),
-            Some(("edit", m)) => task_edit(m),
-            Some(("list", m)) => task_list(m),
-            Some(("next", m)) => task_next(m),
-            Some(("complete", m)) => task_complete(m),
-            _ => unreachable!(),
-        },
-        Some(("project", project_matches)) => match project_matches.subcommand() {
-            Some(("list", m)) => project_list(m),
-            Some(("remove", m)) => project_remove(m),
-            Some(("rename", m)) => project_rename(m),
-            Some(("process", m)) => project_process(m),
-            Some(("empty", m)) => project_empty(m),
-            Some(("schedule", m)) => project_schedule(m),
-            Some(("prioritize", m)) => project_prioritize(m),
-            Some(("import", m)) => project_import(m),
-            _ => unreachable!(),
-        },
-        Some(("filter", filter_matches)) => match filter_matches.subcommand() {
-            Some(("label", m)) => filter_label(m),
-            Some(("process", m)) => filter_process(m),
-            Some(("prioritize", m)) => filter_prioritize(m),
-            Some(("schedule", m)) => filter_schedule(m),
-            _ => unreachable!(),
-        },
-        Some(("version", version_matches)) => match version_matches.subcommand() {
-            Some(("check", m)) => version_check(m),
-            _ => unreachable!(),
-        },
-        _ => unreachable!(),
     };
 
     match result {
@@ -108,165 +380,36 @@ fn main() {
     }
 }
 
-fn cmd() -> Command {
-    Command::new(APP)
-        .version(VERSION)
-        .author(AUTHOR)
-        .about(ABOUT)
-        .arg_required_else_help(true)
-        .propagate_version(true)
-        .arg(config_arg())
-        .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-        .arg(
-            Arg::new("quickadd")
-                .short('q')
-                .long("quickadd")
-                .required(false)
-                .action(ArgAction::Append)
-                .num_args(1..)
-                .value_parser(clap::value_parser!(String))
-                .help(
-                    "Create a new task with natural language processing.",
-                )
-        )
-        .subcommands([
-            Command::new("task")
-                    .arg_required_else_help(true)
-                    .propagate_version(true)
-                    .subcommand_required(true)
-                    .subcommands([
-                       Command::new("create").about("Create a new task (without NLP)")
-                         .arg(config_arg())
-                         .arg(priority_arg())
-                         .arg(content_arg())
-                        .arg(labels_arg())
-                         .arg(description_arg())
-                         .arg(due_arg())
-                         .arg(project_arg())
-                         .arg(flag_arg("nosection", 's',  "Do not prompt for section"))
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing")),
-                       Command::new("edit").about("Edit an exising task's content")
-                         .arg(config_arg())
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                         .arg(filter_arg())
-                         .arg(project_arg()),
-                       Command::new("list").about("List all tasks in a project")
-                         .arg(config_arg())
-                         .arg(project_arg())
-                         .arg(filter_arg())
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing")),
-                       Command::new("next").about("Get the next task by priority")
-                         .arg(config_arg())
-                         .arg(filter_arg())
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                         .arg(project_arg()),
-                       Command::new("complete").about("Complete the last task fetched with the next command")
-                         .arg(config_arg())
-                ]),
-            Command::new("project")
-                   .arg_required_else_help(true)
-                   .propagate_version(true)
-                   .subcommand_required(true)
-                   .subcommands([
-                       Command::new("list").about("List all projects in config")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                         .arg(config_arg()),
-                       Command::new("remove").about("Remove a project from config (not Todoist)")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(config_arg())
-                         .arg(flag_arg("auto", 'a',  "Remove all projects from config that are not in Todoist"))
-                         .arg(flag_arg("all", 'l',  "Remove all projects from config"))
-                        .arg(project_arg()),
-                       Command::new("rename").about("Rename a project in config (not Todoist)")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(config_arg())
-                        .arg(project_arg()),
-                       Command::new("empty").about("Empty a project by putting tasks in other projects")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(config_arg())
-                        .arg(project_arg()),
-                       Command::new("schedule").about("Assign dates to all tasks individually")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                         .arg(flag_arg("skip-recurring", 's',  "Don't re-schedule recurring tasks that are overdue"))
-                        .arg(config_arg())
-                         .arg(flag_arg("overdue", 'u',  "Only schedule overdue tasks"))
-                        .arg(project_arg()),
-                       Command::new("prioritize").about("Give every task a priority")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(config_arg())
-                        .arg(project_arg()),
-                       Command::new("import").about("Get projects from Todoist and prompt to add to config")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(config_arg()),
-                       Command::new("process").about("Complete all tasks that are due today or undated in a project individually in priority order")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(config_arg())
-                        .arg(project_arg())
-                ]
-                    ),
-            Command::new("filter")
-                   .arg_required_else_help(true)
-                   .propagate_version(true)
-                   .subcommand_required(true)
-                   .subcommands([
-                       Command::new("label").about("Iterate through tasks and apply labels from defined choices")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(filter_arg())
-                        .arg(labels_arg())
-                         .arg(config_arg()),
-                       Command::new("process").about("Iterate through tasks and complete them individually in priority order")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(filter_arg())
-                         .arg(config_arg()),
-                       Command::new("prioritize").about("Give every task a priority")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(filter_arg())
-                         .arg(config_arg()),
-                       Command::new("schedule").about("Assign dates to all tasks individually")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                        .arg(filter_arg())
-                         .arg(config_arg()),
-                ]
-                    ),
-            Command::new("version")
-                   .arg_required_else_help(true)
-                   .propagate_version(true)
-                   .subcommand_required(true)
-                   .subcommands([
-                       Command::new("check").about("Check to see if tod is on the latest version, returns exit code 1 if out of date")
-                         .arg(flag_arg("verbose", 'v',  "Display additional debug info while processing"))
-                         .arg(config_arg()),
-                ]
-                    )
-        ]
-        )
-}
-
-// --- TOP LEVEL ---
-
-#[cfg(not(tarpaulin_include))]
-fn quickadd(matches: &ArgMatches, text: String) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-
-    todoist::quick_add_task(&config, &text)?;
-    Ok(color::green_string("✓"))
-}
-
 // --- TASK ---
 
 #[cfg(not(tarpaulin_include))]
-fn task_create(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    let content = fetch_string(matches, &config, "content", "Content")?;
-    let priority = fetch_priority(matches, &config)?;
-    let project = match fetch_project(matches, &config)? {
+fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, String> {
+    let TaskQuickAdd { content } = args;
+    let config = fetch_config(cli)?;
+
+    todoist::quick_add_task(&config, &content.join(" "))?;
+    Ok(color::green_string("✓"))
+}
+
+#[cfg(not(tarpaulin_include))]
+fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
+    let TaskCreate {
+        project,
+        due,
+        description,
+        content,
+        no_section,
+        priority,
+        label: labels,
+    } = args;
+    let config = fetch_config(cli)?;
+    let content = fetch_string(content, &config, "CONTENT")?;
+    let priority = fetch_priority(priority, &config)?;
+    let project = match fetch_project(project, &config)? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
-    let description = fetch_description(matches);
-    let due = fetch_due(matches);
-    let labels = fetch_labels(matches, &config)?;
-    let section = if has_flag(matches, "nosection") || config.no_sections.unwrap_or_default() {
+    let section = if *no_section || config.no_sections.unwrap_or_default() {
         None
     } else {
         let sections = todoist::sections_for_project(&config, &project)?;
@@ -298,35 +441,27 @@ fn task_create(matches: &ArgMatches) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn task_edit(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    match fetch_project_or_filter(matches, &config)? {
+fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, String> {
+    let config = fetch_config(cli)?;
+    let TaskEdit { project, filter } = args;
+    match fetch_project_or_filter(project, filter, &config)? {
         Flag::Project(project) => projects::rename_task(&config, &project),
         Flag::Filter(filter) => filters::rename_task(&config, filter),
     }
 }
 #[cfg(not(tarpaulin_include))]
-fn task_list(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-
-    match fetch_project_or_filter(matches, &config)? {
-        Flag::Project(project) => projects::all_tasks(&config, &project),
-        Flag::Filter(filter) => filters::all_tasks(&config, &filter),
-    }
-}
-
-#[cfg(not(tarpaulin_include))]
-fn task_next(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    match fetch_project(matches, &config)? {
+fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
+    let TaskNext { project, filter } = args;
+    let config = fetch_config(cli)?;
+    match fetch_project_or_filter(project, filter, &config)? {
         Flag::Project(project) => projects::next_task(config, &project),
         Flag::Filter(filter) => filters::next_task(config, &filter),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn task_complete(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
+fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
+    let config = fetch_config(cli)?;
     match config.next_id {
         Some(_) => todoist::complete_task(&config),
         None => {
@@ -335,25 +470,37 @@ fn task_complete(matches: &ArgMatches) -> Result<String, String> {
     }
 }
 
+// --- LIST ---
+
+#[cfg(not(tarpaulin_include))]
+fn list_view(cli: Cli, args: &ListView) -> Result<String, String> {
+    let config = fetch_config(cli)?;
+    let ListView { project, filter } = args;
+
+    match fetch_project_or_filter(project, filter, &config)? {
+        Flag::Project(project) => projects::all_tasks(&config, &project),
+        Flag::Filter(filter) => filters::all_tasks(&config, &filter),
+    }
+}
+
 // --- PROJECT ---
 
 #[cfg(not(tarpaulin_include))]
-fn project_list(matches: &ArgMatches) -> Result<String, String> {
-    let mut config = fetch_config(matches)?;
+fn project_list(cli: Cli, _args: &ProjectList) -> Result<String, String> {
+    let mut config = fetch_config(cli)?;
 
     projects::list(&mut config)
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_remove(matches: &ArgMatches) -> Result<String, String> {
-    let mut config = fetch_config(matches)?;
-    let all = has_flag(matches, "all");
-    let auto = has_flag(matches, "auto");
+fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String> {
+    let ProjectRemove { all, auto, project } = args;
+    let mut config = fetch_config(cli)?;
     match (all, auto) {
         (true, false) => projects::remove_all(&mut config),
         (false, true) => projects::remove_auto(&mut config),
         (false, false) => {
-            let project = match fetch_project(matches, &config)? {
+            let project = match fetch_project(project, &config)? {
                 Flag::Project(project) => project,
                 _ => unreachable!(),
             };
@@ -364,9 +511,10 @@ fn project_remove(matches: &ArgMatches) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_rename(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    let project = match fetch_project(matches, &config)? {
+fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String> {
+    let config = fetch_config(cli)?;
+    let ProjectRename { project } = args;
+    let project = match fetch_project(project, &config)? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
@@ -378,27 +526,17 @@ fn project_rename(matches: &ArgMatches) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_process(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    let project = match fetch_project(matches, &config)? {
-        Flag::Project(project) => project,
-        _ => unreachable!(),
-    };
-
-    projects::process_tasks(config, &project)
-}
-
-#[cfg(not(tarpaulin_include))]
-fn project_import(matches: &ArgMatches) -> Result<String, String> {
-    let mut config = fetch_config(matches)?;
+fn project_import(cli: Cli, _args: &ProjectImport) -> Result<String, String> {
+    let mut config = fetch_config(cli)?;
 
     projects::import(&mut config)
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_empty(matches: &ArgMatches) -> Result<String, String> {
-    let mut config = fetch_config(matches)?;
-    let project = match fetch_project(matches, &config)? {
+fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, String> {
+    let ProjectEmpty { project } = args;
+    let mut config = fetch_config(cli)?;
+    let project = match fetch_project(project, &config)? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
@@ -406,79 +544,69 @@ fn project_empty(matches: &ArgMatches) -> Result<String, String> {
     projects::empty(&mut config, &project)
 }
 
-#[cfg(not(tarpaulin_include))]
-fn project_prioritize(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    let project = match fetch_project(matches, &config)? {
-        Flag::Project(project) => project,
-        _ => unreachable!(),
-    };
-
-    projects::prioritize_tasks(&config, &project)
-}
+// --- LIST ---
 
 #[cfg(not(tarpaulin_include))]
-fn project_schedule(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    let project = match fetch_project(matches, &config)? {
-        Flag::Project(project) => project,
-        _ => unreachable!(),
-    };
-    let skip_recurring = has_flag(matches, "skip-recurring");
-    let filter = if has_flag(matches, "overdue") {
-        projects::TaskFilter::Overdue
-    } else {
-        projects::TaskFilter::Unscheduled
-    };
-
-    projects::schedule(&config, &project, filter, skip_recurring)
-}
-
-// --- FILTER ---
-
-#[cfg(not(tarpaulin_include))]
-fn filter_label(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    let labels = fetch_labels(matches, &config)?;
-    match fetch_filter(matches, &config)? {
+fn list_label(cli: Cli, args: &ListLabel) -> Result<String, String> {
+    let ListLabel {
+        filter,
+        label: labels,
+    } = args;
+    let config = fetch_config(cli)?;
+    match fetch_filter(filter, &config)? {
         Flag::Filter(filter) => filters::label(&config, &filter, labels),
         _ => unreachable!(),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn filter_process(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    match fetch_filter(matches, &config)? {
+fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
+    let ListProcess { project, filter } = args;
+    let config = fetch_config(cli)?;
+    match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::process_tasks(config, &filter),
-        _ => unreachable!(),
+        Flag::Project(project) => projects::process_tasks(config, &project),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn filter_prioritize(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    match fetch_filter(matches, &config)? {
+fn list_prioritize(cli: Cli, args: &ListPrioritize) -> Result<String, String> {
+    let ListPrioritize { project, filter } = args;
+    let config = fetch_config(cli)?;
+    match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter),
-        _ => unreachable!(),
+        Flag::Project(project) => projects::prioritize_tasks(&config, &project),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn filter_schedule(matches: &ArgMatches) -> Result<String, String> {
-    let config = fetch_config(matches)?;
-    match fetch_filter(matches, &config)? {
+fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> {
+    let ListSchedule {
+        project,
+        filter,
+        skip_recurring,
+        overdue,
+    } = args;
+    let config = fetch_config(cli)?;
+    match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::schedule(&config, &filter),
-        _ => unreachable!(),
+        Flag::Project(project) => {
+            let task_filter = if *overdue {
+                projects::TaskFilter::Overdue
+            } else {
+                projects::TaskFilter::Unscheduled
+            };
+
+            projects::schedule(&config, &project, task_filter, *skip_recurring)
+        }
     }
 }
-// --- VERSION ---
+
+// // --- CONFIG ---
 
 #[cfg(not(tarpaulin_include))]
-fn version_check(matches: &ArgMatches) -> Result<String, String> {
-    use cargo::Version;
-
-    let config = fetch_config(matches)?;
+fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<String, String> {
+    let config = fetch_config(cli)?;
 
     match cargo::compare_versions(config) {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
@@ -490,154 +618,32 @@ fn version_check(matches: &ArgMatches) -> Result<String, String> {
     }
 }
 
-// --- ARGUMENT HELPERS ---
-
-#[cfg(not(tarpaulin_include))]
-fn priority_arg() -> Arg {
-    Arg::new("priority")
-        .long("priority")
-        .num_args(1)
-        .required(false)
-        .value_name("PRIORITY")
-        .help("Priority from 1 (without priority) to 4 (highest)")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn flag_arg(id: &'static str, short: char, help: &'static str) -> Arg {
-    Arg::new(id)
-        .short(short)
-        .long(id)
-        .value_parser(["yes", "no"])
-        .num_args(0..1)
-        .default_value("no")
-        .default_missing_value("yes")
-        .required(false)
-        .help(help)
-}
-
-#[cfg(not(tarpaulin_include))]
-fn config_arg() -> Arg {
-    Arg::new("config")
-        .short('o')
-        .long("config")
-        .num_args(1)
-        .required(false)
-        .value_name("CONFIGURATION PATH")
-        .help("Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn content_arg() -> Arg {
-    Arg::new("content")
-        .short('c')
-        .long("content")
-        .num_args(1)
-        .required(false)
-        .value_name("TASK TEXT")
-        .help("Content for task")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn description_arg() -> Arg {
-    Arg::new("description")
-        .short('d')
-        .long("description")
-        .num_args(1)
-        .required(false)
-        .value_name("DESCRIPTION TEXT")
-        .help("Description for task")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn due_arg() -> Arg {
-    Arg::new("due")
-        .short('u')
-        .long("due")
-        .num_args(1)
-        .required(false)
-        .value_name("DUE DATE")
-        .help("Date date in format YYYY-MM-DD, YYYY-MM-DD HH:MM, or natural language")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn project_arg() -> Arg {
-    Arg::new("project")
-        .short('p')
-        .long("project")
-        .num_args(1)
-        .required(false)
-        .value_name("PROJECT NAME")
-        .help("The project into which the task will be added")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn filter_arg() -> Arg {
-    Arg::new("filter")
-        .short('f')
-        .long("filter")
-        .num_args(1)
-        .required(false)
-        .value_name("FILTER_STRING")
-        .help("Filter string https://todoist.com/help/articles/205248842")
-}
-
-#[cfg(not(tarpaulin_include))]
-fn labels_arg() -> Arg {
-    Arg::new("labels")
-        .short('l')
-        .long("labels")
-        .num_args(1..)
-        .required(false)
-        .value_name("LABEL1 LABEL2")
-        .help("List of labels to choose from, to be applied to each entry")
-}
-
 // --- VALUE HELPERS ---
 
-/// Checks if the flag was used
 #[cfg(not(tarpaulin_include))]
-fn has_flag(matches: &ArgMatches, id: &'static str) -> bool {
-    matches.get_one::<String>(id) == Some(&String::from("yes"))
-}
-
-#[cfg(not(tarpaulin_include))]
-fn fetch_config(matches: &ArgMatches) -> Result<Config, String> {
-    let config_path = matches.get_one::<String>("config").map(|s| s.to_owned());
-
-    let verbose = has_flag(matches, "verbose");
+fn fetch_config(cli: Cli) -> Result<Config, String> {
+    let config_path = cli.config;
+    let verbose = cli.verbose;
 
     config::get_or_create(config_path, verbose)?
         .check_for_timezone()?
         .check_for_latest_version()
 }
 
-fn fetch_description(matches: &ArgMatches) -> Option<String> {
-    matches
-        .get_one::<String>("description")
-        .map(|s| s.to_owned())
-}
-
-fn fetch_due(matches: &ArgMatches) -> Option<String> {
-    matches.get_one::<String>("due").map(|s| s.to_owned())
-}
-
 #[cfg(not(tarpaulin_include))]
 fn fetch_string(
-    matches: &ArgMatches,
+    maybe_string: &Option<String>,
     config: &Config,
-    field: &str,
     prompt: &str,
 ) -> Result<String, String> {
-    let argument_content = matches.get_one::<String>(field).map(|s| s.to_owned());
-    match argument_content {
-        Some(string) => Ok(string),
+    match maybe_string {
+        Some(string) => Ok(string.to_owned()),
         None => input::string(prompt, config.mock_string.clone()),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Flag, String> {
-    let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
+fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, String> {
     let projects = config.projects.clone().unwrap_or_default();
     if projects.is_empty() {
         return Err(NO_PROJECTS_ERR.to_string());
@@ -647,7 +653,7 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Flag, String> 
         return Ok(Flag::Project(projects.first().unwrap().clone()));
     }
 
-    match project_content {
+    match project {
         Some(project_name) => projects
             .iter()
             .find(|p| p.name == project_name.as_str())
@@ -660,9 +666,9 @@ fn fetch_project(matches: &ArgMatches, config: &Config) -> Result<Flag, String> 
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_filter(matches: &ArgMatches, config: &Config) -> Result<Flag, String> {
-    match matches.get_one::<String>("filter").map(|s| s.to_owned()) {
-        Some(string) => Ok(Flag::Filter(string)),
+fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, String> {
+    match filter {
+        Some(string) => Ok(Flag::Filter(string.to_owned())),
         None => {
             let string = input::string("Enter a filter:", config.mock_string.clone())?;
             Ok(Flag::Filter(string))
@@ -671,52 +677,28 @@ fn fetch_filter(matches: &ArgMatches, config: &Config) -> Result<Flag, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_project_or_filter(matches: &ArgMatches, config: &Config) -> Result<Flag, String> {
-    let project_content = matches.get_one::<String>("project").map(|s| s.to_owned());
-    let filter_content = matches.get_one::<String>("filter").map(|s| s.to_owned());
-
-    match (project_content, filter_content) {
-        (Some(_), None) => fetch_project(matches, config),
-        (None, Some(_)) => fetch_filter(matches, config),
+fn fetch_project_or_filter(
+    project: &Option<String>,
+    filter: &Option<String>,
+    config: &Config,
+) -> Result<Flag, String> {
+    match (project, filter) {
+        (Some(_), None) => fetch_project(project, config),
+        (None, Some(_)) => fetch_filter(filter, config),
         (Some(_), Some(_)) => Err("Must select project OR filter".to_string()),
         (None, None) => {
             let options = vec![FlagOptions::Project, FlagOptions::Filter];
             match input::select("Select Project or Filter:", options, config.mock_select)? {
-                FlagOptions::Project => fetch_project(matches, config),
-                FlagOptions::Filter => fetch_filter(matches, config),
+                FlagOptions::Project => fetch_project(project, config),
+                FlagOptions::Filter => fetch_filter(filter, config),
             }
         }
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_labels(matches: &ArgMatches, config: &Config) -> Result<Vec<String>, String> {
-    match matches.get_many::<String>("labels") {
-        None => {
-            let labels = input::string(
-                "Enter labels separated by spaces: ",
-                config.mock_string.clone(),
-            )?
-            .split(' ')
-            .map(|s| s.to_owned())
-            .collect();
-
-            Ok(labels)
-        }
-        Some(items) => {
-            let labels = items
-                .into_iter()
-                .map(|s| s.to_owned())
-                .collect::<Vec<String>>();
-
-            Ok(labels)
-        }
-    }
-}
-
-#[cfg(not(tarpaulin_include))]
-fn fetch_priority(matches: &ArgMatches, config: &Config) -> Result<Priority, String> {
-    match Priority::get_from_matches(matches) {
+fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, String> {
+    match priority::from_integer(priority) {
         Some(priority) => Ok(priority),
         None => {
             let options = vec![
@@ -737,5 +719,8 @@ fn fetch_priority(matches: &ArgMatches, config: &Config) -> Result<Priority, Str
 
 #[test]
 fn verify_cmd() {
-    cmd().debug_assert();
+    use clap::CommandFactory;
+    // Mostly checks that it is not going to throw an exception because of conflicting short arguments
+    Cli::try_parse().err();
+    Cli::command().debug_assert();
 }

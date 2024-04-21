@@ -47,10 +47,10 @@ pub fn rename_task(config: &Config, filter: String) -> Result<String, String> {
     todoist::update_task_name(config, selected_task, new_task_content)
 }
 
-pub fn label(config: &Config, filter: &str, labels: Vec<String>) -> Result<String, String> {
+pub fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, String> {
     let tasks = todoist::tasks_for_filter(config, filter)?;
     for task in tasks {
-        label_task(config, task, &labels)?;
+        label_task(config, task, labels)?;
     }
     Ok(color::green_string(&format!(
         "There are no more tasks for filter: '{filter}'"
@@ -311,7 +311,7 @@ mod tests {
         let labels = vec![String::from("thing")];
 
         assert_eq!(
-            label(&config_with_timezone, &filter, labels),
+            label(&config_with_timezone, &filter, &labels),
             Ok(String::from("There are no more tasks for filter: 'today'"))
         );
         mock.assert();

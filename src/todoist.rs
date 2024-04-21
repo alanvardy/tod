@@ -38,19 +38,21 @@ pub fn get_task(config: &Config, id: &str) -> Result<Task, String> {
 #[allow(clippy::too_many_arguments)]
 pub fn add_task(
     config: &Config,
-    content: &str,
+    content: &String,
     project: &Project,
     section: Option<Section>,
     priority: Priority,
-    description: Option<String>,
-    due: Option<String>,
-    labels: Vec<String>,
+    description: &String,
+    due: &Option<String>,
+    labels: &[String],
 ) -> Result<Task, String> {
     let url = String::from(REST_V2_TASKS_URL);
-    let description = description.unwrap_or_default();
     let mut body: HashMap<String, Value> = HashMap::new();
     body.insert("content".to_owned(), Value::String(content.to_owned()));
-    body.insert("description".to_owned(), Value::String(description));
+    body.insert(
+        "description".to_owned(),
+        Value::String(description.to_owned()),
+    );
     body.insert("project_id".to_owned(), Value::String(project.id.clone()));
 
     body.insert("auto_reminder".to_owned(), Value::Bool(true));
@@ -62,10 +64,10 @@ pub fn add_task(
     body.insert("labels".to_owned(), Value::Array(labels));
 
     if let Some(date) = due {
-        if time::is_date(&date) || time::is_datetime(&date) {
-            body.insert("due_date".to_owned(), Value::String(date));
+        if time::is_date(date) || time::is_datetime(date) {
+            body.insert("due_date".to_owned(), Value::String(date.to_owned()));
         } else {
-            body.insert("due_string".to_owned(), Value::String(date));
+            body.insert("due_string".to_owned(), Value::String(date.to_owned()));
         }
     }
 
@@ -266,13 +268,13 @@ mod tests {
         assert_eq!(
             add_task(
                 &config,
-                "New task",
+                &String::from("New task"),
                 &project,
                 Some(section),
                 priority,
-                None,
-                None,
-                vec![]
+                &String::new(),
+                &None,
+                &[]
             ),
             Ok(Task {
                 id: String::from("5149481867"),

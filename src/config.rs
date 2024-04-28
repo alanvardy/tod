@@ -277,7 +277,7 @@ impl Config {
 pub fn get_or_create(config_path: Option<String>, verbose: bool) -> Result<Config, String> {
     let path: String = match config_path {
         None => generate_path()?,
-        Some(path) => path.trim().to_owned(),
+        Some(path) => maybe_expand_home_dir(path)?,
     };
 
     match fs::File::open(&path) {
@@ -305,6 +305,24 @@ pub fn generate_path() -> Result<String, String> {
         Ok(format!("tests/{random_string}.testcfg"))
     } else {
         Ok(format!("{config_directory}/tod.cfg"))
+    }
+}
+
+fn maybe_expand_home_dir(path: String) -> Result<String, String> {
+    if path.starts_with('~') {
+        let home = homedir::get_my_home()
+            .or(Err(String::from("Could not get homedir")))?
+            .ok_or_else(|| String::from("Could not get homedir"))?;
+        let mut path = path;
+        path.replace_range(
+            ..1,
+            home.to_str()
+                .ok_or_else(|| String::from("Could not get homedir"))?,
+        );
+
+        Ok(path)
+    } else {
+        Ok(path)
     }
 }
 
@@ -390,6 +408,24 @@ mod tests {
         config.remove_project(project);
         let projects_count = config.projects.clone().unwrap_or_default().len();
         assert_eq!(projects_count, 0);
+    }
+
+    #[test]
+    fn test_maybe_expand_home_dir() {
+        let expected = Ok(String::from("/home/vardy/tod.cfg"));
+        let actual = maybe_expand_home_dir(expected.clone().unwrap());
+        assert_eq!(expected, actual);
+
+        let actual = maybe_expand_home_dir("~/tod.cfg".to_string());
+
+        let split = actual.unwrap();
+        let mut split = split.split('/');
+
+        assert_eq!(split.next(), Some(""));
+        assert_eq!(split.next(), Some("home"));
+        // This is machine dependent
+        split.next();
+        assert_eq!(split.next(), Some("tod.cfg"));
     }
 
     #[test]

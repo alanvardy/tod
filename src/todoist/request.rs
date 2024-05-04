@@ -1,4 +1,5 @@
 use std::env;
+use std::time::Duration;
 
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -9,6 +10,7 @@ use spinners::Spinner;
 use spinners::Spinners;
 use uuid::Uuid;
 
+use crate::config::Args;
 use crate::config::Config;
 use crate::debug;
 
@@ -36,6 +38,7 @@ pub fn post_todoist_sync(
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, format!("Bearer {token}"))
         .json(&body)
+        .timeout(get_timeout(config))
         .send()
         .or(Err("Did not get response from server"))?;
 
@@ -65,6 +68,7 @@ pub fn post_todoist_rest(
         .header(AUTHORIZATION, authorization)
         .header("X-Request-Id", new_uuid())
         .json(&body)
+        .timeout(get_timeout(config))
         .send()
         .or(Err("Did not get response from server"))?;
 
@@ -92,6 +96,7 @@ pub fn delete_todoist_rest(
         .header(AUTHORIZATION, authorization)
         .header("X-Request-Id", new_uuid())
         .json(&body)
+        .timeout(get_timeout(config))
         .send()
         .or(Err("Did not get response from server"))?;
 
@@ -116,6 +121,7 @@ pub fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> 
         .get(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization)
+        .timeout(get_timeout(config))
         .send()
         .or(Err("Did not get response from server"))?;
 
@@ -143,6 +149,38 @@ fn handle_response(
             Error: {:?}",
             response
         ))
+    }
+}
+
+fn get_timeout(config: &Config) -> Duration {
+    match config {
+        Config {
+            timeout: Some(timeout),
+            args: Args { timeout: None, .. },
+            ..
+        } => Duration::from_secs(timeout.to_owned()),
+        Config {
+            timeout: Some(_),
+            args: Args {
+                timeout: Some(timeout),
+                ..
+            },
+            ..
+        } => Duration::from_secs(timeout.to_owned()),
+        Config {
+            timeout: None,
+            args: Args { timeout: None, .. },
+            ..
+        } => Duration::from_secs(30),
+
+        Config {
+            timeout: None,
+            args: Args {
+                timeout: Some(timeout),
+                ..
+            },
+            ..
+        } => Duration::from_secs(timeout.to_owned()),
     }
 }
 

@@ -6,6 +6,7 @@
 - Added short commands for all subcommands and flags
 - Switch back to Sync API for completing tasks, because REST API doesn't handle subtasks correctly
 - Config path now supports expanding `~` into the home directory
+- Add `config reset` command that deletes config
 
 ## 2024-03-28 v0.5.13
 

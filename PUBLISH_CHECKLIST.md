@@ -15,8 +15,8 @@ This checklist is just here for me to reduce the friction of publishing new vers
 Code changes
 
 1. Change version in `Cargo.toml`
-2. Update dependencies and make sure nothing broke with `./update_test.sh`
-3. Update CHANGELOG.md with version number
+2. Update and test with `./update_test.sh`
+3. Update `CHANGELOG.md` with version number
 4. Add any new examples to documentation
 5. Open PR for version and wait for it to pass
 6. Commit and merge PR

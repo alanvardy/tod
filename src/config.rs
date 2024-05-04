@@ -21,6 +21,7 @@ pub struct Config {
     /// The ID of the next task
     pub next_id: Option<String>,
     pub timezone: Option<String>,
+    pub timeout: Option<u64>,
     /// The last time we checked crates.io for the version
     pub last_version_check: Option<String>,
     pub mock_url: Option<String>,
@@ -34,6 +35,16 @@ pub struct Config {
     /// Goes straight to natural language input in datetime selection
     pub natural_language_only: Option<bool>,
     pub sort_value: Option<SortValue>,
+
+    /// For storing arguments from the commandline
+    #[serde(skip)]
+    pub args: Args,
+}
+
+#[derive(Default, Clone, Eq, PartialEq, Debug)]
+pub struct Args {
+    pub verbose: bool,
+    pub timeout: Option<u64>,
 }
 
 // Determining how
@@ -51,6 +62,7 @@ pub struct SortValue {
     /// Happens now plus or minus 15min
     pub now: u8,
 }
+
 impl Default for SortValue {
     fn default() -> Self {
         SortValue {
@@ -179,6 +191,7 @@ impl Config {
             token: String::from(token),
             next_id: None,
             last_version_check: None,
+            timeout: None,
             sort_value: Some(SortValue::default()),
             timezone: None,
             spinners: Some(true),
@@ -188,6 +201,10 @@ impl Config {
             mock_string: None,
             mock_select: None,
             verbose: None,
+            args: Args {
+                verbose: false,
+                timeout: None,
+            },
             projects: Some(Vec::new()),
         })
     }
@@ -251,30 +268,13 @@ impl Config {
             ..self.clone()
         }
     }
-
-    fn set_verbosity(self, verbose: bool) -> Config {
-        match (self.verbose, verbose) {
-            (_, true) => Config {
-                verbose: Some(true),
-                ..self
-            },
-            (Some(true), false) => Config {
-                verbose: Some(true),
-                ..self
-            },
-            (Some(false), false) => Config {
-                verbose: Some(false),
-                ..self
-            },
-            (None, false) => Config {
-                verbose: Some(false),
-                ..self
-            },
-        }
-    }
 }
 
-pub fn get_or_create(config_path: Option<String>, verbose: bool) -> Result<Config, String> {
+pub fn get_or_create(
+    config_path: Option<String>,
+    verbose: bool,
+    timeout: Option<u64>,
+) -> Result<Config, String> {
     let path: String = match config_path {
         None => generate_path()?,
         Some(path) => maybe_expand_home_dir(path)?,
@@ -290,7 +290,10 @@ pub fn get_or_create(config_path: Option<String>, verbose: bool) -> Result<Confi
             Config::new(&token)?.create()
         }
     }
-    .map(|config| config.set_verbosity(verbose))
+    .map(|config| Config {
+        args: Args { timeout, verbose },
+        ..config
+    })
 }
 
 pub fn generate_path() -> Result<String, String> {
@@ -442,22 +445,27 @@ mod tests {
         assert_eq!(created_config, loaded_config);
 
         // get_or_create (create)
-        let config = get_or_create(None, false);
+        let config = get_or_create(None, false, None);
         assert_eq!(
             config,
             Ok(Config {
                 token: String::new(),
                 projects: Some(Vec::new()),
                 path: config.clone().unwrap().path,
+                timeout: None,
                 no_sections: None,
                 next_id: None,
+                args: Args {
+                    verbose: false,
+                    timeout: None,
+                },
                 spinners: Some(true),
                 sort_value: Some(SortValue::default()),
                 last_version_check: None,
                 timezone: None,
                 natural_language_only: None,
                 mock_url: None,
-                verbose: Some(false),
+                verbose: None,
                 mock_string: None,
                 mock_select: None,
             })
@@ -470,7 +478,7 @@ mod tests {
             .create()
             .unwrap();
 
-        let config = get_or_create(None, false);
+        let config = get_or_create(None, false, None);
 
         assert_eq!(
             config,
@@ -480,12 +488,17 @@ mod tests {
                 path: config.clone().unwrap().path,
                 sort_value: Some(SortValue::default()),
                 next_id: None,
+                timeout: None,
+                args: Args {
+                    verbose: false,
+                    timeout: None,
+                },
                 no_sections: None,
                 spinners: Some(true),
                 last_version_check: None,
                 timezone: None,
                 natural_language_only: None,
-                verbose: Some(false),
+                verbose: None,
                 mock_url: None,
                 mock_string: None,
                 mock_select: None,

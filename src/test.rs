@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod fixtures {
 
-    use crate::config::{self, Config, SortValue};
+    use crate::config::{self, Args, Config, SortValue};
     use crate::projects::Project;
     use crate::sections::Section;
     use crate::tasks::{DateInfo, Task};
@@ -48,7 +48,12 @@ pub mod fixtures {
             }]),
             path: config::generate_path().unwrap(),
             next_id: None,
+            args: Args {
+                timeout: None,
+                verbose: false,
+            },
             timezone: Some(String::from("US/Pacific")),
+            timeout: None,
             last_version_check: None,
             no_sections: None,
             mock_url: None,

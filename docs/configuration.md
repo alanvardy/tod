@@ -12,7 +12,9 @@
     - [path](#path)
     - [natural_language_only](#naturallanguageonly)
     - [no_sections](#nosections)
+    - [sort_value](#sortvalue)
     - [spinners](#spinners)
+    - [timeout](#timeout)
     - [timezone](#timezone)
     - [token](#token)
     - [vecprojects](#vecprojects)
@@ -110,7 +112,7 @@ If true, the datetime selection in `project schedule` will go straight to natura
 
 If true will not prompt for a section whenever possible
 
-## sort_value
+### sort_value
 
 Tasks are ranked by points and the first is returned, the points are the sum of the following:
 
@@ -154,6 +156,14 @@ You can also use the environment variable `DISABLE_SPINNER` to turn them off.
 
 ```bash
   DISABLE_SPINNER=1 tod task create
+```
+
+### timeout
+
+```
+  type: integer
+  default: 30 (seconds)
+  possible values: Any positive number in seconds
 ```
 
 ### timezone

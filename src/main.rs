@@ -47,6 +47,10 @@ struct Cli {
     /// Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
     config: Option<String>,
 
+    #[arg(short, long)]
+    /// Time to wait for a response from API in seconds. Defaults to 30.
+    timeout: Option<u64>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -643,10 +647,14 @@ fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 fn fetch_config(cli: Cli) -> Result<Config, String> {
-    let config_path = cli.config;
-    let verbose = cli.verbose;
+    let Cli {
+        verbose,
+        config: config_path,
+        timeout,
+        command: _,
+    } = cli;
 
-    config::get_or_create(config_path, verbose)?
+    config::get_or_create(config_path, verbose, timeout)?
         .check_for_timezone()?
         .check_for_latest_version()
 }

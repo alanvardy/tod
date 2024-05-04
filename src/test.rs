@@ -13,6 +13,7 @@ pub mod fixtures {
             checked: None,
             duration: None,
             parent_id: None,
+            project_id: String::from("222"),
             labels: vec![String::from("computer")],
             description: String::from(""),
             due: Some(DateInfo {
@@ -151,7 +152,7 @@ pub mod responses {
                 \"note_count\":0,\
                 \"parent_id\":null,\
                 \"priority\":3,\
-                \"project_id\":22222222,\
+                \"project_id\":\"22222222\",\
                 \"responsible_uid\":null,\
                 \"section_id\":333333333,\
                 \"sync_id\":null,\
@@ -188,7 +189,7 @@ pub mod responses {
                 \"note_count\":0,\
                 \"parent_id\":null,\
                 \"priority\":3,\
-                \"project_id\":22222222,\
+                \"project_id\":\"22222222\",\
                 \"responsible_uid\":null,\
                 \"section_id\":333333333,\
                 \"sync_id\":null,\
@@ -222,7 +223,7 @@ pub mod responses {
                 \"note_count\":0,\
                 \"parent_id\":null,\
                 \"priority\":3,\
-                \"project_id\":22222222,\
+                \"project_id\":\"22222222\",\
                 \"responsible_uid\":null,\
                 \"section_id\":333333333,\
                 \"sync_id\":null,\
@@ -254,7 +255,7 @@ pub mod responses {
                 \"note_count\":0,\
                 \"parent_id\":null,\
                 \"priority\":3,\
-                \"project_id\":22222222,\
+                \"project_id\":\"22222222\",\
                 \"responsible_uid\":null,\
                 \"section_id\":333333333,\
                 \"sync_id\":null,\
@@ -284,7 +285,7 @@ pub mod responses {
         \"legacy_project_id\":333333333,\
         \"parent_id\":null,\
         \"priority\":1,\
-        \"project_id\":5555555,\
+        \"project_id\":\"5555555\",\
         \"reminder\":null,\
         \"responsible_uid\":null,\
         \"section_id\":null,\

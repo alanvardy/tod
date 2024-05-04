@@ -126,7 +126,7 @@ pub fn next_task(config: Config, project: &Project) -> Result<String, String> {
     match fetch_next_task(&config, project) {
         Ok(Some((task, remaining))) => {
             config.set_next_id(&task.id).save()?;
-            let task_string = task.fmt(&config, FormatType::Single);
+            let task_string = task.fmt(&config, FormatType::Single, false);
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
         Ok(None) => Ok(color::green_string("No tasks on list")),
@@ -279,7 +279,7 @@ fn handle_task(
         .collect();
     println!(
         "{}{task_count} task(s) remaining",
-        task.fmt(config, FormatType::Single)
+        task.fmt(config, FormatType::Single, false)
     );
     *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
@@ -332,7 +332,7 @@ pub fn all_tasks(config: &Config, project: &Project) -> Result<String, String> {
 
     for task in tasks::sort_by_datetime(tasks, config) {
         buffer.push('\n');
-        buffer.push_str(&task.fmt(config, FormatType::List));
+        buffer.push_str(&task.fmt(config, FormatType::List, false));
     }
     Ok(buffer)
 }
@@ -378,7 +378,7 @@ pub fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, St
         )))
     } else {
         for task in unprioritized_tasks.iter() {
-            tasks::set_priority(config, task.to_owned())?;
+            tasks::set_priority(config, task.to_owned(), false)?;
         }
         Ok(color::green_string(&format!(
             "Successfully prioritized '{}'",
@@ -417,7 +417,7 @@ pub fn schedule(
         )))
     } else {
         for task in filtered_tasks.iter() {
-            println!("{}", task.fmt(config, FormatType::Single));
+            println!("{}", task.fmt(config, FormatType::Single, false));
             let datetime_input = input::datetime(
                 config.mock_select,
                 config.mock_string.clone(),
@@ -446,7 +446,7 @@ pub fn schedule(
 }
 
 pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, String> {
-    println!("{}", task.fmt(config, FormatType::Single));
+    println!("{}", task.fmt(config, FormatType::Single, false));
 
     let options = ["Pick project", "Complete", "Skip", "Delete"]
         .iter()

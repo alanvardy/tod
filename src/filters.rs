@@ -21,7 +21,7 @@ pub fn all_tasks(config: &Config, filter: &String) -> Result<String, String> {
 
     for task in tasks::sort_by_datetime(tasks, config) {
         buffer.push('\n');
-        buffer.push_str(&task.fmt(config, FormatType::List));
+        buffer.push_str(&task.fmt(config, FormatType::List, true));
     }
     Ok(buffer)
 }
@@ -58,7 +58,7 @@ pub fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<Stri
 }
 
 fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result<String, String> {
-    println!("{}", task.fmt(config, FormatType::Single));
+    println!("{}", task.fmt(config, FormatType::Single, true));
     let label = input::select("Select label", labels.to_owned(), config.mock_select)?;
 
     todoist::add_task_label(config, task, label)
@@ -69,7 +69,7 @@ pub fn next_task(config: Config, filter: &str) -> Result<String, String> {
     match fetch_next_task(&config, filter) {
         Ok(Some((task, remaining))) => {
             config.set_next_id(&task.id).save()?;
-            let task_string = task.fmt(&config, FormatType::Single);
+            let task_string = task.fmt(&config, FormatType::Single, true);
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
         Ok(None) => Ok(color::green_string("No tasks on list")),
@@ -114,7 +114,7 @@ fn handle_task(
         .collect();
     println!(
         "{}{task_count} task(s) remaining",
-        task.fmt(config, FormatType::Single)
+        task.fmt(config, FormatType::Single, true)
     );
     *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
@@ -141,7 +141,7 @@ pub fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, Stri
         )))
     } else {
         for task in tasks.iter() {
-            tasks::set_priority(config, task.to_owned())?;
+            tasks::set_priority(config, task.to_owned(), true)?;
         }
         Ok(color::green_string(&format!(
             "Successfully prioritized '{filter}'"
@@ -159,7 +159,7 @@ pub fn schedule(config: &Config, filter: &String) -> Result<String, String> {
         )))
     } else {
         for task in tasks.iter() {
-            println!("{}", task.fmt(config, FormatType::Single));
+            println!("{}", task.fmt(config, FormatType::Single, true));
             let datetime_input = input::datetime(
                 config.mock_select,
                 config.mock_string.clone(),
@@ -218,7 +218,7 @@ mod tests {
         assert_eq!(
             all_tasks(&config_with_timezone, &filter),
             Ok(format!(
-                "Tasks for filter: 'today'\n- Put out recycling\n  ! {TIME} ↻ every other mon at 16:30\n"
+                "Tasks for filter: 'today'\n- Put out recycling\n  ! {TIME} ↻ every other mon at 16:30\n# Project not in config\n"
             ))
         );
         mock.assert();
@@ -272,7 +272,7 @@ mod tests {
         assert_eq!(
             next_task(config_with_timezone, &filter),
             Ok(format!(
-                "Put out recycling\n! {TIME} ↻ every other mon at 16:30\n\n1 task(s) remaining"
+                "Put out recycling\n! {TIME} ↻ every other mon at 16:30\n# Project not in config\n\n1 task(s) remaining"
             ))
         );
     }

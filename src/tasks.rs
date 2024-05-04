@@ -10,6 +10,7 @@ use crate::color;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::projects;
+use crate::projects::Project;
 use crate::tasks::priority::Priority;
 use crate::{input, time, todoist};
 
@@ -21,6 +22,7 @@ pub struct Task {
     pub description: String,
     pub labels: Vec<String>,
     pub parent_id: Option<String>,
+    pub project_id: String,
     pub due: Option<DateInfo>,
     /// Only on rest api return value
     pub is_completed: Option<bool>,
@@ -83,7 +85,7 @@ enum DateTimeInfo {
 }
 
 impl Task {
-    pub fn fmt(&self, config: &Config, format: FormatType) -> String {
+    pub fn fmt(&self, config: &Config, format: FormatType, with_project: bool) -> String {
         let content = match self.priority {
             priority::Priority::Low => color::blue_string(&self.content),
             priority::Priority::Medium => color::yellow_string(&self.content),
@@ -99,6 +101,24 @@ impl Task {
         let description = match &*self.description {
             "" => String::from(""),
             _ => format!("\n{buffer}{}", self.description),
+        };
+
+        let project = if with_project {
+            let project_icon = color::purple_string("#");
+            let maybe_project = config
+                .projects
+                .clone()
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|p| p.id == self.project_id)
+                .collect::<Vec<Project>>();
+
+            match maybe_project.first() {
+                Some(Project { name, .. }) => format!("\n{project_icon} {name}"),
+                None => format!("\n{project_icon} Project not in config"),
+            }
+        } else {
+            String::new()
         };
 
         let due_icon = color::purple_string("!");
@@ -163,7 +183,7 @@ impl Task {
             format!(" {} {}", color::purple_string("@"), self.labels.join(" "))
         };
 
-        format!("{prefix}{content}{description}{due}{labels}\n")
+        format!("{prefix}{content}{description}{due}{labels}{project}\n")
     }
 
     /// Determines the numeric value of an task for sorting
@@ -442,8 +462,8 @@ fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool {
     }
 }
 
-pub fn set_priority(config: &Config, task: Task) -> Result<String, String> {
-    println!("{}", task.fmt(config, FormatType::Single));
+pub fn set_priority(config: &Config, task: Task, with_project: bool) -> Result<String, String> {
+    println!("{}", task.fmt(config, FormatType::Single, with_project));
 
     let options = vec![
         Priority::None,
@@ -527,7 +547,7 @@ mod tests {
         };
 
         assert_eq!(
-            format!("{}", task.fmt(&config, FormatType::Single)),
+            format!("{}", task.fmt(&config, FormatType::Single, false)),
             "Get gifts for the twins\n! 2021-08-13 @ computer\n"
         );
     }
@@ -545,8 +565,8 @@ mod tests {
         };
 
         assert_eq!(
-            format!("{}", task.fmt(&config, FormatType::Single)),
-            "Get gifts for the twins\n! Today @ computer\n"
+            format!("{}", task.fmt(&config, FormatType::Single, true)),
+            "Get gifts for the twins\n! Today @ computer\n# Project not in config\n"
         );
     }
 
@@ -678,6 +698,7 @@ mod tests {
             content: String::from("Get gifts for the twins"),
             checked: None,
             parent_id: None,
+            project_id: String::from("123"),
             description: String::from(""),
             duration: Some(Duration {
                 amount: 123,
@@ -752,6 +773,7 @@ mod tests {
             duration: None,
             parent_id: None,
             description: String::from(""),
+            project_id: String::from("123"),
             labels: vec![String::from("computer")],
             due: None,
             priority: Priority::Medium,
@@ -831,7 +853,7 @@ mod tests {
             .mock_select(1)
             .mock_url(server.url());
 
-        let result = set_priority(&config, task);
+        let result = set_priority(&config, task, false);
         assert_eq!(result, Ok("✓".to_string()));
         mock.assert();
     }

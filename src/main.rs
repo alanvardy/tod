@@ -316,10 +316,17 @@ enum ConfigCommands {
     #[clap(alias = "v")]
     /// (v) Check to see if tod is on the latest version, returns exit code 1 if out of date
     CheckVersion(ConfigCheckVersion),
+
+    #[clap(alias = "r")]
+    /// (r) Delete the configuration file
+    Reset(ConfigReset),
 }
 
 #[derive(Parser, Debug, Clone)]
 struct ConfigCheckVersion {}
+
+#[derive(Parser, Debug, Clone)]
+struct ConfigReset {}
 
 enum Flag {
     Project(Project),
@@ -366,6 +373,7 @@ fn main() {
         Commands::Config(ConfigCommands::CheckVersion(args)) => {
             config_check_version(cli.clone(), args)
         }
+        Commands::Config(ConfigCommands::Reset(args)) => config_reset(cli.clone(), args),
     };
 
     match result {
@@ -615,6 +623,19 @@ fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<String, 
             VERSION, version
         )),
         Err(e) => Err(e),
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, String> {
+    use std::fs;
+
+    let config = fetch_config(cli)?;
+    let path = config.path;
+
+    match fs::remove_file(path.clone()) {
+        Ok(_) => Ok(format!("{path} deleted successfully")),
+        Err(e) => Err(format!("Could not delete config at path: {path}, {e}")),
     }
 }
 

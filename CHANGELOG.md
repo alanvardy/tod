@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Show project name when printing a task when the task was obtained through a filter (not a project)
+
 ## 2024-05-04 v0.6.0
 
 - **BREAKING CHANGE** Rewrote the external API, both to make it more coherent for the end user and to make it easier to add to from a development perspective. No functionality lost. The main change is that instead of using the `project` or `filter` command for searching for lists of tasks, we now use the `list` command that can take either `--project` or `--filter` flags. This is a change needed to proceed with planned features.

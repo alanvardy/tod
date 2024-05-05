@@ -115,6 +115,10 @@ struct ProjectRemove {
     /// Remove all projects from config that are not in Todoist
     auto: bool,
 
+    #[arg(short = 'r', long, default_value_t = false)]
+    /// Keep repeating prompt to remove projects. Use Ctrl/CMD + c to exit.
+    repeat: bool,
+
     #[arg(short = 'l', long, default_value_t = false)]
     /// Remove all projects from config
     all: bool,
@@ -506,18 +510,27 @@ fn project_list(cli: Cli, _args: &ProjectList) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String> {
-    let ProjectRemove { all, auto, project } = args;
+    let ProjectRemove {
+        all,
+        auto,
+        project,
+        repeat,
+    } = args;
     let mut config = fetch_config(cli)?;
     match (all, auto) {
         (true, false) => projects::remove_all(&mut config),
         (false, true) => projects::remove_auto(&mut config),
-        (false, false) => {
+        (false, false) => loop {
             let project = match fetch_project(project, &config)? {
                 Flag::Project(project) => project,
                 _ => unreachable!(),
             };
-            projects::remove(&mut config, &project)
-        }
+            let value = projects::remove(&mut config, &project);
+
+            if !repeat {
+                return value;
+            }
+        },
         (_, _) => Err(String::from("Incorrect flags provided")),
     }
 }

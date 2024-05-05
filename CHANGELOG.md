@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-05-05 v0.6.1
+
 - Show project name when printing a task when the task was obtained through a filter (not a project)
 - Add `timeout` argument
 - Add `repeat` flag to `project remove`

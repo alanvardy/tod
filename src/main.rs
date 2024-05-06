@@ -170,7 +170,7 @@ enum TaskCommands {
 struct TaskQuickAdd {
     #[arg(short, long, num_args(1..))]
     /// Content for task
-    content: Vec<String>,
+    content: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -403,7 +403,8 @@ fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, String> {
     let TaskQuickAdd { content } = args;
     let config = fetch_config(cli)?;
 
-    todoist::quick_add_task(&config, &content.join(" "))?;
+    let content = fetch_string(&content.as_ref().map(|c| c.join(" ")), &config, "CONTENT")?;
+    todoist::quick_add_task(&config, &content)?;
     Ok(color::green_string("✓"))
 }
 

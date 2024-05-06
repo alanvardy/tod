@@ -93,7 +93,7 @@ pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> 
     for task in tasks {
         println!(" ");
         config.set_next_id(&task.id).save()?;
-        match handle_task(&config.reload()?, task, &mut task_count) {
+        match tasks::process_task(&config.reload()?, task, &mut task_count, true) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(color::green_string("Exited")),
@@ -102,33 +102,6 @@ pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> 
     Ok(color::green_string(&format!(
         "There are no more tasks for filter: '{filter}'"
     )))
-}
-fn handle_task(
-    config: &Config,
-    task: Task,
-    task_count: &mut i32,
-) -> Option<Result<String, String>> {
-    let options = ["complete", "skip", "quit"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-    println!(
-        "{}{task_count} task(s) remaining",
-        task.fmt(config, FormatType::Single, true)
-    );
-    *task_count -= 1;
-    match input::select("Select an option", options, config.mock_select) {
-        Ok(string) => {
-            if string == "complete" {
-                Some(todoist::complete_task(config))
-            } else if string == "skip" {
-                Some(Ok(color::green_string("task skipped")))
-            } else {
-                None
-            }
-        }
-        Err(e) => Some(Err(e)),
-    }
 }
 
 /// Prioritize all unprioritized tasks in a project

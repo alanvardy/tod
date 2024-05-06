@@ -256,7 +256,7 @@ pub fn process_tasks(config: Config, project: &Project) -> Result<String, String
     for task in tasks {
         println!(" ");
         config.set_next_id(&task.id).save()?;
-        match handle_task(&config.reload()?, task, &mut task_count) {
+        match tasks::process_task(&config.reload()?, task, &mut task_count, false) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(color::green_string("Exited")),
@@ -266,37 +266,6 @@ pub fn process_tasks(config: Config, project: &Project) -> Result<String, String
     Ok(color::green_string(&format!(
         "There are no more tasks in '{project_name}'"
     )))
-}
-
-fn handle_task(
-    config: &Config,
-    task: Task,
-    task_count: &mut i32,
-) -> Option<Result<String, String>> {
-    let options = ["Complete", "Skip", "Delete", "Quit"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
-    println!(
-        "{}{task_count} task(s) remaining",
-        task.fmt(config, FormatType::Single, false)
-    );
-    *task_count -= 1;
-    match input::select("Select an option", options, config.mock_select) {
-        Ok(string) => {
-            if string == "Complete" {
-                Some(todoist::complete_task(config))
-            } else if string == "Delete" {
-                Some(todoist::delete_task(config, &task))
-            } else if string == "Skip" {
-                Some(Ok(color::green_string("Task skipped")))
-                // The quit clause
-            } else {
-                None
-            }
-        }
-        Err(e) => Some(Err(e)),
-    }
 }
 
 pub fn rename_task(config: &Config, project: &Project) -> Result<String, String> {
@@ -619,27 +588,6 @@ mod tests {
             .map(|p| p.name.to_owned())
             .collect();
         assert!(config_keys.contains(&"Doomsday".to_string()))
-    }
-
-    #[test]
-    fn test_handle_task() {
-        let mut server = mockito::Server::new();
-        let mock = server
-            .mock("POST", "/sync/v9/sync")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::sync())
-            .create();
-
-        let task = test::fixtures::task();
-        let config = test::fixtures::config()
-            .mock_url(server.url())
-            .mock_select(0);
-        let mut task_count = 3;
-        let result = handle_task(&config, task, &mut task_count);
-        let expected = Some(Ok(String::from("✓")));
-        assert_eq!(result, expected);
-        mock.assert();
     }
 
     #[test]

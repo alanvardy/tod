@@ -364,6 +364,37 @@ impl Task {
     }
 }
 
+pub fn process_task(
+    config: &Config,
+    task: Task,
+    task_count: &mut i32,
+    with_project: bool,
+) -> Option<Result<String, String>> {
+    let options = ["Complete", "Skip", "Delete", "Quit"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    println!(
+        "{}{task_count} task(s) remaining",
+        task.fmt(config, FormatType::Single, with_project)
+    );
+    *task_count -= 1;
+    match input::select("Select an option", options, config.mock_select) {
+        Ok(string) => {
+            if string == "Complete" {
+                Some(todoist::complete_task(config))
+            } else if string == "Delete" {
+                Some(todoist::delete_task(config, &task))
+            } else if string == "Skip" {
+                Some(Ok(color::green_string("Task skipped")))
+                // The quit clause
+            } else {
+                None
+            }
+        }
+        Err(e) => Some(Err(e)),
+    }
+}
 pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, String> {
     let result: Result<Body, _> = serde_json::from_str(&json);
     match result {
@@ -855,6 +886,27 @@ mod tests {
 
         let result = set_priority(&config, task, false);
         assert_eq!(result, Ok("✓".to_string()));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_process_task() {
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sync())
+            .create();
+
+        let task = test::fixtures::task();
+        let config = test::fixtures::config()
+            .mock_url(server.url())
+            .mock_select(0);
+        let mut task_count = 3;
+        let result = process_task(&config, task, &mut task_count, true);
+        let expected = Some(Ok(String::from("✓")));
+        assert_eq!(result, expected);
         mock.assert();
     }
 }

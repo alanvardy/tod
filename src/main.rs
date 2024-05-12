@@ -482,8 +482,8 @@ fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
     let config = fetch_config(cli)?;
-    match config.next_id {
-        Some(_) => todoist::complete_task(&config),
+    match config.next_id.as_ref() {
+        Some(id) => todoist::complete_task(&config, id),
         None => {
             Err("There is nothing to complete. A task must first be marked as 'next'.".to_string())
         }
@@ -593,8 +593,8 @@ fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
     let ListProcess { project, filter } = args;
     let config = fetch_config(cli)?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::process_tasks(config, &filter),
-        Flag::Project(project) => projects::process_tasks(config, &project),
+        Flag::Filter(filter) => filters::process_tasks(&config, &filter),
+        Flag::Project(project) => projects::process_tasks(&config, &project),
     }
 }
 

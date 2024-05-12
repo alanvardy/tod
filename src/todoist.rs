@@ -137,14 +137,14 @@ pub fn move_task_to_section(
 
 /// Update the priority of an task by ID
 pub fn update_task_priority(
-    config: Config,
+    config: &Config,
     task: Task,
     priority: Priority,
 ) -> Result<String, String> {
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(&config, url, body)?;
+    request::post_todoist_rest(config, url, body)?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
@@ -187,8 +187,8 @@ pub fn update_task_name(config: &Config, task: Task, new_name: String) -> Result
 }
 
 /// Complete the last task returned by "next task"
-pub fn complete_task(config: &Config) -> Result<String, String> {
-    let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": config.next_id}}]});
+pub fn complete_task(config: &Config, task_id: &str) -> Result<String, String> {
+    let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task_id}}]});
     let url = String::from(SYNC_URL);
 
     request::post_todoist_sync(config, url, body)?;
@@ -353,11 +353,9 @@ mod tests {
             .with_body(test::responses::sync())
             .create();
 
-        let config = test::fixtures::config()
-            .mock_url(server.url())
-            .set_next_id(&"112233".to_string());
+        let config = test::fixtures::config().mock_url(server.url());
 
-        let response = complete_task(&config);
+        let response = complete_task(&config, "112233");
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
@@ -404,7 +402,7 @@ mod tests {
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = update_task_priority(config, task, Priority::High);
+        let response = update_task_priority(&config, task, Priority::High);
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

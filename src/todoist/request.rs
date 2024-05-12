@@ -1,10 +1,10 @@
 use std::env;
 use std::time::Duration;
 
-use reqwest::blocking::Client;
-use reqwest::blocking::Response;
 use reqwest::header::AUTHORIZATION;
 use reqwest::header::CONTENT_TYPE;
+use reqwest::Client;
+use reqwest::Response;
 use serde_json::json;
 use spinners::Spinner;
 use spinners::Spinners;
@@ -22,7 +22,7 @@ const MESSAGE: &str = "Querying API";
 
 /// Post to Todoist via sync API
 /// We use sync when we want natural languague processing.
-pub fn post_todoist_sync(
+pub async fn post_todoist_sync(
     config: &Config,
     url: String,
     body: serde_json::Value,
@@ -40,15 +40,16 @@ pub fn post_todoist_sync(
         .json(&body)
         .timeout(get_timeout(config))
         .send()
+        .await
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(config, response, "POST", url, body)
+    handle_response(config, response, "POST", url, body).await
 }
 
 /// Post to Todoist via REST api
 /// We use this when we want more options and don't need natural language processing
-pub fn post_todoist_rest(
+pub async fn post_todoist_rest(
     config: &Config,
     url: String,
     body: serde_json::Value,
@@ -70,13 +71,14 @@ pub fn post_todoist_rest(
         .json(&body)
         .timeout(get_timeout(config))
         .send()
+        .await
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(config, response, "POST", url, body)
+    handle_response(config, response, "POST", url, body).await
 }
 
-pub fn delete_todoist_rest(
+pub async fn delete_todoist_rest(
     config: &Config,
     url: String,
     body: serde_json::Value,
@@ -98,15 +100,16 @@ pub fn delete_todoist_rest(
         .json(&body)
         .timeout(get_timeout(config))
         .send()
+        .await
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(config, response, "DELETE", url, body)
+    handle_response(config, response, "DELETE", url, body).await
 }
 
 // Combine get and post into one function
 /// Get Todoist via REST api
-pub fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> {
+pub async fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> {
     let base_url = get_base_url(config);
     let token = config.token.clone();
 
@@ -123,13 +126,14 @@ pub fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> 
         .header(AUTHORIZATION, authorization)
         .timeout(get_timeout(config))
         .send()
+        .await
         .or(Err("Did not get response from server"))?;
 
     maybe_stop_spinner(spinner);
-    handle_response(config, response, "GET", url, json!({}))
+    handle_response(config, response, "GET", url, json!({})).await
 }
 
-fn handle_response(
+async fn handle_response(
     config: &Config,
     response: Response,
     method: &str,
@@ -137,7 +141,7 @@ fn handle_response(
     body: serde_json::Value,
 ) -> Result<String, String> {
     if response.status().is_success() {
-        let text = response.text().unwrap_or_default();
+        let text = response.text().await.unwrap();
         debug::print(config, format!("{method} {url}\nresponse: {text}"));
         Ok(text)
     } else {

@@ -359,27 +359,28 @@ impl Display for FlagOptions {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = Cli::parse();
 
     let result = match &cli.command {
-        Commands::Project(ProjectCommands::List(args)) => project_list(cli.clone(), args),
-        Commands::Project(ProjectCommands::Remove(args)) => project_remove(cli.clone(), args),
-        Commands::Project(ProjectCommands::Rename(args)) => project_rename(cli.clone(), args),
-        Commands::Project(ProjectCommands::Import(args)) => project_import(cli.clone(), args),
-        Commands::Project(ProjectCommands::Empty(args)) => project_empty(cli.clone(), args),
+        Commands::Project(ProjectCommands::List(args)) => project_list(cli.clone(), args).await,
+        Commands::Project(ProjectCommands::Remove(args)) => project_remove(cli.clone(), args).await,
+        Commands::Project(ProjectCommands::Rename(args)) => project_rename(cli.clone(), args).await,
+        Commands::Project(ProjectCommands::Import(args)) => project_import(cli.clone(), args).await,
+        Commands::Project(ProjectCommands::Empty(args)) => project_empty(cli.clone(), args).await,
 
-        Commands::Task(TaskCommands::QuickAdd(args)) => task_quick_add(cli.clone(), args),
-        Commands::Task(TaskCommands::Create(args)) => task_create(cli.clone(), args),
-        Commands::Task(TaskCommands::Edit(args)) => task_edit(cli.clone(), args),
-        Commands::Task(TaskCommands::Next(args)) => task_next(cli.clone(), args),
-        Commands::Task(TaskCommands::Complete(args)) => task_complete(cli.clone(), args),
+        Commands::Task(TaskCommands::QuickAdd(args)) => task_quick_add(cli.clone(), args).await,
+        Commands::Task(TaskCommands::Create(args)) => task_create(cli.clone(), args).await,
+        Commands::Task(TaskCommands::Edit(args)) => task_edit(cli.clone(), args).await,
+        Commands::Task(TaskCommands::Next(args)) => task_next(cli.clone(), args).await,
+        Commands::Task(TaskCommands::Complete(args)) => task_complete(cli.clone(), args).await,
 
-        Commands::List(ListCommands::View(args)) => list_view(cli.clone(), args),
-        Commands::List(ListCommands::Process(args)) => list_process(cli.clone(), args),
-        Commands::List(ListCommands::Prioritize(args)) => list_prioritize(cli.clone(), args),
-        Commands::List(ListCommands::Label(args)) => list_label(cli.clone(), args),
-        Commands::List(ListCommands::Schedule(args)) => list_schedule(cli.clone(), args),
+        Commands::List(ListCommands::View(args)) => list_view(cli.clone(), args).await,
+        Commands::List(ListCommands::Process(args)) => list_process(cli.clone(), args).await,
+        Commands::List(ListCommands::Prioritize(args)) => list_prioritize(cli.clone(), args).await,
+        Commands::List(ListCommands::Label(args)) => list_label(cli.clone(), args).await,
+        Commands::List(ListCommands::Schedule(args)) => list_schedule(cli.clone(), args).await,
 
         Commands::Config(ConfigCommands::CheckVersion(args)) => {
             config_check_version(cli.clone(), args)
@@ -402,17 +403,17 @@ fn main() {
 // --- TASK ---
 
 #[cfg(not(tarpaulin_include))]
-fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, String> {
+async fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, String> {
     let TaskQuickAdd { content } = args;
     let config = fetch_config(cli)?;
 
     let content = fetch_string(&content.as_ref().map(|c| c.join(" ")), &config, "CONTENT")?;
-    todoist::quick_add_task(&config, &content)?;
+    todoist::quick_add_task(&config, &content).await?;
     Ok(color::green_string("✓"))
 }
 
 #[cfg(not(tarpaulin_include))]
-fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
+async fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
     let TaskCreate {
         project,
         due,
@@ -432,7 +433,7 @@ fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
     let section = if *no_section || config.no_sections.unwrap_or_default() {
         None
     } else {
-        let sections = todoist::sections_for_project(&config, &project)?;
+        let sections = todoist::sections_for_project(&config, &project).await?;
         let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
         if section_names.is_empty() {
             None
@@ -455,35 +456,36 @@ fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
         description,
         due,
         labels,
-    )?;
+    )
+    .await?;
 
     Ok(color::green_string("✓"))
 }
 
 #[cfg(not(tarpaulin_include))]
-fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, String> {
+async fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, String> {
     let config = fetch_config(cli)?;
     let TaskEdit { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Project(project) => projects::rename_task(&config, &project),
-        Flag::Filter(filter) => filters::rename_task(&config, filter),
+        Flag::Project(project) => projects::rename_task(&config, &project).await,
+        Flag::Filter(filter) => filters::rename_task(&config, filter).await,
     }
 }
 #[cfg(not(tarpaulin_include))]
-fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
+async fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
     let TaskNext { project, filter } = args;
     let config = fetch_config(cli)?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Project(project) => projects::next_task(config, &project),
-        Flag::Filter(filter) => filters::next_task(config, &filter),
+        Flag::Project(project) => projects::next_task(config, &project).await,
+        Flag::Filter(filter) => filters::next_task(config, &filter).await,
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
+async fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
     let config = fetch_config(cli)?;
     match config.next_id.as_ref() {
-        Some(id) => todoist::complete_task(&config, id),
+        Some(id) => todoist::complete_task(&config, id).await,
         None => {
             Err("There is nothing to complete. A task must first be marked as 'next'.".to_string())
         }
@@ -493,27 +495,27 @@ fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
 // --- LIST ---
 
 #[cfg(not(tarpaulin_include))]
-fn list_view(cli: Cli, args: &ListView) -> Result<String, String> {
+async fn list_view(cli: Cli, args: &ListView) -> Result<String, String> {
     let config = fetch_config(cli)?;
     let ListView { project, filter } = args;
 
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Project(project) => projects::all_tasks(&config, &project),
-        Flag::Filter(filter) => filters::all_tasks(&config, &filter),
+        Flag::Project(project) => projects::all_tasks(&config, &project).await,
+        Flag::Filter(filter) => filters::all_tasks(&config, &filter).await,
     }
 }
 
 // --- PROJECT ---
 
 #[cfg(not(tarpaulin_include))]
-fn project_list(cli: Cli, _args: &ProjectList) -> Result<String, String> {
+async fn project_list(cli: Cli, _args: &ProjectList) -> Result<String, String> {
     let mut config = fetch_config(cli)?;
 
-    projects::list(&mut config)
+    projects::list(&mut config).await
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String> {
+async fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String> {
     let ProjectRemove {
         all,
         auto,
@@ -523,7 +525,7 @@ fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String> {
     let mut config = fetch_config(cli)?;
     match (all, auto) {
         (true, false) => projects::remove_all(&mut config),
-        (false, true) => projects::remove_auto(&mut config),
+        (false, true) => projects::remove_auto(&mut config).await,
         (false, false) => loop {
             let project = match fetch_project(project, &config)? {
                 Flag::Project(project) => project,
@@ -540,7 +542,7 @@ fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String> {
+async fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String> {
     let config = fetch_config(cli)?;
     let ProjectRename { project } = args;
     let project = match fetch_project(project, &config)? {
@@ -555,14 +557,14 @@ fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_import(cli: Cli, _args: &ProjectImport) -> Result<String, String> {
+async fn project_import(cli: Cli, _args: &ProjectImport) -> Result<String, String> {
     let mut config = fetch_config(cli)?;
 
-    projects::import(&mut config)
+    projects::import(&mut config).await
 }
 
 #[cfg(not(tarpaulin_include))]
-fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, String> {
+async fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, String> {
     let ProjectEmpty { project } = args;
     let mut config = fetch_config(cli)?;
     let project = match fetch_project(project, &config)? {
@@ -570,46 +572,46 @@ fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, String> {
         _ => unreachable!(),
     };
 
-    projects::empty(&mut config, &project)
+    projects::empty(&mut config, &project).await
 }
 
 // --- LIST ---
 
 #[cfg(not(tarpaulin_include))]
-fn list_label(cli: Cli, args: &ListLabel) -> Result<String, String> {
+async fn list_label(cli: Cli, args: &ListLabel) -> Result<String, String> {
     let ListLabel {
         filter,
         label: labels,
     } = args;
     let config = fetch_config(cli)?;
     match fetch_filter(filter, &config)? {
-        Flag::Filter(filter) => filters::label(&config, &filter, labels),
+        Flag::Filter(filter) => filters::label(&config, &filter, labels).await,
         _ => unreachable!(),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
+async fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
     let ListProcess { project, filter } = args;
     let config = fetch_config(cli)?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::process_tasks(&config, &filter),
-        Flag::Project(project) => projects::process_tasks(&config, &project),
+        Flag::Filter(filter) => filters::process_tasks(&config, &filter).await,
+        Flag::Project(project) => projects::process_tasks(&config, &project).await,
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn list_prioritize(cli: Cli, args: &ListPrioritize) -> Result<String, String> {
+async fn list_prioritize(cli: Cli, args: &ListPrioritize) -> Result<String, String> {
     let ListPrioritize { project, filter } = args;
     let config = fetch_config(cli)?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter),
-        Flag::Project(project) => projects::prioritize_tasks(&config, &project),
+        Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter).await,
+        Flag::Project(project) => projects::prioritize_tasks(&config, &project).await,
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> {
+async fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> {
     let ListSchedule {
         project,
         filter,
@@ -618,7 +620,7 @@ fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> {
     } = args;
     let config = fetch_config(cli)?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::schedule(&config, &filter),
+        Flag::Filter(filter) => filters::schedule(&config, &filter).await,
         Flag::Project(project) => {
             let task_filter = if *overdue {
                 projects::TaskFilter::Overdue
@@ -626,7 +628,7 @@ fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> {
                 projects::TaskFilter::Unscheduled
             };
 
-            projects::schedule(&config, &project, task_filter, *skip_recurring)
+            projects::schedule(&config, &project, task_filter, *skip_recurring).await
         }
     }
 }

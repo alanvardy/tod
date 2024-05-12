@@ -247,15 +247,14 @@ fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, St
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub fn process_tasks(config: Config, project: &Project) -> Result<String, String> {
-    let tasks = todoist::tasks_for_project(&config, project)?;
-    let tasks = tasks::filter_not_in_future(tasks, &config)?;
-    let tasks = tasks::sort_by_value(tasks, &config);
-    let tasks = tasks::reject_parent_tasks(tasks, &config);
+pub fn process_tasks(config: &Config, project: &Project) -> Result<String, String> {
+    let tasks = todoist::tasks_for_project(config, project)?;
+    let tasks = tasks::filter_not_in_future(tasks, config)?;
+    let tasks = tasks::sort_by_value(tasks, config);
+    let tasks = tasks::reject_parent_tasks(tasks, config);
     let mut task_count = tasks.len() as i32;
     for task in tasks {
         println!(" ");
-        config.set_next_id(&task.id).save()?;
         match tasks::process_task(&config.reload()?, task, &mut task_count, false) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
@@ -393,10 +392,7 @@ pub fn schedule(
                 config.natural_language_only,
             )?;
             match datetime_input {
-                input::DateTimeInput::Complete => {
-                    let config = config.set_next_id(&task.id);
-                    todoist::complete_task(&config)?
-                }
+                input::DateTimeInput::Complete => todoist::complete_task(config, &task.id)?,
                 DateTimeInput::Skip => "Skipped".to_string(),
 
                 input::DateTimeInput::Text(due_string) => {
@@ -429,7 +425,7 @@ pub fn move_task_to_project(config: &Config, task: Task) -> Result<String, Strin
 
     match selection.as_str() {
         "Complete" => {
-            todoist::complete_task(&config.set_next_id(&task.id))?;
+            todoist::complete_task(config, &task.id)?;
             Ok(color::green_string("✓"))
         }
         "Delete" => {
@@ -616,7 +612,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let result = process_tasks(config, project);
+        let result = process_tasks(&config, project);
         assert_eq!(
             result,
             Ok("There are no more tasks in 'myproject'".to_string())

@@ -85,15 +85,14 @@ fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub fn process_tasks(config: Config, filter: &String) -> Result<String, String> {
-    let tasks = todoist::tasks_for_filter(&config, filter)?;
-    let tasks = tasks::sort_by_value(tasks, &config);
-    let tasks = tasks::reject_parent_tasks(tasks, &config);
+pub fn process_tasks(config: &Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter)?;
+    let tasks = tasks::sort_by_value(tasks, config);
+    let tasks = tasks::reject_parent_tasks(tasks, config);
     let mut task_count = tasks.len() as i32;
     for task in tasks {
         println!(" ");
-        config.set_next_id(&task.id).save()?;
-        match tasks::process_task(&config.reload()?, task, &mut task_count, true) {
+        match tasks::process_task(config, task, &mut task_count, true) {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(color::green_string("Exited")),
@@ -139,10 +138,7 @@ pub fn schedule(config: &Config, filter: &String) -> Result<String, String> {
                 config.natural_language_only,
             )?;
             match datetime_input {
-                input::DateTimeInput::Complete => {
-                    let config = config.set_next_id(&task.id);
-                    todoist::complete_task(&config)?
-                }
+                input::DateTimeInput::Complete => todoist::complete_task(config, &task.id)?,
                 DateTimeInput::Skip => "Skipped".to_string(),
 
                 input::DateTimeInput::Text(due_string) => {
@@ -315,7 +311,7 @@ mod tests {
             .unwrap();
         let filter = String::from("today");
 
-        let result = process_tasks(config, &filter);
+        let result = process_tasks(&config, &filter);
         assert_eq!(
             result,
             Ok("There are no more tasks for filter: 'today'".to_string())

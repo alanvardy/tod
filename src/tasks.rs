@@ -382,7 +382,7 @@ pub fn process_task(
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "Complete" {
-                Some(todoist::complete_task(config))
+                Some(todoist::complete_task(config, &task.id))
             } else if string == "Delete" {
                 Some(todoist::delete_task(config, &task))
             } else if string == "Skip" {
@@ -508,7 +508,6 @@ pub fn set_priority(config: &Config, task: Task, with_project: bool) -> Result<S
         config.mock_select,
     )?;
 
-    let config = config.set_next_id(&task.id);
     todoist::update_task_priority(config, task, priority)
 }
 

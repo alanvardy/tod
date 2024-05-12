@@ -7,8 +7,8 @@ use crate::{
 };
 
 /// All tasks for a project
-pub fn all_tasks(config: &Config, filter: &String) -> Result<String, String> {
-    let tasks = todoist::tasks_for_filter(config, filter)?;
+pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
         return Ok(format!("No tasks for filter: '{filter}'"));
@@ -26,8 +26,8 @@ pub fn all_tasks(config: &Config, filter: &String) -> Result<String, String> {
     Ok(buffer)
 }
 
-pub fn rename_task(config: &Config, filter: String) -> Result<String, String> {
-    let project_tasks = todoist::tasks_for_filter(config, &filter)?;
+pub async fn rename_task(config: &Config, filter: String) -> Result<String, String> {
+    let project_tasks = todoist::tasks_for_filter(config, &filter).await?;
 
     let selected_task = input::select(
         "Choose a task of the project:",
@@ -44,29 +44,29 @@ pub fn rename_task(config: &Config, filter: String) -> Result<String, String> {
         ));
     }
 
-    todoist::update_task_name(config, selected_task, new_task_content)
+    todoist::update_task_name(config, selected_task, new_task_content).await
 }
 
-pub fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, String> {
-    let tasks = todoist::tasks_for_filter(config, filter)?;
+pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter).await?;
     for task in tasks {
-        label_task(config, task, labels)?;
+        label_task(config, task, labels).await?;
     }
     Ok(color::green_string(&format!(
         "There are no more tasks for filter: '{filter}'"
     )))
 }
 
-fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result<String, String> {
+async fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result<String, String> {
     println!("{}", task.fmt(config, FormatType::Single, true));
     let label = input::select("Select label", labels.to_owned(), config.mock_select)?;
 
-    todoist::add_task_label(config, task, label)
+    todoist::add_task_label(config, task, label).await
 }
 
 /// Get the next task by priority and save its id to config
-pub fn next_task(config: Config, filter: &str) -> Result<String, String> {
-    match fetch_next_task(&config, filter) {
+pub async fn next_task(config: Config, filter: &str) -> Result<String, String> {
+    match fetch_next_task(&config, filter).await {
         Ok(Some((task, remaining))) => {
             config.set_next_id(&task.id).save()?;
             let task_string = task.fmt(&config, FormatType::Single, true);
@@ -77,22 +77,22 @@ pub fn next_task(config: Config, filter: &str) -> Result<String, String> {
     }
 }
 
-fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)>, String> {
-    let tasks = todoist::tasks_for_filter(config, filter)?;
+async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)>, String> {
+    let tasks = todoist::tasks_for_filter(config, filter).await?;
     let tasks = tasks::sort_by_value(tasks, config);
 
     Ok(tasks.first().map(|task| (task.to_owned(), tasks.len())))
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub fn process_tasks(config: &Config, filter: &String) -> Result<String, String> {
-    let tasks = todoist::tasks_for_filter(config, filter)?;
+pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter).await?;
     let tasks = tasks::sort_by_value(tasks, config);
-    let tasks = tasks::reject_parent_tasks(tasks, config);
+    let tasks = tasks::reject_parent_tasks(tasks, config).await;
     let mut task_count = tasks.len() as i32;
     for task in tasks {
         println!(" ");
-        match tasks::process_task(config, task, &mut task_count, true) {
+        match tasks::process_task(config, task, &mut task_count, true).await {
             Some(Ok(_)) => (),
             Some(Err(e)) => return Err(e),
             None => return Ok(color::green_string("Exited")),
@@ -104,8 +104,8 @@ pub fn process_tasks(config: &Config, filter: &String) -> Result<String, String>
 }
 
 /// Prioritize all unprioritized tasks in a project
-pub fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, String> {
-    let tasks = todoist::tasks_for_filter(config, filter)?;
+pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
         Ok(color::green_string(&format!(
@@ -113,7 +113,7 @@ pub fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, Stri
         )))
     } else {
         for task in tasks.iter() {
-            tasks::set_priority(config, task.to_owned(), true)?;
+            tasks::set_priority(config, task.to_owned(), true).await?;
         }
         Ok(color::green_string(&format!(
             "Successfully prioritized '{filter}'"
@@ -122,8 +122,8 @@ pub fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, Stri
 }
 
 /// Put dates on all tasks without dates
-pub fn schedule(config: &Config, filter: &String) -> Result<String, String> {
-    let tasks = todoist::tasks_for_filter(config, filter)?;
+pub async fn schedule(config: &Config, filter: &String) -> Result<String, String> {
+    let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
         Ok(color::green_string(&format!(
@@ -138,14 +138,14 @@ pub fn schedule(config: &Config, filter: &String) -> Result<String, String> {
                 config.natural_language_only,
             )?;
             match datetime_input {
-                input::DateTimeInput::Complete => todoist::complete_task(config, &task.id)?,
+                input::DateTimeInput::Complete => todoist::complete_task(config, &task.id).await?,
                 DateTimeInput::Skip => "Skipped".to_string(),
 
                 input::DateTimeInput::Text(due_string) => {
-                    todoist::update_task_due(config, task.to_owned(), due_string)?
+                    todoist::update_task_due(config, task.to_owned(), due_string).await?
                 }
                 input::DateTimeInput::None => {
-                    todoist::update_task_due(config, task.to_owned(), "No Date".to_string())?
+                    todoist::update_task_due(config, task.to_owned(), "No Date".to_string()).await?
                 }
             };
         }
@@ -164,15 +164,16 @@ mod tests {
     /// Need to adjust this value forward or back an hour when timezone changes
     const TIME: &str = "16:59";
 
-    #[test]
-    fn test_all_tasks() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_all_tasks() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
@@ -185,7 +186,7 @@ mod tests {
         let filter = String::from("today");
 
         assert_eq!(
-            all_tasks(&config_with_timezone, &filter),
+            all_tasks(&config_with_timezone, &filter).await,
             Ok(format!(
                 "Tasks for filter: 'today'\n- Put out recycling\n  ! {TIME} ↻ every other mon at 16:30\n# Project not in config\n"
             ))
@@ -193,15 +194,16 @@ mod tests {
         mock.assert();
     }
 
-    #[test]
-    fn test_rename_task() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_rename_task() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config()
             .mock_url(server.url())
@@ -209,20 +211,21 @@ mod tests {
 
         let result = rename_task(&config, String::from("today"));
         assert_eq!(
-            result,
+            result.await,
             Ok("The content is the same, no need to change it".to_string())
         );
         mock.assert();
     }
-    #[test]
-    fn test_get_next_task() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_get_next_task() {
+        let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
@@ -239,28 +242,30 @@ mod tests {
 
         let filter = String::from("today");
         assert_eq!(
-            next_task(config_with_timezone, &filter),
+            next_task(config_with_timezone, &filter).await,
             Ok(format!(
                 "Put out recycling\n! {TIME} ↻ every other mon at 16:30\n# Project not in config\n\n1 task(s) remaining"
             ))
         );
     }
-    #[test]
-    fn test_label() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_label() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let mock2 = server
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
@@ -280,29 +285,31 @@ mod tests {
         let labels = vec![String::from("thing")];
 
         assert_eq!(
-            label(&config_with_timezone, &filter, &labels),
+            label(&config_with_timezone, &filter, &labels).await,
             Ok(String::from("There are no more tasks for filter: 'today'"))
         );
         mock.assert();
         mock2.assert();
     }
 
-    #[test]
-    fn test_process_tasks() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_process_tasks() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let mock2 = server
             .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config()
             .mock_url(server.url())
@@ -313,29 +320,31 @@ mod tests {
 
         let result = process_tasks(&config, &filter);
         assert_eq!(
-            result,
+            result.await,
             Ok("There are no more tasks for filter: 'today'".to_string())
         );
         mock.assert();
         mock2.assert();
     }
 
-    #[test]
-    fn test_schedule() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_schedule() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_unscheduled_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let mock2 = server
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config()
             .mock_url(server.url())
@@ -345,7 +354,7 @@ mod tests {
         let filter = String::from("today");
         let result = schedule(&config, &filter);
         assert_eq!(
-            result,
+            result.await,
             Ok("Successfully scheduled tasks in 'today'".to_string())
         );
 
@@ -354,28 +363,30 @@ mod tests {
         let filter = String::from("today");
         let result = schedule(&config, &filter);
         assert_eq!(
-            result,
+            result.await,
             Ok("Successfully scheduled tasks in 'today'".to_string())
         );
 
         mock.expect(2);
         mock2.expect(2);
     }
-    #[test]
-    fn test_prioritize_tasks() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_prioritize_tasks() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
         let mock2 = server
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::get_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config()
             .mock_url(server.url())
@@ -383,7 +394,10 @@ mod tests {
 
         let filter = String::from("today");
         let result = prioritize_tasks(&config, &filter);
-        assert_eq!(result, Ok(String::from("Successfully prioritized 'today'")));
+        assert_eq!(
+            result.await,
+            Ok(String::from("Successfully prioritized 'today'"))
+        );
         mock.assert();
         mock2.assert();
     }

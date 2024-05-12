@@ -364,7 +364,7 @@ impl Task {
     }
 }
 
-pub fn process_task(
+pub async fn process_task(
     config: &Config,
     task: Task,
     task_count: &mut i32,
@@ -382,9 +382,9 @@ pub fn process_task(
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "Complete" {
-                Some(todoist::complete_task(config, &task.id))
+                Some(todoist::complete_task(config, &task.id).await)
             } else if string == "Delete" {
-                Some(todoist::delete_task(config, &task))
+                Some(todoist::delete_task(config, &task).await)
             } else if string == "Skip" {
                 Some(Ok(color::green_string("Task skipped")))
                 // The quit clause
@@ -442,7 +442,7 @@ pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Tas
 // We don't want to process parent tasks when child tasks are unchecked, or child tasks when they are checked
 // We additionally need to make sure that parent tasks are not in the future
 
-pub fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task> {
+pub async fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task> {
     let parent_ids: Vec<String> = tasks
         .clone()
         .into_iter()
@@ -450,19 +450,37 @@ pub fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task> {
         .map(|task| task.parent_id.unwrap_or_default())
         .collect();
 
-    tasks
-        .clone()
-        .into_iter()
-        .filter(|task| {
-            !parent_ids.contains(&task.id)
+    let mut handles = Vec::new();
+
+    for task in tasks.clone() {
+        let config = config.clone();
+        let parent_ids = parent_ids.clone();
+        let tasks = tasks.clone();
+
+        let handle = tokio::spawn(async move {
+            if !parent_ids.contains(&task.id)
                 && !task.checked.unwrap_or_default()
-                && !parent_in_future(task.clone(), tasks.clone(), config)
-        })
-        .collect()
+                && !parent_in_future(task.clone(), tasks, &config).await
+            {
+                Some(task)
+            } else {
+                None
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    futures::future::join_all(handles)
+        .await
+        .into_iter()
+        .filter_map(|t| t.ok())
+        .flatten()
+        .collect::<Vec<Task>>()
 }
 
 // Need to make sure that we are not completing a subtask for a parent task that is in the future
-fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool {
+async fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool {
     let task_ids: Vec<String> = tasks.clone().into_iter().map(|task| task.id).collect();
 
     match task {
@@ -477,7 +495,7 @@ fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool {
                 false
             } else {
                 // look up id and see if it is in the future
-                match todoist::get_task(config, &parent_id) {
+                match todoist::get_task(config, &parent_id).await {
                     Err(_) => {
                         println!("Could not fetch task for id: {parent_id}");
                         false
@@ -493,7 +511,11 @@ fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool {
     }
 }
 
-pub fn set_priority(config: &Config, task: Task, with_project: bool) -> Result<String, String> {
+pub async fn set_priority(
+    config: &Config,
+    task: Task,
+    with_project: bool,
+) -> Result<String, String> {
     println!("{}", task.fmt(config, FormatType::Single, with_project));
 
     let options = vec![
@@ -508,7 +530,7 @@ pub fn set_priority(config: &Config, task: Task, with_project: bool) -> Result<S
         config.mock_select,
     )?;
 
-    todoist::update_task_priority(config, task, priority)
+    todoist::update_task_priority(config, task, priority).await
 }
 
 #[cfg(test)]
@@ -869,34 +891,36 @@ mod tests {
         assert_eq!(Priority::High.to_integer(), 4);
     }
 
-    #[test]
-    fn test_set_priority() {
+    #[tokio::test]
+    async fn test_set_priority() {
         let task = test::fixtures::task();
-        let mut server = mockito::Server::new();
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/rest/v2/tasks/222")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())
-            .create();
+            .create_async()
+            .await;
         let config = test::fixtures::config()
             .mock_select(1)
             .mock_url(server.url());
 
         let result = set_priority(&config, task, false);
-        assert_eq!(result, Ok("✓".to_string()));
+        assert_eq!(result.await, Ok("✓".to_string()));
         mock.assert();
     }
 
-    #[test]
-    fn test_process_task() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_process_task() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
-            .create();
+            .create_async()
+            .await;
 
         let task = test::fixtures::task();
         let config = test::fixtures::config()
@@ -905,7 +929,7 @@ mod tests {
         let mut task_count = 3;
         let result = process_task(&config, task, &mut task_count, true);
         let expected = Some(Ok(String::from("✓")));
-        assert_eq!(result, expected);
+        assert_eq!(result.await, expected);
         mock.assert();
     }
 }

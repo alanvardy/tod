@@ -1763,6 +1763,7 @@ dependencies = [
  "clap",
  "colored",
  "dirs",
+ "futures",
  "homedir",
  "inquire",
  "matches",

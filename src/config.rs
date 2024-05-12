@@ -79,8 +79,8 @@ impl Default for SortValue {
     }
 }
 impl Config {
-    pub fn reload_projects(self: &mut Config) -> Result<String, String> {
-        let all_projects = todoist::projects(self)?;
+    pub async fn reload_projects(self: &mut Config) -> Result<String, String> {
+        let all_projects = todoist::projects(self).await?;
         let current_projects = self.projects.clone().unwrap_or_default();
         let current_project_ids: Vec<String> =
             current_projects.iter().map(|p| p.id.to_owned()).collect();

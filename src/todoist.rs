@@ -20,23 +20,23 @@ const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
 
 /// Add a new task to the inbox with natural language support
-pub fn quick_add_task(config: &Config, content: &str) -> Result<Task, String> {
+pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, String> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"text": content, "auto_reminder": true});
 
-    let json = request::post_todoist_sync(config, url, body)?;
+    let json = request::post_todoist_sync(config, url, body).await?;
     tasks::json_to_task(json)
 }
 
-pub fn get_task(config: &Config, id: &str) -> Result<Task, String> {
+pub async fn get_task(config: &Config, id: &str) -> Result<Task, String> {
     let url = format!("{REST_V2_TASKS_URL}{id}");
-    let json = request::get_todoist_rest(config, url)?;
+    let json = request::get_todoist_rest(config, url).await?;
     tasks::json_to_task(json)
 }
 
 /// Add Task without natural language support but supports additional parameters
 #[allow(clippy::too_many_arguments)]
-pub fn add_task(
+pub async fn add_task(
     config: &Config,
     content: &String,
     project: &Project,
@@ -77,41 +77,44 @@ pub fn add_task(
 
     let body = json!(body);
 
-    let json = request::post_todoist_rest(config, url, body)?;
+    let json = request::post_todoist_rest(config, url, body).await?;
     tasks::json_to_task(json)
 }
 
 /// Get a vector of all tasks for a project
-pub fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, String> {
+pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project.id });
-    let json = request::post_todoist_sync(config, url, body)?;
+    let json = request::post_todoist_sync(config, url, body).await?;
     tasks::sync_json_to_tasks(json)
 }
 
-pub fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>, String> {
+pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>, String> {
     use urlencoding::encode;
 
     let encoded = encode(filter);
     let url = format!("{REST_V2_TASKS_URL}?filter={encoded}");
-    let json = request::get_todoist_rest(config, url)?;
+    let json = request::get_todoist_rest(config, url).await?;
     tasks::rest_json_to_tasks(json)
 }
 
-pub fn sections_for_project(config: &Config, project: &Project) -> Result<Vec<Section>, String> {
+pub async fn sections_for_project(
+    config: &Config,
+    project: &Project,
+) -> Result<Vec<Section>, String> {
     let project_id = &project.id;
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
-    let json = request::get_todoist_rest(config, url)?;
+    let json = request::get_todoist_rest(config, url).await?;
     sections::json_to_sections(json)
 }
 
-pub fn projects(config: &Config) -> Result<Vec<Project>, String> {
-    let json = request::get_todoist_rest(config, PROJECTS_URL.to_string())?;
+pub async fn projects(config: &Config) -> Result<Vec<Project>, String> {
+    let json = request::get_todoist_rest(config, PROJECTS_URL.to_string()).await?;
     projects::json_to_projects(json)
 }
 
 /// Move an task to a different project
-pub fn move_task_to_project(
+pub async fn move_task_to_project(
     config: &Config,
     task: Task,
     project: &Project,
@@ -119,11 +122,11 @@ pub fn move_task_to_project(
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project.id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body)?;
+    request::post_todoist_sync(config, url, body).await?;
     Ok(String::from("✓"))
 }
 
-pub fn move_task_to_section(
+pub async fn move_task_to_section(
     config: &Config,
     task: Task,
     section: &Section,
@@ -131,12 +134,12 @@ pub fn move_task_to_section(
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section.id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body)?;
+    request::post_todoist_sync(config, url, body).await?;
     Ok(String::from("✓"))
 }
 
 /// Update the priority of an task by ID
-pub fn update_task_priority(
+pub async fn update_task_priority(
     config: &Config,
     task: Task,
     priority: Priority,
@@ -144,25 +147,29 @@ pub fn update_task_priority(
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body)?;
+    request::post_todoist_rest(config, url, body).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
 
 /// Add a label to task by ID
-pub fn add_task_label(config: &Config, task: Task, label: String) -> Result<String, String> {
+pub async fn add_task_label(config: &Config, task: Task, label: String) -> Result<String, String> {
     let mut labels = task.labels;
     labels.push(label);
     let body = json!({ "labels": labels});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body)?;
+    request::post_todoist_rest(config, url, body).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
 
 /// Update due date for task using natural language
-pub fn update_task_due(config: &Config, task: Task, due_string: String) -> Result<String, String> {
+pub async fn update_task_due(
+    config: &Config,
+    task: Task,
+    due_string: String,
+) -> Result<String, String> {
     let due_string = if task.is_recurring() {
         format!("{} starting {due_string}", task.due.unwrap().string)
     } else {
@@ -171,27 +178,31 @@ pub fn update_task_due(config: &Config, task: Task, due_string: String) -> Resul
     let body = json!({ "due_string": due_string });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body)?;
+    request::post_todoist_rest(config, url, body).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
 
 /// Update the name of an task by ID
-pub fn update_task_name(config: &Config, task: Task, new_name: String) -> Result<String, String> {
+pub async fn update_task_name(
+    config: &Config,
+    task: Task,
+    new_name: String,
+) -> Result<String, String> {
     let body = json!({ "content": new_name });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body)?;
+    request::post_todoist_rest(config, url, body).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
 
 /// Complete the last task returned by "next task"
-pub fn complete_task(config: &Config, task_id: &str) -> Result<String, String> {
+pub async fn complete_task(config: &Config, task_id: &str) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task_id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body)?;
+    request::post_todoist_sync(config, url, body).await?;
 
     if !cfg!(test) {
         config.clone().clear_next_id().save()?;
@@ -201,11 +212,11 @@ pub fn complete_task(config: &Config, task_id: &str) -> Result<String, String> {
     Ok(String::from("✓"))
 }
 
-pub fn delete_task(config: &Config, task: &Task) -> Result<String, String> {
+pub async fn delete_task(config: &Config, task: &Task) -> Result<String, String> {
     let body = json!({});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::delete_todoist_rest(config, url, body)?;
+    request::delete_todoist_rest(config, url, body).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -218,20 +229,21 @@ mod tests {
     use crate::{test, time};
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn test_quick_add_task() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_quick_add_task() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/sync/v9/quick/add")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
         assert_eq!(
-            quick_add_task(&config, "testy test"),
+            quick_add_task(&config, "testy test").await,
             Ok(Task {
                 id: String::from("5149481867"),
                 priority: Priority::None,
@@ -250,15 +262,16 @@ mod tests {
         mock.assert();
     }
 
-    #[test]
-    fn test_add_task() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_add_task() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/rest/v2/tasks/")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
@@ -276,7 +289,8 @@ mod tests {
                 &String::new(),
                 &None,
                 &[]
-            ),
+            )
+            .await,
             Ok(Task {
                 id: String::from("5149481867"),
                 priority: Priority::None,
@@ -295,16 +309,17 @@ mod tests {
         mock.assert();
     }
 
-    #[test]
-    fn should_get_tasks_for_project() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn should_get_tasks_for_project() {
+        let mut server = mockito::Server::new_async().await;
 
         let mock = server
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
         let config_with_timezone = Config {
@@ -315,7 +330,7 @@ mod tests {
         let project = binding.first().unwrap();
 
         assert_eq!(
-            tasks_for_project(&config_with_timezone, project),
+            tasks_for_project(&config_with_timezone, project).await,
             Ok(vec![Task {
                 id: String::from("999999"),
                 content: String::from("Put out recycling"),
@@ -343,33 +358,35 @@ mod tests {
         mock.assert();
     }
 
-    #[test]
-    fn should_complete_a_task() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn should_complete_a_task() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = complete_task(&config, "112233");
+        let response = complete_task(&config, "112233").await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
 
-    #[test]
-    fn should_move_a_task() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn should_move_a_task() {
+        let mut server = mockito::Server::new_async().await;
 
         let mock = server
             .mock("POST", "/sync/v9/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
-            .create();
+            .create_async()
+            .await;
 
         let task = test::fixtures::task();
         let config = test::fixtures::config().mock_url(server.url());
@@ -381,48 +398,50 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let response = move_task_to_project(&config, task, project);
+        let response = move_task_to_project(&config, task, project).await;
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));
     }
 
-    #[test]
-    fn should_prioritize_a_task() {
+    #[tokio::test]
+    async fn should_prioritize_a_task() {
         let task = test::fixtures::task();
         let url: &str = &format!("{}{}", "/rest/v2/tasks/", task.id);
-        let mut server = mockito::Server::new();
+        let mut server = mockito::Server::new_async().await;
 
         let mock = server
             .mock("POST", url)
             .with_status(204)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = update_task_priority(&config, task, Priority::High);
+        let response = update_task_priority(&config, task, Priority::High).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
 
-    #[test]
-    fn should_update_date_on_a_task() {
+    #[tokio::test]
+    async fn should_update_date_on_a_task() {
         let task = test::fixtures::task();
         let url: &str = &format!("{}{}", "/rest/v2/tasks/", task.id);
-        let mut server = mockito::Server::new();
+        let mut server = mockito::Server::new_async().await;
 
         let mock = server
             .mock("POST", url)
             .with_status(204)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = update_task_due(&config, task, "today".to_string());
+        let response = update_task_due(&config, task, "today".to_string()).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

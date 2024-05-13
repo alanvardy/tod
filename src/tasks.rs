@@ -4,6 +4,7 @@ use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
+use tokio::task::JoinHandle;
 
 pub mod priority;
 use crate::color;
@@ -369,7 +370,7 @@ pub async fn process_task(
     task: Task,
     task_count: &mut i32,
     with_project: bool,
-) -> Option<Result<String, String>> {
+) -> Option<JoinHandle<()>> {
     let options = ["Complete", "Skip", "Delete", "Quit"]
         .iter()
         .map(|s| s.to_string())
@@ -382,17 +383,33 @@ pub async fn process_task(
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "Complete" {
-                Some(todoist::complete_task(config, &task.id).await)
+                let config = config.clone();
+                let handle = tokio::spawn(async move {
+                    if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
+                        println!("{e}");
+                    }
+                });
+                Some(handle)
             } else if string == "Delete" {
-                Some(todoist::delete_task(config, &task).await)
+                let config = config.clone();
+                let handle = tokio::spawn(async move {
+                    if let Err(e) = todoist::delete_task(&config, &task, false).await {
+                        println!("{e}");
+                    }
+                });
+                Some(handle)
             } else if string == "Skip" {
-                Some(Ok(color::green_string("Task skipped")))
-                // The quit clause
+                let handle = tokio::spawn(async move {});
+                Some(handle)
             } else {
+                // The quit clause
                 None
             }
         }
-        Err(e) => Some(Err(e)),
+        Err(e) => {
+            let handle = tokio::spawn(async move { println!("{e}") });
+            Some(handle)
+        }
     }
 }
 pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, String> {
@@ -927,9 +944,11 @@ mod tests {
             .mock_url(server.url())
             .mock_select(0);
         let mut task_count = 3;
-        let result = process_task(&config, task, &mut task_count, true);
-        let expected = Some(Ok(String::from("✓")));
-        assert_eq!(result.await, expected);
+        process_task(&config, task, &mut task_count, true)
+            .await
+            .unwrap()
+            .await
+            .unwrap();
         mock.assert();
     }
 }

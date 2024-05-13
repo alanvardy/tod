@@ -485,7 +485,7 @@ async fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
 async fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
     let config = fetch_config(cli)?;
     match config.next_id.as_ref() {
-        Some(id) => todoist::complete_task(&config, id).await,
+        Some(id) => todoist::complete_task(&config, id, true).await,
         None => {
             Err("There is nothing to complete. A task must first be marked as 'next'.".to_string())
         }

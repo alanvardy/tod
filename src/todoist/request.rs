@@ -26,12 +26,13 @@ pub async fn post_todoist_sync(
     config: &Config,
     url: String,
     body: serde_json::Value,
+    spinner: bool,
 ) -> Result<String, String> {
     let base_url = get_base_url(config);
     let request_url = format!("{base_url}{url}");
     let token = &config.token;
 
-    let spinner = maybe_start_spinner(config);
+    let spinner = maybe_start_spinner(config, spinner);
     debug::print(config, format!("POST {request_url}\nbody: {body}"));
     let response = Client::new()
         .post(request_url.clone())
@@ -59,7 +60,7 @@ pub async fn post_todoist_rest(
 
     let request_url = format!("{base_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
-    let spinner = maybe_start_spinner(config);
+    let spinner = maybe_start_spinner(config, true);
 
     debug::print(config, format!("POST {request_url}\nbody: {body}"));
 
@@ -82,13 +83,14 @@ pub async fn delete_todoist_rest(
     config: &Config,
     url: String,
     body: serde_json::Value,
+    spinner: bool,
 ) -> Result<String, String> {
     let base_url = get_base_url(config);
     let token = &config.token;
 
     let request_url = format!("{base_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
-    let spinner = maybe_start_spinner(config);
+    let spinner = maybe_start_spinner(config, spinner);
 
     debug::print(config, format!("DELETE {request_url}\nbody: {body}"));
 
@@ -115,7 +117,7 @@ pub async fn get_todoist_rest(config: &Config, url: String) -> Result<String, St
 
     let request_url = format!("{base_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
-    let spinner = maybe_start_spinner(config);
+    let spinner = maybe_start_spinner(config, true);
     if config.verbose.unwrap_or_default() {
         println!("GET {request_url}")
     }
@@ -196,20 +198,18 @@ fn get_base_url(config: &Config) -> String {
     }
 }
 
-fn maybe_start_spinner(config: &Config) -> Option<Spinner> {
+fn maybe_start_spinner(config: &Config, spinner: bool) -> Option<Spinner> {
     if cfg!(test) {
         return None;
     }
 
-    match env::var("DISABLE_SPINNER") {
-        Ok(_) => None,
+    match (env::var("DISABLE_SPINNER"), config.spinners, spinner) {
+        (Ok(_), _, _) => None,
+        (_, Some(false), _) => None,
+        (_, _, false) => None,
         _ => {
-            if let Some(false) = config.spinners {
-                None
-            } else {
-                let sp = Spinner::new(SPINNER, MESSAGE.into());
-                Some(sp)
-            }
+            let sp = Spinner::new(SPINNER, MESSAGE.into());
+            Some(sp)
         }
     }
 }

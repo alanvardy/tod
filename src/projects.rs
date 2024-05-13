@@ -1,5 +1,6 @@
 use pad::PadStr;
 use std::fmt::Display;
+use tokio::task::JoinHandle;
 
 use crate::config::Config;
 use crate::input::DateTimeInput;
@@ -334,9 +335,14 @@ pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Str
             .filter(|task| task.parent_id.is_none())
             .collect::<Vec<Task>>();
 
+        let mut handles = Vec::new();
         for task in tasks.iter() {
-            move_task_to_project(config, task.to_owned()).await?;
+            match move_task_to_project(config, task.to_owned()).await {
+                Ok(handle) => handles.push(handle),
+                Err(e) => return Err(e),
+            };
         }
+        futures::future::join_all(handles).await;
         Ok(color::green_string(&format!(
             "Successfully emptied '{}'",
             project.name
@@ -426,29 +432,34 @@ pub async fn schedule(
     }
 }
 
-pub async fn move_task_to_project(config: &Config, task: Task) -> Result<String, String> {
+pub async fn move_task_to_project(config: &Config, task: Task) -> Result<JoinHandle<()>, String> {
     println!("{}", task.fmt(config, FormatType::Single, false));
 
     let options = ["Pick project", "Complete", "Skip", "Delete"]
         .iter()
         .map(|o| o.to_string())
         .collect::<Vec<String>>();
-    let selection = input::select(
-        "Enter destination project name or complete:",
-        options,
-        config.mock_select,
-    )?;
+    let selection = input::select("Choose", options, config.mock_select)?;
 
     match selection.as_str() {
         "Complete" => {
-            todoist::complete_task(config, &task.id, true).await?;
-            Ok(color::green_string("✓"))
+            let config = config.clone();
+            Ok(tokio::spawn(async move {
+                if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
+                    println!("{e}");
+                }
+            }))
         }
+
         "Delete" => {
-            todoist::delete_task(config, &task, true).await?;
-            Ok(color::green_string("✓"))
+            let config = config.clone();
+            Ok(tokio::spawn(async move {
+                if let Err(e) = todoist::delete_task(&config, &task, false).await {
+                    println!("{e}");
+                }
+            }))
         }
-        "Skip" => Ok(color::green_string("Skipped")),
+        "Skip" => Ok(tokio::spawn(async move {})),
         _ => {
             let projects = config.projects.clone().unwrap_or_default();
             let project = input::select("Select project", projects, config.mock_select)?;
@@ -456,15 +467,30 @@ pub async fn move_task_to_project(config: &Config, task: Task) -> Result<String,
             let sections = todoist::sections_for_project(config, &project).await?;
             let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
             if section_names.is_empty() || config.no_sections.unwrap_or_default() {
-                todoist::move_task_to_project(config, task, &project).await
+                let config = config.clone();
+                Ok(tokio::spawn(async move {
+                    if let Err(e) =
+                        todoist::move_task_to_project(&config, task, &project, false).await
+                    {
+                        println!("{e}");
+                    }
+                }))
             } else {
                 let section_name =
                     input::select("Select section", section_names, config.mock_select)?;
-                let section = &sections
+                let section = sections
                     .iter()
                     .find(|x| x.name == section_name.as_str())
-                    .expect("Section does not exist");
-                todoist::move_task_to_section(config, task, section).await
+                    .expect("Section does not exist")
+                    .clone();
+                let config = config.clone();
+                Ok(tokio::spawn(async move {
+                    if let Err(e) =
+                        todoist::move_task_to_section(&config, task, &section, false).await
+                    {
+                        println!("{e}")
+                    }
+                }))
             }
         }
     }
@@ -755,8 +781,11 @@ mod tests {
         let config = test::fixtures::config().mock_select(2);
         let task = test::fixtures::task();
 
-        let result = move_task_to_project(&config, task);
-        assert_eq!(result.await, Ok(String::from("Skipped")));
+        move_task_to_project(&config, task)
+            .await
+            .unwrap()
+            .await
+            .unwrap();
     }
 
     #[tokio::test]

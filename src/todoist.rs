@@ -118,11 +118,12 @@ pub async fn move_task_to_project(
     config: &Config,
     task: Task,
     project: &Project,
+    spinner: bool,
 ) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project.id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body, true).await?;
+    request::post_todoist_sync(config, url, body, spinner).await?;
     Ok(String::from("✓"))
 }
 
@@ -130,11 +131,12 @@ pub async fn move_task_to_section(
     config: &Config,
     task: Task,
     section: &Section,
+    spinner: bool,
 ) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section.id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body, true).await?;
+    request::post_todoist_sync(config, url, body, spinner).await?;
     Ok(String::from("✓"))
 }
 
@@ -402,7 +404,7 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let response = move_task_to_project(&config, task, project).await;
+        let response = move_task_to_project(&config, task, project, false).await;
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));

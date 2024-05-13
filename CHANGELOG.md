@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-05-12 v0.6.3
+
 - Make `list process` calls asynchronously
 - Make `project empty` calls asynchronously
 

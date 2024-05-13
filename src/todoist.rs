@@ -24,7 +24,7 @@ pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Stri
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"text": content, "auto_reminder": true});
 
-    let json = request::post_todoist_sync(config, url, body).await?;
+    let json = request::post_todoist_sync(config, url, body, true).await?;
     tasks::json_to_task(json)
 }
 
@@ -85,7 +85,7 @@ pub async fn add_task(
 pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, String> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project.id });
-    let json = request::post_todoist_sync(config, url, body).await?;
+    let json = request::post_todoist_sync(config, url, body, true).await?;
     tasks::sync_json_to_tasks(json)
 }
 
@@ -122,7 +122,7 @@ pub async fn move_task_to_project(
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project.id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body).await?;
+    request::post_todoist_sync(config, url, body, true).await?;
     Ok(String::from("✓"))
 }
 
@@ -134,7 +134,7 @@ pub async fn move_task_to_section(
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section.id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body).await?;
+    request::post_todoist_sync(config, url, body, true).await?;
     Ok(String::from("✓"))
 }
 
@@ -198,11 +198,15 @@ pub async fn update_task_name(
 }
 
 /// Complete the last task returned by "next task"
-pub async fn complete_task(config: &Config, task_id: &str) -> Result<String, String> {
+pub async fn complete_task(
+    config: &Config,
+    task_id: &str,
+    spinner: bool,
+) -> Result<String, String> {
     let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task_id}}]});
     let url = String::from(SYNC_URL);
 
-    request::post_todoist_sync(config, url, body).await?;
+    request::post_todoist_sync(config, url, body, spinner).await?;
 
     if !cfg!(test) {
         config.clone().clear_next_id().save()?;
@@ -212,11 +216,11 @@ pub async fn complete_task(config: &Config, task_id: &str) -> Result<String, Str
     Ok(String::from("✓"))
 }
 
-pub async fn delete_task(config: &Config, task: &Task) -> Result<String, String> {
+pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<String, String> {
     let body = json!({});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::delete_todoist_rest(config, url, body).await?;
+    request::delete_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -371,7 +375,7 @@ mod tests {
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = complete_task(&config, "112233").await;
+        let response = complete_task(&config, "112233", false).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

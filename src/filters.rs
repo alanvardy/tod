@@ -90,14 +90,15 @@ pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, S
     let tasks = tasks::sort_by_value(tasks, config);
     let tasks = tasks::reject_parent_tasks(tasks, config).await;
     let mut task_count = tasks.len() as i32;
+    let mut handles = Vec::new();
     for task in tasks {
         println!(" ");
         match tasks::process_task(config, task, &mut task_count, true).await {
-            Some(Ok(_)) => (),
-            Some(Err(e)) => return Err(e),
+            Some(handle) => handles.push(handle),
             None => return Ok(color::green_string("Exited")),
         }
     }
+    futures::future::join_all(handles).await;
     Ok(color::green_string(&format!(
         "There are no more tasks for filter: '{filter}'"
     )))
@@ -138,7 +139,9 @@ pub async fn schedule(config: &Config, filter: &String) -> Result<String, String
                 config.natural_language_only,
             )?;
             match datetime_input {
-                input::DateTimeInput::Complete => todoist::complete_task(config, &task.id).await?,
+                input::DateTimeInput::Complete => {
+                    todoist::complete_task(config, &task.id, true).await?
+                }
                 DateTimeInput::Skip => "Skipped".to_string(),
 
                 input::DateTimeInput::Text(due_string) => {

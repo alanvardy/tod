@@ -96,7 +96,7 @@ impl Config {
         Ok(color::green_string("✓"))
     }
 
-    pub fn check_for_latest_version(self: Config) -> Result<Config, String> {
+    pub async fn check_for_latest_version(self: Config) -> Result<Config, String> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
             last_version_check: Some(time::today_string(&self)?),
@@ -104,7 +104,7 @@ impl Config {
         };
 
         if last_version != Some(time::today_string(&self)?) {
-            match cargo::compare_versions(self) {
+            match cargo::compare_versions(self).await {
                 Ok(Version::Dated(version)) => {
                     println!(
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",

@@ -383,9 +383,9 @@ async fn main() {
         Commands::List(ListCommands::Schedule(args)) => list_schedule(cli.clone(), args).await,
 
         Commands::Config(ConfigCommands::CheckVersion(args)) => {
-            config_check_version(cli.clone(), args)
+            config_check_version(cli.clone(), args).await
         }
-        Commands::Config(ConfigCommands::Reset(args)) => config_reset(cli.clone(), args),
+        Commands::Config(ConfigCommands::Reset(args)) => config_reset(cli.clone(), args).await,
     };
 
     match result {
@@ -405,7 +405,7 @@ async fn main() {
 #[cfg(not(tarpaulin_include))]
 async fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, String> {
     let TaskQuickAdd { content } = args;
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
 
     let content = fetch_string(&content.as_ref().map(|c| c.join(" ")), &config, "CONTENT")?;
     todoist::quick_add_task(&config, &content).await?;
@@ -423,7 +423,7 @@ async fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
         priority,
         label: labels,
     } = args;
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     let content = fetch_string(content, &config, "CONTENT")?;
     let priority = fetch_priority(priority, &config)?;
     let project = match fetch_project(project, &config)? {
@@ -464,7 +464,7 @@ async fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 async fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, String> {
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     let TaskEdit { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Project(project) => projects::rename_task(&config, &project).await,
@@ -474,7 +474,7 @@ async fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 async fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
     let TaskNext { project, filter } = args;
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Project(project) => projects::next_task(config, &project).await,
         Flag::Filter(filter) => filters::next_task(config, &filter).await,
@@ -483,7 +483,7 @@ async fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 async fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     match config.next_id.as_ref() {
         Some(id) => todoist::complete_task(&config, id, true).await,
         None => {
@@ -496,7 +496,7 @@ async fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String>
 
 #[cfg(not(tarpaulin_include))]
 async fn list_view(cli: Cli, args: &ListView) -> Result<String, String> {
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     let ListView { project, filter } = args;
 
     match fetch_project_or_filter(project, filter, &config)? {
@@ -509,7 +509,7 @@ async fn list_view(cli: Cli, args: &ListView) -> Result<String, String> {
 
 #[cfg(not(tarpaulin_include))]
 async fn project_list(cli: Cli, _args: &ProjectList) -> Result<String, String> {
-    let mut config = fetch_config(cli)?;
+    let mut config = fetch_config(cli).await?;
 
     projects::list(&mut config).await
 }
@@ -522,7 +522,7 @@ async fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String
         project,
         repeat,
     } = args;
-    let mut config = fetch_config(cli)?;
+    let mut config = fetch_config(cli).await?;
     match (all, auto) {
         (true, false) => projects::remove_all(&mut config),
         (false, true) => projects::remove_auto(&mut config).await,
@@ -543,7 +543,7 @@ async fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String
 
 #[cfg(not(tarpaulin_include))]
 async fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String> {
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     let ProjectRename { project } = args;
     let project = match fetch_project(project, &config)? {
         Flag::Project(project) => project,
@@ -558,7 +558,7 @@ async fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String
 
 #[cfg(not(tarpaulin_include))]
 async fn project_import(cli: Cli, _args: &ProjectImport) -> Result<String, String> {
-    let mut config = fetch_config(cli)?;
+    let mut config = fetch_config(cli).await?;
 
     projects::import(&mut config).await
 }
@@ -566,7 +566,7 @@ async fn project_import(cli: Cli, _args: &ProjectImport) -> Result<String, Strin
 #[cfg(not(tarpaulin_include))]
 async fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, String> {
     let ProjectEmpty { project } = args;
-    let mut config = fetch_config(cli)?;
+    let mut config = fetch_config(cli).await?;
     let project = match fetch_project(project, &config)? {
         Flag::Project(project) => project,
         _ => unreachable!(),
@@ -583,7 +583,7 @@ async fn list_label(cli: Cli, args: &ListLabel) -> Result<String, String> {
         filter,
         label: labels,
     } = args;
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     match fetch_filter(filter, &config)? {
         Flag::Filter(filter) => filters::label(&config, &filter, labels).await,
         _ => unreachable!(),
@@ -593,7 +593,7 @@ async fn list_label(cli: Cli, args: &ListLabel) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 async fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
     let ListProcess { project, filter } = args;
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::process_tasks(&config, &filter).await,
         Flag::Project(project) => projects::process_tasks(&config, &project).await,
@@ -603,7 +603,7 @@ async fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
 #[cfg(not(tarpaulin_include))]
 async fn list_prioritize(cli: Cli, args: &ListPrioritize) -> Result<String, String> {
     let ListPrioritize { project, filter } = args;
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter).await,
         Flag::Project(project) => projects::prioritize_tasks(&config, &project).await,
@@ -618,7 +618,7 @@ async fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> 
         skip_recurring,
         overdue,
     } = args;
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::schedule(&config, &filter).await,
         Flag::Project(project) => {
@@ -636,10 +636,10 @@ async fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> 
 // // --- CONFIG ---
 
 #[cfg(not(tarpaulin_include))]
-fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<String, String> {
-    let config = fetch_config(cli)?;
+async fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<String, String> {
+    let config = fetch_config(cli).await?;
 
-    match cargo::compare_versions(config) {
+    match cargo::compare_versions(config).await {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
         Ok(Version::Dated(version)) => Err(format!(
             "Tod is out of date with version: {}, latest is:{}",
@@ -650,10 +650,10 @@ fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<String, 
 }
 
 #[cfg(not(tarpaulin_include))]
-fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, String> {
+async fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, String> {
     use std::fs;
 
-    let config = fetch_config(cli)?;
+    let config = fetch_config(cli).await?;
     let path = config.path;
 
     match fs::remove_file(path.clone()) {
@@ -665,7 +665,7 @@ fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, String> {
 // --- VALUE HELPERS ---
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_config(cli: Cli) -> Result<Config, String> {
+async fn fetch_config(cli: Cli) -> Result<Config, String> {
     let Cli {
         verbose,
         config: config_path,
@@ -676,6 +676,7 @@ fn fetch_config(cli: Cli) -> Result<Config, String> {
     config::get_or_create(config_path, verbose, timeout)?
         .check_for_timezone()?
         .check_for_latest_version()
+        .await
 }
 
 #[cfg(not(tarpaulin_include))]

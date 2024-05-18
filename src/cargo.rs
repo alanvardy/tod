@@ -1,5 +1,5 @@
-use reqwest::blocking::Client;
 use reqwest::header::USER_AGENT;
+use reqwest::Client;
 use serde::Deserialize;
 
 use crate::config::Config;
@@ -22,15 +22,15 @@ pub enum Version {
     Latest,
     Dated(String),
 }
-pub fn compare_versions(config: Config) -> Result<Version, String> {
-    match get_latest_version(config) {
+pub async fn compare_versions(config: Config) -> Result<Version, String> {
+    match get_latest_version(config).await {
         Ok(version) if version.as_str() != VERSION => Ok(Version::Dated(version)),
         Ok(_) => Ok(Version::Latest),
         Err(err) => Err(err),
     }
 }
 /// Get latest version number from Cargo.io
-pub fn get_latest_version(config: Config) -> Result<String, String> {
+pub async fn get_latest_version(config: Config) -> Result<String, String> {
     #[cfg(not(test))]
     let cargo_url: String = "https://crates.io/api".to_string();
     let _token = config.token;
@@ -44,15 +44,20 @@ pub fn get_latest_version(config: Config) -> Result<String, String> {
         .get(request_url)
         .header(USER_AGENT, "Tod")
         .send()
+        .await
         .or(Err("Did not get response from server"))?;
 
     if response.status().is_success() {
-        let cr: CargoResponse =
-            serde_json::from_str(&response.text().or(Err("Could not read response text"))?)
-                .or(Err("Could not serialize to CargoResponse"))?;
+        let cr: CargoResponse = serde_json::from_str(
+            &response
+                .text()
+                .await
+                .or(Err("Could not read response text"))?,
+        )
+        .or(Err("Could not serialize to CargoResponse"))?;
         Ok(cr.versions.first().unwrap().num.clone())
     } else {
-        Err(format!("Error: {:#?}", response.text()))
+        Err(format!("Error: {:#?}", response.text().await))
     }
 }
 #[cfg(test)]
@@ -61,19 +66,20 @@ mod tests {
     use crate::{test, VERSION};
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn test_get_latest_version() {
-        let mut server = mockito::Server::new();
+    #[tokio::test]
+    async fn test_get_latest_version() {
+        let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/v1/crates/tod/versions")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::versions())
-            .create();
+            .create_async()
+            .await;
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = get_latest_version(config);
+        let response = get_latest_version(config).await;
         mock.assert();
 
         assert_eq!(response, Ok(String::from(VERSION)));

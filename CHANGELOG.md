@@ -2,6 +2,10 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-05018 v0.6.4
+
+- Remove blocking `reqwest` client
+
 ## 2024-05-12 v0.6.3
 
 - Make `list process` calls asynchronously

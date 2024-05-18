@@ -1,6 +1,6 @@
 [package]
 name = "tod"
-version = "0.6.3"
+version = "0.6.4"
 authors = ["Alan Vardy <alan@vardy.cc>"]
 edition = "2021"
 license = "MIT"
@@ -16,7 +16,7 @@ categories = ["command-line-utilities"]
 [dependencies]
 serde_json = "1"
 serde = { version = "1.0", features = ["derive"] }
-reqwest = { version = "0.12", features = ["json", "blocking"] }
+reqwest = { version = "0.12", features = ["json"] }
 uuid = { version = "1.8", features = ["serde", "v4"] }
 dirs = "5.0"
 matches = "0.1.10"

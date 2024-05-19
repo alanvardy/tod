@@ -13,6 +13,8 @@ use uuid::Uuid;
 use crate::config::Args;
 use crate::config::Config;
 use crate::debug;
+use crate::error;
+use crate::error::Error;
 
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
 const TODOIST_URL: &str = "https://api.todoist.com";
@@ -27,7 +29,7 @@ pub async fn post_todoist_sync(
     url: String,
     body: serde_json::Value,
     spinner: bool,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let request_url = format!("{base_url}{url}");
     let token = &config.token;
@@ -41,8 +43,7 @@ pub async fn post_todoist_sync(
         .json(&body)
         .timeout(get_timeout(config))
         .send()
-        .await
-        .or(Err("Did not get response from server"))?;
+        .await?;
 
     maybe_stop_spinner(spinner);
     handle_response(config, response, "POST", url, body).await
@@ -54,7 +55,7 @@ pub async fn post_todoist_rest(
     config: &Config,
     url: String,
     body: serde_json::Value,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let token = &config.token;
 
@@ -72,8 +73,7 @@ pub async fn post_todoist_rest(
         .json(&body)
         .timeout(get_timeout(config))
         .send()
-        .await
-        .or(Err("Did not get response from server"))?;
+        .await?;
 
     maybe_stop_spinner(spinner);
     handle_response(config, response, "POST", url, body).await
@@ -84,7 +84,7 @@ pub async fn delete_todoist_rest(
     url: String,
     body: serde_json::Value,
     spinner: bool,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let token = &config.token;
 
@@ -102,8 +102,7 @@ pub async fn delete_todoist_rest(
         .json(&body)
         .timeout(get_timeout(config))
         .send()
-        .await
-        .or(Err("Did not get response from server"))?;
+        .await?;
 
     maybe_stop_spinner(spinner);
     handle_response(config, response, "DELETE", url, body).await
@@ -111,7 +110,7 @@ pub async fn delete_todoist_rest(
 
 // Combine get and post into one function
 /// Get Todoist via REST api
-pub async fn get_todoist_rest(config: &Config, url: String) -> Result<String, String> {
+pub async fn get_todoist_rest(config: &Config, url: String) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let token = config.token.clone();
 
@@ -128,8 +127,7 @@ pub async fn get_todoist_rest(config: &Config, url: String) -> Result<String, St
         .header(AUTHORIZATION, authorization)
         .timeout(get_timeout(config))
         .send()
-        .await
-        .or(Err("Did not get response from server"))?;
+        .await?;
 
     maybe_stop_spinner(spinner);
     handle_response(config, response, "GET", url, json!({})).await
@@ -141,19 +139,22 @@ async fn handle_response(
     method: &str,
     url: String,
     body: serde_json::Value,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     if response.status().is_success() {
         let text = response.text().await.unwrap();
         debug::print(config, format!("{method} {url}\nresponse: {text}"));
         Ok(text)
     } else {
-        Err(format!(
-            "
+        Err(error::new(
+            "reqwest",
+            &format!(
+                "
             method: {method}
             url: {url}
             body: {body}
             Error: {:?}",
-            response
+                response
+            ),
         ))
     }
 }

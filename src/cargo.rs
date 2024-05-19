@@ -3,6 +3,7 @@ use reqwest::Client;
 use serde::Deserialize;
 
 use crate::config::Config;
+use crate::error::Error;
 use crate::VERSION;
 
 // CRATES.IO URLS
@@ -22,7 +23,7 @@ pub enum Version {
     Latest,
     Dated(String),
 }
-pub async fn compare_versions(config: Config) -> Result<Version, String> {
+pub async fn compare_versions(config: Config) -> Result<Version, Error> {
     match get_latest_version(config).await {
         Ok(version) if version.as_str() != VERSION => Ok(Version::Dated(version)),
         Ok(_) => Ok(Version::Latest),
@@ -30,7 +31,7 @@ pub async fn compare_versions(config: Config) -> Result<Version, String> {
     }
 }
 /// Get latest version number from Cargo.io
-pub async fn get_latest_version(config: Config) -> Result<String, String> {
+pub async fn get_latest_version(config: Config) -> Result<String, Error> {
     #[cfg(not(test))]
     let cargo_url: String = "https://crates.io/api".to_string();
     let _token = config.token;
@@ -44,20 +45,15 @@ pub async fn get_latest_version(config: Config) -> Result<String, String> {
         .get(request_url)
         .header(USER_AGENT, "Tod")
         .send()
-        .await
-        .or(Err("Did not get response from server"))?;
+        .await?;
 
     if response.status().is_success() {
-        let cr: CargoResponse = serde_json::from_str(
-            &response
-                .text()
-                .await
-                .or(Err("Could not read response text"))?,
-        )
-        .or(Err("Could not serialize to CargoResponse"))?;
+        let cr: CargoResponse = serde_json::from_str(&response.text().await?)?;
         Ok(cr.versions.first().unwrap().num.clone())
     } else {
-        Err(format!("Error: {:#?}", response.text().await))
+        let message = format!("Error: {:#?}", response.text().await);
+        let source = "get_latest_version response failure".to_string();
+        Err(Error { message, source })
     }
 }
 #[cfg(test)]

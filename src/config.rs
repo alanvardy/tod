@@ -1,4 +1,5 @@
 use crate::cargo::Version;
+use crate::error::{self, Error};
 use crate::projects::Project;
 use crate::{cargo, color, input, time, todoist, VERSION};
 use chrono_tz::TZ_VARIANTS;
@@ -79,7 +80,7 @@ impl Default for SortValue {
     }
 }
 impl Config {
-    pub async fn reload_projects(self: &mut Config) -> Result<String, String> {
+    pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
         let all_projects = todoist::projects(self).await?;
         let current_projects = self.projects.clone().unwrap_or_default();
         let current_project_ids: Vec<String> =
@@ -96,7 +97,7 @@ impl Config {
         Ok(color::green_string("✓"))
     }
 
-    pub async fn check_for_latest_version(self: Config) -> Result<Config, String> {
+    pub async fn check_for_latest_version(self: Config) -> Result<Config, Error> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
             last_version_check: Some(time::today_string(&self)?),
@@ -112,7 +113,7 @@ impl Config {
                         VERSION,
                         color::cyan_string("cargo install tod --force")
                     );
-                    new_config.clone().save().unwrap();
+                    new_config.clone().save()?;
                 }
                 Ok(Version::Latest) => (),
                 Err(err) => println!(
@@ -126,7 +127,7 @@ impl Config {
         Ok(new_config)
     }
 
-    pub fn check_for_timezone(self: Config) -> Result<Config, String> {
+    pub fn check_for_timezone(self: Config) -> Result<Config, Error> {
         if self.timezone.is_none() {
             let desc = "Please select your timezone";
             let mut options = TZ_VARIANTS
@@ -156,25 +157,18 @@ impl Config {
         Config { next_id, ..self }
     }
 
-    pub fn create(self) -> Result<Config, String> {
+    pub fn create(self) -> Result<Config, Error> {
         let json = json!(self).to_string();
-        let mut file = fs::File::create(&self.path).or(Err("Could not create file"))?;
-        file.write_all(json.as_bytes())
-            .or(Err("Could not write to file"))?;
+        let mut file = fs::File::create(&self.path)?;
+        file.write_all(json.as_bytes())?;
         println!("Config successfully created in {}", &self.path);
         Ok(self)
     }
 
-    pub fn load(path: &str) -> Result<Config, String> {
+    pub fn load(path: &str) -> Result<Config, Error> {
         let mut json = String::new();
-
-        fs::File::open(path)
-            .or(Err("Could not find file"))?
-            .read_to_string(&mut json)
-            .or(Err("Could not read to string"))?;
-
-        let config = serde_json::from_str::<Config>(&json)
-            .map_err(|_| format!("Could not parse JSON:\n{json}"))?;
+        fs::File::open(path)?.read_to_string(&mut json)?;
+        let config = serde_json::from_str::<Config>(&json)?;
 
         match config.sort_value {
             None => Ok(Config {
@@ -185,7 +179,7 @@ impl Config {
         }
     }
 
-    pub fn new(token: &str) -> Result<Config, String> {
+    pub fn new(token: &str) -> Result<Config, Error> {
         Ok(Config {
             path: generate_path()?,
             token: String::from(token),
@@ -209,7 +203,7 @@ impl Config {
         })
     }
 
-    pub fn reload(&self) -> Result<Self, String> {
+    pub fn reload(&self) -> Result<Self, Error> {
         Config::load(&self.path)
     }
 
@@ -236,7 +230,7 @@ impl Config {
         self.projects = Some(projects);
     }
 
-    pub fn save(&mut self) -> std::result::Result<String, String> {
+    pub fn save(&mut self) -> std::result::Result<String, Error> {
         // We don't want to overwrite verbose in the config
         let config = match Config::load(&self.path) {
             Ok(Config { verbose, .. }) => Config {
@@ -247,15 +241,13 @@ impl Config {
         };
 
         let json = json!(config);
-        let string = serde_json::to_string_pretty(&json).or(Err("Could not convert to JSON"))?;
+        let string = serde_json::to_string_pretty(&json)?;
         fs::OpenOptions::new()
             .write(true)
             .read(true)
             .truncate(true)
-            .open(&self.path)
-            .or(Err("Could not find config"))?
-            .write_all(string.as_bytes())
-            .or(Err("Could not write to file"))?;
+            .open(&self.path)?
+            .write_all(string.as_bytes())?;
 
         Ok(color::green_string("✓"))
     }
@@ -274,7 +266,7 @@ pub fn get_or_create(
     config_path: Option<String>,
     verbose: bool,
     timeout: Option<u64>,
-) -> Result<Config, String> {
+) -> Result<Config, Error> {
     let path: String = match config_path {
         None => generate_path()?,
         Some(path) => maybe_expand_home_dir(path)?,
@@ -296,11 +288,11 @@ pub fn get_or_create(
     })
 }
 
-pub fn generate_path() -> Result<String, String> {
+pub fn generate_path() -> Result<String, Error> {
     let config_directory = dirs::config_dir()
-        .ok_or_else(|| String::from("Could not find config directory"))?
+        .ok_or_else(|| error::new("dirs", "Could not find config directory"))?
         .to_str()
-        .ok_or_else(|| String::from("Could not convert config directory to string"))?
+        .ok_or_else(|| error::new("dirs", "Could not convert config directory to string"))?
         .to_owned();
     if cfg!(test) {
         _ = fs::create_dir(format!("{config_directory}/tod_test"));
@@ -311,16 +303,15 @@ pub fn generate_path() -> Result<String, String> {
     }
 }
 
-fn maybe_expand_home_dir(path: String) -> Result<String, String> {
+fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
     if path.starts_with('~') {
-        let home = homedir::get_my_home()
-            .or(Err(String::from("Could not get homedir")))?
-            .ok_or_else(|| String::from("Could not get homedir"))?;
+        let home = homedir::get_my_home()?
+            .ok_or_else(|| error::new("homedir", "Could not get homedir"))?;
         let mut path = path;
         path.replace_range(
             ..1,
             home.to_str()
-                .ok_or_else(|| String::from("Could not get homedir"))?,
+                .ok_or_else(|| error::new("homedir", "Could not get homedir"))?,
         );
 
         Ok(path)

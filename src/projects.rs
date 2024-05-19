@@ -3,6 +3,7 @@ use std::fmt::Display;
 use tokio::task::JoinHandle;
 
 use crate::config::Config;
+use crate::error::{self, Error};
 use crate::input::DateTimeInput;
 use crate::tasks::priority::Priority;
 use crate::tasks::{FormatType, Task};
@@ -42,16 +43,19 @@ impl Display for Project {
         write!(f, "{}\n{}", self.name, self.url)
     }
 }
-pub fn json_to_projects(json: String) -> Result<Vec<Project>, String> {
+pub fn json_to_projects(json: String) -> Result<Vec<Project>, Error> {
     let result: Result<Vec<Project>, _> = serde_json::from_str(&json);
     match result {
         Ok(projects) => Ok(projects),
-        Err(err) => Err(format!("Could not parse response for project: {err:?}")),
+        Err(err) => Err(error::new(
+            "serde_json",
+            &format!("Could not parse response for project: {err:?}"),
+        )),
     }
 }
 
 /// List the projects in config with task counts
-pub async fn list(config: &mut Config) -> Result<String, String> {
+pub async fn list(config: &mut Config) -> Result<String, Error> {
     config.reload_projects().await?;
 
     if let Some(projects) = config.projects.clone() {
@@ -99,7 +103,7 @@ async fn project_name_with_count(config: &Config, project: &Project) -> String {
 }
 
 /// Gets the number of tasks for a project that are not in the future
-async fn count_processable_tasks(config: &Config, project: &Project) -> Result<u8, String> {
+async fn count_processable_tasks(config: &Config, project: &Project) -> Result<u8, Error> {
     let all_tasks = todoist::tasks_for_project(config, project).await?;
     let count = tasks::filter_not_in_future(all_tasks, config)?.len();
 
@@ -107,19 +111,19 @@ async fn count_processable_tasks(config: &Config, project: &Project) -> Result<u
 }
 
 /// Add a project to the projects HashMap in Config
-pub fn add(config: &mut Config, project: &Project) -> Result<String, String> {
+pub fn add(config: &mut Config, project: &Project) -> Result<String, Error> {
     config.add_project(project.clone());
     config.save()
 }
 
 /// Remove a project from the projects HashMap in Config
-pub fn remove(config: &mut Config, project: &Project) -> Result<String, String> {
+pub fn remove(config: &mut Config, project: &Project) -> Result<String, Error> {
     config.remove_project(project);
     config.save()
 }
 
 /// Rename a project in config
-pub fn rename(config: Config, project: &Project) -> Result<String, String> {
+pub fn rename(config: Config, project: &Project) -> Result<String, Error> {
     let new_name = input::string_with_default("Input new project name", &project.name)?;
 
     let mut config = config;
@@ -133,7 +137,7 @@ pub fn rename(config: Config, project: &Project) -> Result<String, String> {
 }
 
 /// Get the next task by priority and save its id to config
-pub async fn next_task(config: Config, project: &Project) -> Result<String, String> {
+pub async fn next_task(config: Config, project: &Project) -> Result<String, Error> {
     match fetch_next_task(&config, project).await {
         Ok(Some((task, remaining))) => {
             config.set_next_id(&task.id).save()?;
@@ -148,7 +152,7 @@ pub async fn next_task(config: Config, project: &Project) -> Result<String, Stri
 async fn fetch_next_task(
     config: &Config,
     project: &Project,
-) -> Result<Option<(Task, usize)>, String> {
+) -> Result<Option<(Task, usize)>, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
     let filtered_tasks = tasks::filter_not_in_future(tasks, config)?;
     let tasks = tasks::sort_by_value(filtered_tasks, config);
@@ -157,7 +161,7 @@ async fn fetch_next_task(
 }
 
 /// Removes all projects from config that don't exist in Todoist
-pub async fn remove_auto(config: &mut Config) -> Result<String, String> {
+pub async fn remove_auto(config: &mut Config) -> Result<String, Error> {
     let projects = todoist::projects(config).await?;
     let missing_projects = filter_missing_projects(config, projects);
 
@@ -179,7 +183,7 @@ pub async fn remove_auto(config: &mut Config) -> Result<String, String> {
 }
 
 /// Removes all projects from config
-pub fn remove_all(config: &mut Config) -> Result<String, String> {
+pub fn remove_all(config: &mut Config) -> Result<String, Error> {
     let options = vec!["Cancel", "Confirm"];
     let selection = input::select(
         "Confirm removing all projects from config",
@@ -216,7 +220,7 @@ fn filter_missing_projects(config: &Config, projects: Vec<Project>) -> Vec<Proje
 }
 
 /// Fetch projects and prompt to add them to config one by one
-pub async fn import(config: &mut Config) -> Result<String, String> {
+pub async fn import(config: &mut Config) -> Result<String, Error> {
     let projects = todoist::projects(config).await?;
     let new_projects = filter_new_projects(config, projects);
     for project in new_projects {
@@ -243,7 +247,7 @@ fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> 
 }
 
 /// Prompt the user if they want to add project to config and maybe add
-fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, String> {
+fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, Error> {
     let options = vec!["add", "skip"];
     println!("{}", project);
     match input::select("Select an option", options.clone(), config.mock_select) {
@@ -253,7 +257,7 @@ fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, St
             } else if string == "skip" {
                 Ok(String::from("Skipped"))
             } else {
-                Err(String::from("Invalid option"))
+                Err(error::new("add_project", "Invalid option"))
             }
         }
         Err(e) => Err(e)?,
@@ -261,7 +265,7 @@ fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, St
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub async fn process_tasks(config: &Config, project: &Project) -> Result<String, String> {
+pub async fn process_tasks(config: &Config, project: &Project) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
     let tasks = tasks::filter_not_in_future(tasks, config)?;
     let tasks = tasks::sort_by_value(tasks, config);
@@ -282,7 +286,7 @@ pub async fn process_tasks(config: &Config, project: &Project) -> Result<String,
     )))
 }
 
-pub async fn rename_task(config: &Config, project: &Project) -> Result<String, String> {
+pub async fn rename_task(config: &Config, project: &Project) -> Result<String, Error> {
     let project_tasks = todoist::tasks_for_project(config, project).await?;
 
     let selected_task = input::select(
@@ -304,7 +308,7 @@ pub async fn rename_task(config: &Config, project: &Project) -> Result<String, S
 }
 
 /// All tasks for a project
-pub async fn all_tasks(config: &Config, project: &Project) -> Result<String, String> {
+pub async fn all_tasks(config: &Config, project: &Project) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     let mut buffer = String::new();
@@ -321,7 +325,7 @@ pub async fn all_tasks(config: &Config, project: &Project) -> Result<String, Str
 }
 
 /// Empty a project by sending tasks to other projects one at a time
-pub async fn empty(config: &mut Config, project: &Project) -> Result<String, String> {
+pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     if tasks.is_empty() {
@@ -351,7 +355,7 @@ pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Str
 }
 
 /// Prioritize all unprioritized tasks in a project
-pub async fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, String> {
+pub async fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     let unprioritized_tasks: Vec<Task> = tasks
@@ -381,7 +385,7 @@ pub async fn schedule(
     project: &Project,
     filter: TaskFilter,
     skip_recurring: bool,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     let filtered_tasks: Vec<Task> = if skip_recurring {
@@ -432,7 +436,7 @@ pub async fn schedule(
     }
 }
 
-pub async fn move_task_to_project(config: &Config, task: Task) -> Result<JoinHandle<()>, String> {
+pub async fn move_task_to_project(config: &Config, task: Task) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, false));
 
     let options = ["Pick project", "Complete", "Skip", "Delete"]
@@ -689,7 +693,7 @@ mod tests {
             .unwrap();
 
         let result = remove_auto(&mut config);
-        let expected: Result<String, String> = Ok(String::from("Auto removed: 'myproject'"));
+        let expected: Result<String, Error> = Ok(String::from("Auto removed: 'myproject'"));
         assert_eq!(result.await, expected);
         mock.assert();
         let projects = config.projects.clone().unwrap_or_default();
@@ -701,7 +705,7 @@ mod tests {
         let mut config = test::fixtures::config().mock_select(1).create().unwrap();
 
         let result = remove_all(&mut config);
-        let expected: Result<String, String> = Ok(String::from("Removed all projects from config"));
+        let expected: Result<String, Error> = Ok(String::from("Removed all projects from config"));
         assert_eq!(result, expected);
 
         let projects = config.projects.clone().unwrap_or_default();

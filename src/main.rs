@@ -587,8 +587,9 @@ async fn list_label(cli: Cli, args: &ListLabel) -> Result<String, Error> {
         label: labels,
     } = args;
     let config = fetch_config(cli).await?;
+    let labels = maybe_fetch_labels(&config, labels)?;
     match fetch_filter(filter, &config)? {
-        Flag::Filter(filter) => filters::label(&config, &filter, labels).await,
+        Flag::Filter(filter) => filters::label(&config, &filter, &labels).await,
         _ => unreachable!(),
     }
 }
@@ -779,6 +780,22 @@ fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, Er
                 config.mock_select,
             )
         }
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<String>, Error> {
+    if labels.is_empty() {
+        let labels = input::string(
+            "Enter labels to select from, separated by a space",
+            config.mock_string.clone(),
+        )?
+        .split(' ')
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+        Ok(labels)
+    } else {
+        Ok(labels.to_vec())
     }
 }
 // --- TESTS ---

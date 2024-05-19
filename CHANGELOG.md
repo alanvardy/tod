@@ -2,6 +2,9 @@
 
 ## Unreleased (on main branch only)
 
+- Internal refactoring to use an error struct and provide better errors
+- Ask for labels in `list label` when labels are not provided. Previously just showed an error.
+
 ## 2024-05018 v0.6.4
 
 - Remove blocking `reqwest` client

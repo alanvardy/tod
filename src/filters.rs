@@ -1,3 +1,5 @@
+use futures::future;
+
 use crate::{
     color,
     config::Config,
@@ -99,7 +101,7 @@ pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, E
             None => return Ok(color::green_string("Exited")),
         }
     }
-    futures::future::join_all(handles).await;
+    future::join_all(handles).await;
     Ok(color::green_string(&format!(
         "There are no more tasks for filter: '{filter}'"
     )))

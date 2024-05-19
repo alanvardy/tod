@@ -10,7 +10,6 @@ pub mod priority;
 use crate::color;
 use crate::config::Config;
 use crate::config::SortValue;
-use crate::error;
 use crate::error::Error;
 use crate::projects;
 use crate::projects::Project;
@@ -421,20 +420,13 @@ pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
 }
 
 pub fn rest_json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
-    let result: Result<Vec<Task>, Error> =
-        serde_json::from_str(&json).map_err(|e| error::new("serde_json", &e.to_string()));
-
-    result
+    let tasks: Vec<Task> = serde_json::from_str(&json)?;
+    Ok(tasks)
 }
 
 pub fn json_to_task(json: String) -> Result<Task, Error> {
-    match serde_json::from_str(&json) {
-        Ok(task) => Ok(task),
-        Err(err) => Err(error::new(
-            "serde_json",
-            &format!("Could not parse response for task: {err:?}"),
-        )),
-    }
+    let task: Task = serde_json::from_str(&json)?;
+    Ok(task)
 }
 
 pub fn sort_by_value(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {

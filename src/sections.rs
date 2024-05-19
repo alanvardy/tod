@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::error::{self, Error};
+use crate::error::Error;
 
 // Projects are split into sections
 #[derive(PartialEq, Deserialize, Clone, Debug)]
@@ -12,14 +12,8 @@ pub struct Section {
 }
 
 pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
-    let result: Result<Vec<Section>, _> = serde_json::from_str(&json);
-    match result {
-        Ok(sections) => Ok(sections),
-        Err(err) => Err(error::new(
-            "serde_json",
-            &format!("Could not parse response for section: {err:?}"),
-        )),
-    }
+    let sections: Vec<Section> = serde_json::from_str(&json)?;
+    Ok(sections)
 }
 
 #[cfg(test)]

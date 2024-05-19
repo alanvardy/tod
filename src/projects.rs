@@ -44,14 +44,8 @@ impl Display for Project {
     }
 }
 pub fn json_to_projects(json: String) -> Result<Vec<Project>, Error> {
-    let result: Result<Vec<Project>, _> = serde_json::from_str(&json);
-    match result {
-        Ok(projects) => Ok(projects),
-        Err(err) => Err(error::new(
-            "serde_json",
-            &format!("Could not parse response for project: {err:?}"),
-        )),
-    }
+    let projects: Vec<Project> = serde_json::from_str(&json)?;
+    Ok(projects)
 }
 
 /// List the projects in config with task counts

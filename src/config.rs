@@ -97,7 +97,7 @@ impl Config {
         Ok(color::green_string("✓"))
     }
 
-    pub async fn check_for_latest_version(self: Config) -> Result<Config, Error> {
+    pub async fn check_for_latest_version(self: Config) -> Result<(), Error> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
             last_version_check: Some(time::today_string(&self)?),
@@ -122,9 +122,9 @@ impl Config {
                     err
                 ),
             };
-        }
+        };
 
-        Ok(new_config)
+        Ok(())
     }
 
     pub fn check_for_timezone(self: Config) -> Result<Config, Error> {

@@ -1,3 +1,4 @@
+use futures::future;
 use pad::PadStr;
 use std::fmt::Display;
 use tokio::task::JoinHandle;
@@ -63,7 +64,7 @@ pub async fn list(config: &mut Config) -> Result<String, Error> {
             project_handles.push(handle);
         }
 
-        let mut projects: Vec<String> = futures::future::join_all(project_handles)
+        let mut projects: Vec<String> = future::join_all(project_handles)
             .await
             .into_iter()
             .map(|p| p.unwrap_or_default())
@@ -273,7 +274,7 @@ pub async fn process_tasks(config: &Config, project: &Project) -> Result<String,
             None => return Ok(color::green_string("Exited")),
         }
     }
-    futures::future::join_all(handles).await;
+    future::join_all(handles).await;
     let project_name = project.clone().name;
     Ok(color::green_string(&format!(
         "There are no more tasks in '{project_name}'"
@@ -340,7 +341,7 @@ pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Err
                 Err(e) => return Err(e),
             };
         }
-        futures::future::join_all(handles).await;
+        future::join_all(handles).await;
         Ok(color::green_string(&format!(
             "Successfully emptied '{}'",
             project.name

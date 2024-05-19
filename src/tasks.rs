@@ -1,6 +1,7 @@
 use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono_tz::Tz;
+use futures::future;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
@@ -484,7 +485,7 @@ pub async fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task>
         handles.push(handle);
     }
 
-    futures::future::join_all(handles)
+    future::join_all(handles)
         .await
         .into_iter()
         .filter_map(|t| t.ok())

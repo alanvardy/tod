@@ -396,7 +396,7 @@ async fn main() {
             std::process::exit(0);
         }
         Err(e) => {
-            println!("{e}");
+            println!("\n\n{e}");
             std::process::exit(1);
         }
     }
@@ -683,10 +683,13 @@ async fn fetch_config(cli: Cli) -> Result<Config, Error> {
         command: _,
     } = cli;
 
-    config::get_or_create(config_path, verbose, timeout)?
-        .check_for_timezone()?
-        .check_for_latest_version()
-        .await
+    let config = config::get_or_create(config_path, verbose, timeout)?;
+
+    let async_config = config.clone();
+
+    tokio::spawn(async move { async_config.check_for_latest_version().await });
+
+    config.check_for_timezone()
 }
 
 #[cfg(not(tarpaulin_include))]

@@ -5,6 +5,7 @@ use serde_json::{json, Number, Value};
 mod request;
 
 use crate::config::Config;
+use crate::error::Error;
 use crate::projects::Project;
 use crate::sections::Section;
 use crate::tasks::priority::Priority;
@@ -20,7 +21,7 @@ const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
 
 /// Add a new task to the inbox with natural language support
-pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, String> {
+pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Error> {
     let url = String::from(QUICK_ADD_URL);
     let body = json!({"text": content, "auto_reminder": true});
 
@@ -28,7 +29,7 @@ pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Stri
     tasks::json_to_task(json)
 }
 
-pub async fn get_task(config: &Config, id: &str) -> Result<Task, String> {
+pub async fn get_task(config: &Config, id: &str) -> Result<Task, Error> {
     let url = format!("{REST_V2_TASKS_URL}{id}");
     let json = request::get_todoist_rest(config, url).await?;
     tasks::json_to_task(json)
@@ -45,7 +46,7 @@ pub async fn add_task(
     description: &String,
     due: &Option<String>,
     labels: &[String],
-) -> Result<Task, String> {
+) -> Result<Task, Error> {
     let url = String::from(REST_V2_TASKS_URL);
     let mut body: HashMap<String, Value> = HashMap::new();
     body.insert("content".to_owned(), Value::String(content.to_owned()));
@@ -82,14 +83,14 @@ pub async fn add_task(
 }
 
 /// Get a vector of all tasks for a project
-pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, String> {
+pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, Error> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project.id });
     let json = request::post_todoist_sync(config, url, body, true).await?;
     tasks::sync_json_to_tasks(json)
 }
 
-pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>, String> {
+pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>, Error> {
     use urlencoding::encode;
 
     let encoded = encode(filter);
@@ -101,14 +102,14 @@ pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>
 pub async fn sections_for_project(
     config: &Config,
     project: &Project,
-) -> Result<Vec<Section>, String> {
+) -> Result<Vec<Section>, Error> {
     let project_id = &project.id;
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
     let json = request::get_todoist_rest(config, url).await?;
     sections::json_to_sections(json)
 }
 
-pub async fn projects(config: &Config) -> Result<Vec<Project>, String> {
+pub async fn projects(config: &Config) -> Result<Vec<Project>, Error> {
     let json = request::get_todoist_rest(config, PROJECTS_URL.to_string()).await?;
     projects::json_to_projects(json)
 }
@@ -119,7 +120,7 @@ pub async fn move_task_to_project(
     task: Task,
     project: &Project,
     spinner: bool,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project.id}}]});
     let url = String::from(SYNC_URL);
 
@@ -132,7 +133,7 @@ pub async fn move_task_to_section(
     task: Task,
     section: &Section,
     spinner: bool,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section.id}}]});
     let url = String::from(SYNC_URL);
 
@@ -145,7 +146,7 @@ pub async fn update_task_priority(
     config: &Config,
     task: Task,
     priority: Priority,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
@@ -155,7 +156,7 @@ pub async fn update_task_priority(
 }
 
 /// Add a label to task by ID
-pub async fn add_task_label(config: &Config, task: Task, label: String) -> Result<String, String> {
+pub async fn add_task_label(config: &Config, task: Task, label: String) -> Result<String, Error> {
     let mut labels = task.labels;
     labels.push(label);
     let body = json!({ "labels": labels});
@@ -171,7 +172,7 @@ pub async fn update_task_due(
     config: &Config,
     task: Task,
     due_string: String,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let due_string = if task.is_recurring() {
         format!("{} starting {due_string}", task.due.unwrap().string)
     } else {
@@ -190,7 +191,7 @@ pub async fn update_task_name(
     config: &Config,
     task: Task,
     new_name: String,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     let body = json!({ "content": new_name });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
@@ -200,11 +201,7 @@ pub async fn update_task_name(
 }
 
 /// Complete the last task returned by "next task"
-pub async fn complete_task(
-    config: &Config,
-    task_id: &str,
-    spinner: bool,
-) -> Result<String, String> {
+pub async fn complete_task(config: &Config, task_id: &str, spinner: bool) -> Result<String, Error> {
     let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task_id}}]});
     let url = String::from(SYNC_URL);
 
@@ -218,7 +215,7 @@ pub async fn complete_task(
     Ok(String::from("✓"))
 }
 
-pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<String, String> {
+pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<String, Error> {
     let body = json!({});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 

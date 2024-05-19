@@ -11,6 +11,7 @@ use std::fmt::Display;
 use cargo::Version;
 use clap::{Parser, Subcommand};
 use config::Config;
+use error::Error;
 use projects::Project;
 use tasks::priority;
 use tasks::priority::Priority;
@@ -19,6 +20,7 @@ mod cargo;
 mod color;
 mod config;
 mod debug;
+mod error;
 mod filters;
 mod input;
 mod projects;
@@ -363,7 +365,7 @@ impl Display for FlagOptions {
 async fn main() {
     let cli = Cli::parse();
 
-    let result = match &cli.command {
+    let result: Result<String, Error> = match &cli.command {
         Commands::Project(ProjectCommands::List(args)) => project_list(cli.clone(), args).await,
         Commands::Project(ProjectCommands::Remove(args)) => project_remove(cli.clone(), args).await,
         Commands::Project(ProjectCommands::Rename(args)) => project_rename(cli.clone(), args).await,
@@ -394,7 +396,7 @@ async fn main() {
             std::process::exit(0);
         }
         Err(e) => {
-            println!("{}", color::red_string(&e));
+            println!("{e}");
             std::process::exit(1);
         }
     }
@@ -403,7 +405,7 @@ async fn main() {
 // --- TASK ---
 
 #[cfg(not(tarpaulin_include))]
-async fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, String> {
+async fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, Error> {
     let TaskQuickAdd { content } = args;
     let config = fetch_config(cli).await?;
 
@@ -413,7 +415,7 @@ async fn task_quick_add(cli: Cli, args: &TaskQuickAdd) -> Result<String, String>
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
+async fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, Error> {
     let TaskCreate {
         project,
         due,
@@ -463,7 +465,7 @@ async fn task_create(cli: Cli, args: &TaskCreate) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, String> {
+async fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, Error> {
     let config = fetch_config(cli).await?;
     let TaskEdit { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -472,7 +474,7 @@ async fn task_edit(cli: Cli, args: &TaskEdit) -> Result<String, String> {
     }
 }
 #[cfg(not(tarpaulin_include))]
-async fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
+async fn task_next(cli: Cli, args: &TaskNext) -> Result<String, Error> {
     let TaskNext { project, filter } = args;
     let config = fetch_config(cli).await?;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -482,20 +484,21 @@ async fn task_next(cli: Cli, args: &TaskNext) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, String> {
+async fn task_complete(cli: Cli, _args: &TaskComplete) -> Result<String, Error> {
     let config = fetch_config(cli).await?;
     match config.next_id.as_ref() {
         Some(id) => todoist::complete_task(&config, id, true).await,
-        None => {
-            Err("There is nothing to complete. A task must first be marked as 'next'.".to_string())
-        }
+        None => Err(error::new(
+            "task_complete",
+            "There is nothing to complete. A task must first be marked as 'next'.",
+        )),
     }
 }
 
 // --- LIST ---
 
 #[cfg(not(tarpaulin_include))]
-async fn list_view(cli: Cli, args: &ListView) -> Result<String, String> {
+async fn list_view(cli: Cli, args: &ListView) -> Result<String, Error> {
     let config = fetch_config(cli).await?;
     let ListView { project, filter } = args;
 
@@ -508,14 +511,14 @@ async fn list_view(cli: Cli, args: &ListView) -> Result<String, String> {
 // --- PROJECT ---
 
 #[cfg(not(tarpaulin_include))]
-async fn project_list(cli: Cli, _args: &ProjectList) -> Result<String, String> {
+async fn project_list(cli: Cli, _args: &ProjectList) -> Result<String, Error> {
     let mut config = fetch_config(cli).await?;
 
     projects::list(&mut config).await
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String> {
+async fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, Error> {
     let ProjectRemove {
         all,
         auto,
@@ -537,12 +540,12 @@ async fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, String
                 return value;
             }
         },
-        (_, _) => Err(String::from("Incorrect flags provided")),
+        (_, _) => Err(error::new("project_remove", "Incorrect flags provided")),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String> {
+async fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, Error> {
     let config = fetch_config(cli).await?;
     let ProjectRename { project } = args;
     let project = match fetch_project(project, &config)? {
@@ -557,14 +560,14 @@ async fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, String
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_import(cli: Cli, _args: &ProjectImport) -> Result<String, String> {
+async fn project_import(cli: Cli, _args: &ProjectImport) -> Result<String, Error> {
     let mut config = fetch_config(cli).await?;
 
     projects::import(&mut config).await
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, String> {
+async fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, Error> {
     let ProjectEmpty { project } = args;
     let mut config = fetch_config(cli).await?;
     let project = match fetch_project(project, &config)? {
@@ -578,7 +581,7 @@ async fn project_empty(cli: Cli, args: &ProjectEmpty) -> Result<String, String> 
 // --- LIST ---
 
 #[cfg(not(tarpaulin_include))]
-async fn list_label(cli: Cli, args: &ListLabel) -> Result<String, String> {
+async fn list_label(cli: Cli, args: &ListLabel) -> Result<String, Error> {
     let ListLabel {
         filter,
         label: labels,
@@ -591,7 +594,7 @@ async fn list_label(cli: Cli, args: &ListLabel) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
+async fn list_process(cli: Cli, args: &ListProcess) -> Result<String, Error> {
     let ListProcess { project, filter } = args;
     let config = fetch_config(cli).await?;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -601,7 +604,7 @@ async fn list_process(cli: Cli, args: &ListProcess) -> Result<String, String> {
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn list_prioritize(cli: Cli, args: &ListPrioritize) -> Result<String, String> {
+async fn list_prioritize(cli: Cli, args: &ListPrioritize) -> Result<String, Error> {
     let ListPrioritize { project, filter } = args;
     let config = fetch_config(cli).await?;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -611,7 +614,7 @@ async fn list_prioritize(cli: Cli, args: &ListPrioritize) -> Result<String, Stri
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> {
+async fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, Error> {
     let ListSchedule {
         project,
         filter,
@@ -636,21 +639,24 @@ async fn list_schedule(cli: Cli, args: &ListSchedule) -> Result<String, String> 
 // // --- CONFIG ---
 
 #[cfg(not(tarpaulin_include))]
-async fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<String, String> {
+async fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<String, Error> {
     let config = fetch_config(cli).await?;
 
     match cargo::compare_versions(config).await {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
-        Ok(Version::Dated(version)) => Err(format!(
-            "Tod is out of date with version: {}, latest is:{}",
-            VERSION, version
+        Ok(Version::Dated(version)) => Err(error::new(
+            "cargo",
+            &format!(
+                "Tod is out of date with version: {}, latest is:{}",
+                VERSION, version
+            ),
         )),
         Err(e) => Err(e),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, String> {
+async fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, Error> {
     use std::fs;
 
     let config = fetch_config(cli).await?;
@@ -658,14 +664,17 @@ async fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, String> {
 
     match fs::remove_file(path.clone()) {
         Ok(_) => Ok(format!("{path} deleted successfully")),
-        Err(e) => Err(format!("Could not delete config at path: {path}, {e}")),
+        Err(e) => Err(error::new(
+            "config_reset",
+            &format!("Could not delete config at path: {path}, {e}"),
+        )),
     }
 }
 
 // --- VALUE HELPERS ---
 
 #[cfg(not(tarpaulin_include))]
-async fn fetch_config(cli: Cli) -> Result<Config, String> {
+async fn fetch_config(cli: Cli) -> Result<Config, Error> {
     let Cli {
         verbose,
         config: config_path,
@@ -684,7 +693,7 @@ fn fetch_string(
     maybe_string: &Option<String>,
     config: &Config,
     prompt: &str,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     match maybe_string {
         Some(string) => Ok(string.to_owned()),
         None => input::string(prompt, config.mock_string.clone()),
@@ -692,10 +701,10 @@ fn fetch_string(
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, String> {
+fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Error> {
     let projects = config.projects.clone().unwrap_or_default();
     if projects.is_empty() {
-        return Err(NO_PROJECTS_ERR.to_string());
+        return Err(error::new("fetch_project", NO_PROJECTS_ERR));
     }
 
     if projects.len() == 1 {
@@ -707,7 +716,12 @@ fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Stri
             .iter()
             .find(|p| p.name == project_name.as_str())
             .map_or_else(
-                || Err("Could not find project in config".to_string()),
+                || {
+                    Err(error::new(
+                        "fetch_project",
+                        "Could not find project in config",
+                    ))
+                },
                 |p| Ok(Flag::Project(p.to_owned())),
             ),
         None => input::select("Select project", projects, config.mock_select).map(Flag::Project),
@@ -715,7 +729,7 @@ fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Stri
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, String> {
+fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, Error> {
     match filter {
         Some(string) => Ok(Flag::Filter(string.to_owned())),
         None => {
@@ -730,11 +744,14 @@ fn fetch_project_or_filter(
     project: &Option<String>,
     filter: &Option<String>,
     config: &Config,
-) -> Result<Flag, String> {
+) -> Result<Flag, Error> {
     match (project, filter) {
         (Some(_), None) => fetch_project(project, config),
         (None, Some(_)) => fetch_filter(filter, config),
-        (Some(_), Some(_)) => Err("Must select project OR filter".to_string()),
+        (Some(_), Some(_)) => Err(error::new(
+            "project_or_filter",
+            "Must select project OR filter",
+        )),
         (None, None) => {
             let options = vec![FlagOptions::Project, FlagOptions::Filter];
             match input::select("Select Project or Filter:", options, config.mock_select)? {
@@ -746,7 +763,7 @@ fn fetch_project_or_filter(
 }
 
 #[cfg(not(tarpaulin_include))]
-fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, String> {
+fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, Error> {
     match priority::from_integer(priority) {
         Some(priority) => Ok(priority),
         None => {

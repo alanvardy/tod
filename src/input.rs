@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use crate::error::Error;
 use inquire::{DateSelect, Select, Text};
 
 pub enum DateTimeInput {
@@ -14,7 +15,7 @@ pub fn datetime(
     mock_select: Option<usize>,
     mock_string: Option<String>,
     natural_language_only: Option<bool>,
-) -> Result<DateTimeInput, String> {
+) -> Result<DateTimeInput, Error> {
     let selection = if natural_language_only.unwrap_or_default() {
         "Natural Language"
     } else {
@@ -49,7 +50,7 @@ pub fn datetime(
         "Pick Date" => {
             let string = DateSelect::new("Select Date")
                 .prompt()
-                .map_err(|e| e.to_string())?
+                .map_err(Error::from)?
                 .to_string();
 
             Ok(DateTimeInput::Text(string))
@@ -58,12 +59,15 @@ pub fn datetime(
         "No Date" => Ok(DateTimeInput::None),
         "Complete" => Ok(DateTimeInput::Complete),
         "Skip" => Ok(DateTimeInput::Skip),
-        _ => Err(String::from("Unrecognized input")),
+        _ => Err(Error {
+            message: String::from("Unrecognized input"),
+            source: String::from("Datetime Input"),
+        }),
     }
 }
 
 /// Get text input from user
-pub fn string(desc: &str, mock_string: Option<String>) -> Result<String, String> {
+pub fn string(desc: &str, mock_string: Option<String>) -> Result<String, Error> {
     if cfg!(test) {
         if let Some(string) = mock_string {
             Ok(string)
@@ -71,12 +75,12 @@ pub fn string(desc: &str, mock_string: Option<String>) -> Result<String, String>
             panic!("Must set mock_string in config")
         }
     } else {
-        Text::new(desc).prompt().map_err(|e| e.to_string())
+        Text::new(desc).prompt().map_err(Error::from)
     }
 }
 
 /// Get string input with default value
-pub fn string_with_default(desc: &str, default_message: &str) -> Result<String, String> {
+pub fn string_with_default(desc: &str, default_message: &str) -> Result<String, Error> {
     if cfg!(test) {
         return Ok(String::from(default_message));
     }
@@ -84,7 +88,7 @@ pub fn string_with_default(desc: &str, default_message: &str) -> Result<String, 
     Text::new(desc)
         .with_initial_value(default_message)
         .prompt()
-        .map_err(|e| e.to_string())
+        .map_err(Error::from)
 }
 
 /// Select an input from a list
@@ -92,7 +96,7 @@ pub fn select<T: Display>(
     desc: &str,
     options: Vec<T>,
     mock_select: Option<usize>,
-) -> Result<T, String> {
+) -> Result<T, Error> {
     if cfg!(test) {
         if let Some(index) = mock_select {
             Ok(options
@@ -103,9 +107,7 @@ pub fn select<T: Display>(
             panic!("Must set mock_select in config")
         }
     } else {
-        Select::new(desc, options)
-            .prompt()
-            .map_err(|e| e.to_string())
+        Select::new(desc, options).prompt().map_err(Error::from)
     }
 }
 #[cfg(test)]

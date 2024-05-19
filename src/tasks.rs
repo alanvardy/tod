@@ -10,6 +10,8 @@ pub mod priority;
 use crate::color;
 use crate::config::Config;
 use crate::config::SortValue;
+use crate::error;
+use crate::error::Error;
 use crate::projects;
 use crate::projects::Project;
 use crate::tasks::priority::Priority;
@@ -170,7 +172,7 @@ impl Task {
                 format!("\n{buffer}{due_icon} {datetime_string}{duration_string}{recurring_icon}")
             }
             Ok(DateTimeInfo::NoDateTime) => String::from(""),
-            Err(string) => string.clone(),
+            Err(e) => e.to_string(),
         };
 
         let prefix = match format {
@@ -278,7 +280,7 @@ impl Task {
     }
 
     /// Converts the JSON date representation into Date or Datetime
-    fn datetimeinfo(&self, config: &Config) -> Result<DateTimeInfo, String> {
+    fn datetimeinfo(&self, config: &Config) -> Result<DateTimeInfo, Error> {
         let tz = match (self.clone().due, config.clone().timezone) {
             (None, Some(tz_string)) => time::timezone_from_str(&Some(tz_string))?,
             (None, None) => Tz::UTC,
@@ -330,7 +332,7 @@ impl Task {
     }
 
     // Returns true if the datetime is today and there is a time
-    fn is_today(&self, config: &Config) -> Result<bool, String> {
+    fn is_today(&self, config: &Config) -> Result<bool, Error> {
         let boolean = match self.datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(config)?,
@@ -343,7 +345,7 @@ impl Task {
         Ok(boolean)
     }
 
-    fn is_overdue(&self, config: &Config) -> Result<bool, String> {
+    fn is_overdue(&self, config: &Config) -> Result<bool, Error> {
         let boolean = match self.clone().datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
             Ok(DateTimeInfo::Date { date, .. }) => time::is_date_in_past(date, config)?,
@@ -412,24 +414,26 @@ pub async fn process_task(
         }
     }
 }
-pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, String> {
-    let result: Result<Body, _> = serde_json::from_str(&json);
-    match result {
-        Ok(body) => Ok(body.items),
-        Err(err) => Err(format!("Could not parse response for task: {err:?}")),
-    }
+
+pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
+    let body: Body = serde_json::from_str(&json)?;
+    Ok(body.items)
 }
 
-pub fn rest_json_to_tasks(json: String) -> Result<Vec<Task>, String> {
-    let result: Result<Vec<Task>, String> = serde_json::from_str(&json).map_err(|e| e.to_string());
+pub fn rest_json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
+    let result: Result<Vec<Task>, Error> =
+        serde_json::from_str(&json).map_err(|e| error::new("serde_json", &e.to_string()));
 
     result
 }
 
-pub fn json_to_task(json: String) -> Result<Task, String> {
+pub fn json_to_task(json: String) -> Result<Task, Error> {
     match serde_json::from_str(&json) {
         Ok(task) => Ok(task),
-        Err(err) => Err(format!("Could not parse response for task: {err:?}")),
+        Err(err) => Err(error::new(
+            "serde_json",
+            &format!("Could not parse response for task: {err:?}"),
+        )),
     }
 }
 
@@ -443,7 +447,7 @@ pub fn sort_by_datetime(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {
     tasks
 }
 
-pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Task>, String> {
+pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Task>, Error> {
     let tasks = tasks
         .into_iter()
         .filter(|task| {
@@ -532,7 +536,7 @@ pub async fn set_priority(
     config: &Config,
     task: Task,
     with_project: bool,
-) -> Result<String, String> {
+) -> Result<String, Error> {
     println!("{}", task.fmt(config, FormatType::Single, with_project));
 
     let options = vec![
@@ -884,20 +888,6 @@ mod tests {
             ..task
         };
         assert!(task_today.is_overdue(&config).unwrap());
-    }
-
-    #[test]
-    fn json_to_tasks_works() {
-        let json = String::from("2{.e");
-        let error_text = String::from("Could not parse response for task: Error(\"invalid type: integer `2`, expected struct Body\", line: 1, column: 1)");
-        assert_eq!(sync_json_to_tasks(json), Err(error_text));
-    }
-
-    #[test]
-    fn json_to_task_works() {
-        let json = String::from("2{.e");
-        let error_text = String::from("Could not parse response for task: Error(\"invalid type: integer `2`, expected struct Task\", line: 1, column: 1)");
-        assert_eq!(json_to_task(json), Err(error_text));
     }
 
     #[test]

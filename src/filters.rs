@@ -1,13 +1,14 @@
 use crate::{
     color,
     config::Config,
+    error::Error,
     input::{self, DateTimeInput},
     tasks::{self, FormatType, Task},
     todoist,
 };
 
 /// All tasks for a project
-pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, String> {
+pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
@@ -26,7 +27,7 @@ pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, Strin
     Ok(buffer)
 }
 
-pub async fn rename_task(config: &Config, filter: String) -> Result<String, String> {
+pub async fn rename_task(config: &Config, filter: String) -> Result<String, Error> {
     let project_tasks = todoist::tasks_for_filter(config, &filter).await?;
 
     let selected_task = input::select(
@@ -47,7 +48,7 @@ pub async fn rename_task(config: &Config, filter: String) -> Result<String, Stri
     todoist::update_task_name(config, selected_task, new_task_content).await
 }
 
-pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, String> {
+pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
     for task in tasks {
         label_task(config, task, labels).await?;
@@ -57,7 +58,7 @@ pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Resul
     )))
 }
 
-async fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result<String, String> {
+async fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result<String, Error> {
     println!("{}", task.fmt(config, FormatType::Single, true));
     let label = input::select("Select label", labels.to_owned(), config.mock_select)?;
 
@@ -65,7 +66,7 @@ async fn label_task(config: &Config, task: Task, labels: &Vec<String>) -> Result
 }
 
 /// Get the next task by priority and save its id to config
-pub async fn next_task(config: Config, filter: &str) -> Result<String, String> {
+pub async fn next_task(config: Config, filter: &str) -> Result<String, Error> {
     match fetch_next_task(&config, filter).await {
         Ok(Some((task, remaining))) => {
             config.set_next_id(&task.id).save()?;
@@ -77,7 +78,7 @@ pub async fn next_task(config: Config, filter: &str) -> Result<String, String> {
     }
 }
 
-async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)>, String> {
+async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)>, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
     let tasks = tasks::sort_by_value(tasks, config);
 
@@ -85,7 +86,7 @@ async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, 
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, String> {
+pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
     let tasks = tasks::sort_by_value(tasks, config);
     let tasks = tasks::reject_parent_tasks(tasks, config).await;
@@ -105,7 +106,7 @@ pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, S
 }
 
 /// Prioritize all unprioritized tasks in a project
-pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, String> {
+pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
@@ -123,7 +124,7 @@ pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String
 }
 
 /// Put dates on all tasks without dates
-pub async fn schedule(config: &Config, filter: &String) -> Result<String, String> {
+pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {

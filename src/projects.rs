@@ -403,6 +403,7 @@ pub async fn schedule(
             project.name
         )))
     } else {
+        let mut handles = Vec::new();
         for task in filtered_tasks.iter() {
             println!("{}", task.fmt(config, FormatType::Single, false));
             let datetime_input = input::datetime(
@@ -412,18 +413,50 @@ pub async fn schedule(
             )?;
             match datetime_input {
                 input::DateTimeInput::Complete => {
-                    todoist::complete_task(config, &task.id, true).await?
+                    let config = config.clone();
+                    let task = task.clone();
+                    let handle = tokio::spawn(async move {
+                        if let Err(e) = todoist::complete_task(&config, &task.id, true).await {
+                            println!("{e}");
+                        }
+                    });
+                    handles.push(handle);
                 }
-                DateTimeInput::Skip => "Skipped".to_string(),
+
+                DateTimeInput::Skip => (),
 
                 input::DateTimeInput::Text(due_string) => {
-                    todoist::update_task_due(config, task.to_owned(), due_string).await?
+                    let config = config.clone();
+                    let task = task.clone();
+                    let handle = tokio::spawn(async move {
+                        if let Err(e) =
+                            todoist::update_task_due(&config, task.to_owned(), due_string).await
+                        {
+                            println!("{e}");
+                        }
+                    });
+                    handles.push(handle);
                 }
                 input::DateTimeInput::None => {
-                    todoist::update_task_due(config, task.to_owned(), "No Date".to_string()).await?
+                    let config = config.clone();
+                    let task = task.clone();
+                    let handle = tokio::spawn(async move {
+                        if let Err(e) = todoist::update_task_due(
+                            &config,
+                            task.to_owned(),
+                            "No Date".to_string(),
+                        )
+                        .await
+                        {
+                            println!("{e}");
+                        }
+                    });
+                    handles.push(handle);
                 }
             };
         }
+
+        future::join_all(handles).await;
         Ok(color::green_string(&format!(
             "Successfully scheduled tasks in '{}'",
             project.name

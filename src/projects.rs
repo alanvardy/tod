@@ -364,9 +364,13 @@ pub async fn prioritize_tasks(config: &Config, project: &Project) -> Result<Stri
             project.name
         )))
     } else {
+        let mut handles = Vec::new();
         for task in unprioritized_tasks.iter() {
-            tasks::set_priority(config, task.to_owned(), false).await?;
+            let handle = tasks::set_priority(config, task.to_owned(), false).await?;
+            handles.push(handle);
         }
+
+        future::join_all(handles).await;
         Ok(color::green_string(&format!(
             "Successfully prioritized '{}'",
             project.name
@@ -413,44 +417,23 @@ pub async fn schedule(
             )?;
             match datetime_input {
                 input::DateTimeInput::Complete => {
-                    let config = config.clone();
-                    let task = task.clone();
-                    let handle = tokio::spawn(async move {
-                        if let Err(e) = todoist::complete_task(&config, &task.id, true).await {
-                            println!("{e}");
-                        }
-                    });
+                    let handle = tasks::spawn_complete_task(config.clone(), task.clone());
                     handles.push(handle);
                 }
 
                 DateTimeInput::Skip => (),
 
                 input::DateTimeInput::Text(due_string) => {
-                    let config = config.clone();
-                    let task = task.clone();
-                    let handle = tokio::spawn(async move {
-                        if let Err(e) =
-                            todoist::update_task_due(&config, task.to_owned(), due_string).await
-                        {
-                            println!("{e}");
-                        }
-                    });
+                    let handle =
+                        tasks::spawn_update_task_due(config.clone(), task.clone(), due_string);
                     handles.push(handle);
                 }
                 input::DateTimeInput::None => {
-                    let config = config.clone();
-                    let task = task.clone();
-                    let handle = tokio::spawn(async move {
-                        if let Err(e) = todoist::update_task_due(
-                            &config,
-                            task.to_owned(),
-                            "No Date".to_string(),
-                        )
-                        .await
-                        {
-                            println!("{e}");
-                        }
-                    });
+                    let handle = tasks::spawn_update_task_due(
+                        config.clone(),
+                        task.clone(),
+                        "No date".to_string(),
+                    );
                     handles.push(handle);
                 }
             };
@@ -474,23 +457,9 @@ pub async fn move_task_to_project(config: &Config, task: Task) -> Result<JoinHan
     let selection = input::select("Choose", options, config.mock_select)?;
 
     match selection.as_str() {
-        "Complete" => {
-            let config = config.clone();
-            Ok(tokio::spawn(async move {
-                if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
-                    println!("{e}");
-                }
-            }))
-        }
+        "Complete" => Ok(tasks::spawn_complete_task(config.clone(), task)),
 
-        "Delete" => {
-            let config = config.clone();
-            Ok(tokio::spawn(async move {
-                if let Err(e) = todoist::delete_task(&config, &task, false).await {
-                    println!("{e}");
-                }
-            }))
-        }
+        "Delete" => Ok(tasks::spawn_delete_task(config.clone(), task)),
         "Skip" => Ok(tokio::spawn(async move {})),
         _ => {
             let projects = config.projects.clone().unwrap_or_default();

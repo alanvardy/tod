@@ -78,7 +78,7 @@ pub async fn add_task(
 
     let body = json!(body);
 
-    let json = request::post_todoist_rest(config, url, body).await?;
+    let json = request::post_todoist_rest(config, url, body, true).await?;
     tasks::json_to_task(json)
 }
 
@@ -150,7 +150,7 @@ pub async fn update_task_priority(
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body).await?;
+    request::post_todoist_rest(config, url, body, true).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
@@ -162,7 +162,7 @@ pub async fn add_task_label(config: &Config, task: Task, label: String) -> Resul
     let body = json!({ "labels": labels});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body).await?;
+    request::post_todoist_rest(config, url, body, true).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
@@ -172,6 +172,7 @@ pub async fn update_task_due(
     config: &Config,
     task: Task,
     due_string: String,
+    spinner: bool,
 ) -> Result<String, Error> {
     let due_string = if task.is_recurring() {
         format!("{} starting {due_string}", task.due.unwrap().string)
@@ -181,7 +182,7 @@ pub async fn update_task_due(
     let body = json!({ "due_string": due_string });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body).await?;
+    request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
@@ -195,7 +196,7 @@ pub async fn update_task_name(
     let body = json!({ "content": new_name });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body).await?;
+    request::post_todoist_rest(config, url, body, true).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -444,7 +445,7 @@ mod tests {
 
         let config = test::fixtures::config().mock_url(server.url());
 
-        let response = update_task_due(&config, task, "today".to_string()).await;
+        let response = update_task_due(&config, task, "today".to_string(), true).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

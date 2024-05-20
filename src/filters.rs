@@ -130,9 +130,12 @@ pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String
             "No tasks to prioritize in '{filter}'"
         )))
     } else {
+        let mut handles = Vec::new();
         for task in tasks.iter() {
-            tasks::set_priority(config, task.to_owned(), true).await?;
+            let handle = tasks::set_priority(config, task.to_owned(), true).await?;
+            handles.push(handle);
         }
+        future::join_all(handles).await;
         Ok(color::green_string(&format!(
             "Successfully prioritized '{filter}'"
         )))
@@ -148,6 +151,7 @@ pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error>
             "No tasks to schedule in '{filter}'"
         )))
     } else {
+        let mut handles = Vec::new();
         for task in tasks.iter() {
             println!("{}", task.fmt(config, FormatType::Single, true));
             let datetime_input = input::datetime(
@@ -157,18 +161,28 @@ pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error>
             )?;
             match datetime_input {
                 input::DateTimeInput::Complete => {
-                    todoist::complete_task(config, &task.id, true).await?
+                    let handle = tasks::spawn_complete_task(config.clone(), task.clone());
+                    handles.push(handle);
                 }
-                DateTimeInput::Skip => "Skipped".to_string(),
+                DateTimeInput::Skip => (),
 
                 input::DateTimeInput::Text(due_string) => {
-                    todoist::update_task_due(config, task.to_owned(), due_string).await?
+                    let handle =
+                        tasks::spawn_update_task_due(config.clone(), task.clone(), due_string);
+                    handles.push(handle);
                 }
                 input::DateTimeInput::None => {
-                    todoist::update_task_due(config, task.to_owned(), "No Date".to_string()).await?
+                    let handle = tasks::spawn_update_task_due(
+                        config.clone(),
+                        task.clone(),
+                        "No date".to_string(),
+                    );
+                    handles.push(handle);
                 }
             };
         }
+
+        future::join_all(handles).await;
         Ok(color::green_string(&format!(
             "Successfully scheduled tasks in '{filter}'"
         )))

@@ -377,32 +377,18 @@ pub async fn process_task(
         .iter()
         .map(|s| s.to_string())
         .collect();
-    println!(
-        "{}{task_count} task(s) remaining",
-        task.fmt(config, FormatType::Single, with_project)
-    );
+    let formatted_task = task.fmt(config, FormatType::Single, with_project);
+    println!("{formatted_task}{task_count} task(s) remaining");
     *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "Complete" {
-                let config = config.clone();
-                let handle = tokio::spawn(async move {
-                    if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
-                        println!("{e}");
-                    }
-                });
-                Some(handle)
+                Some(spawn_complete_task(config.clone(), task))
             } else if string == "Delete" {
-                let config = config.clone();
-                let handle = tokio::spawn(async move {
-                    if let Err(e) = todoist::delete_task(&config, &task, false).await {
-                        println!("{e}");
-                    }
-                });
-                Some(handle)
+                Some(spawn_delete_task(config.clone(), task))
             } else if string == "Skip" {
-                let handle = tokio::spawn(async move {});
-                Some(handle)
+                // Do nothing
+                Some(tokio::spawn(async move {}))
             } else {
                 // The quit clause
                 None
@@ -413,6 +399,33 @@ pub async fn process_task(
             Some(handle)
         }
     }
+}
+
+// Completes task inside another thread
+pub fn spawn_complete_task(config: Config, task: Task) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
+            println!("{e}");
+        }
+    })
+}
+
+// Deletes task inside another thread
+pub fn spawn_delete_task(config: Config, task: Task) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::delete_task(&config, &task, false).await {
+            println!("{e}");
+        }
+    })
+}
+
+// Deletes task inside another thread
+pub fn spawn_update_task_due(config: Config, task: Task, due_string: String) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::update_task_due(&config, task, due_string, false).await {
+            println!("{e}");
+        }
+    })
 }
 
 pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
@@ -529,7 +542,7 @@ pub async fn set_priority(
     config: &Config,
     task: Task,
     with_project: bool,
-) -> Result<String, Error> {
+) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, with_project));
 
     let options = vec![
@@ -544,7 +557,12 @@ pub async fn set_priority(
         config.mock_select,
     )?;
 
-    todoist::update_task_priority(config, task, priority).await
+    let config = config.clone();
+    Ok(tokio::spawn(async move {
+        if let Err(e) = todoist::update_task_priority(&config, task, priority).await {
+            println!("{e}");
+        }
+    }))
 }
 
 #[cfg(test)]
@@ -906,8 +924,9 @@ mod tests {
             .mock_select(1)
             .mock_url(server.url());
 
-        let result = set_priority(&config, task, false);
-        assert_eq!(result.await, Ok("✓".to_string()));
+        let future = set_priority(&config, task, false).await.unwrap();
+
+        tokio::join!(future).0.unwrap();
         mock.assert();
     }
 

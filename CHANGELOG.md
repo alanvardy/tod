@@ -7,6 +7,7 @@
 - Check Cargo version asynchronously
 - Make `list schedule` calls asynchronously
 - Make `list label` calls asynchronously
+- Make `list prioritize` calls asynchronously
 
 ## 2024-05018 v0.6.4
 

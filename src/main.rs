@@ -527,14 +527,14 @@ async fn project_remove(cli: Cli, args: &ProjectRemove) -> Result<String, Error>
     } = args;
     let mut config = fetch_config(cli).await?;
     match (all, auto) {
-        (true, false) => projects::remove_all(&mut config),
+        (true, false) => projects::remove_all(&mut config).await,
         (false, true) => projects::remove_auto(&mut config).await,
         (false, false) => loop {
             let project = match fetch_project(project, &config)? {
                 Flag::Project(project) => project,
                 _ => unreachable!(),
             };
-            let value = projects::remove(&mut config, &project);
+            let value = projects::remove(&mut config, &project).await;
 
             if !repeat {
                 return value;
@@ -556,7 +556,7 @@ async fn project_rename(cli: Cli, args: &ProjectRename) -> Result<String, Error>
         &config,
         format!("Calling projects::rename with project:\n{project}"),
     );
-    projects::rename(config, &project)
+    projects::rename(config, &project).await
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -658,12 +658,12 @@ async fn config_check_version(cli: Cli, _args: &ConfigCheckVersion) -> Result<St
 
 #[cfg(not(tarpaulin_include))]
 async fn config_reset(cli: Cli, _args: &ConfigReset) -> Result<String, Error> {
-    use std::fs;
+    use tokio::fs;
 
     let config = fetch_config(cli).await?;
     let path = config.path;
 
-    match fs::remove_file(path.clone()) {
+    match fs::remove_file(path.clone()).await {
         Ok(_) => Ok(format!("{path} deleted successfully")),
         Err(e) => Err(error::new(
             "config_reset",
@@ -683,13 +683,13 @@ async fn fetch_config(cli: Cli) -> Result<Config, Error> {
         command: _,
     } = cli;
 
-    let config = config::get_or_create(config_path, verbose, timeout)?;
+    let config = config::get_or_create(config_path, verbose, timeout).await?;
 
     let async_config = config.clone();
 
     tokio::spawn(async move { async_config.check_for_latest_version().await });
 
-    config.check_for_timezone()
+    config.check_for_timezone().await
 }
 
 #[cfg(not(tarpaulin_include))]

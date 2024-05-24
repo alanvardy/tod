@@ -571,9 +571,9 @@ mod tests {
     use crate::test;
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn date_value_can_handle_date() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn date_value_can_handle_date() {
+        let config = test::fixtures::config().await;
         // On another day
         assert_eq!(test::fixtures::task().date_value(&config), 50);
 
@@ -604,9 +604,9 @@ mod tests {
         assert_eq!(task.date_value(&config), 80);
     }
 
-    #[test]
-    fn date_value_can_handle_datetime() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn date_value_can_handle_datetime() {
+        let config = test::fixtures::config().await;
         let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-02-27T19:41:56Z"),
@@ -618,9 +618,9 @@ mod tests {
         assert_eq!(task.date_value(&config), 50);
     }
 
-    #[test]
-    fn can_format_task_with_a_date() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn can_format_task_with_a_date() {
+        let config = test::fixtures::config().await;
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
@@ -636,9 +636,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn can_format_task_with_today() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn can_format_task_with_today() {
+        let config = test::fixtures::config().await;
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
@@ -654,9 +654,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn value_can_get_the_value_of_an_task() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn value_can_get_the_value_of_an_task() {
+        let config = test::fixtures::config().await;
         let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
@@ -668,9 +668,9 @@ mod tests {
         assert_matches!(task.datetime(&config), Some(DateTime { .. }));
     }
 
-    #[test]
-    fn datetime_works_with_date() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn datetime_works_with_date() {
+        let config = test::fixtures::config().await;
         let task = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
@@ -682,9 +682,9 @@ mod tests {
         assert_eq!(task.datetime(&config), None);
     }
 
-    #[test]
-    fn has_no_date_works() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn has_no_date_works() {
+        let config = test::fixtures::config().await;
         let task = Task {
             due: None,
             ..test::fixtures::task()
@@ -702,9 +702,9 @@ mod tests {
         assert!(!task_today.has_no_date());
     }
 
-    #[test]
-    fn is_today_works() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn is_today_works() {
+        let config = test::fixtures::config().await;
         let task = Task {
             due: None,
             ..test::fixtures::task()
@@ -735,9 +735,9 @@ mod tests {
         assert!(!task_in_past.is_today(&config).unwrap());
     }
 
-    #[test]
-    fn sort_by_value_works() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn sort_by_value_works() {
+        let config = test::fixtures::config().await;
         let today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
@@ -774,9 +774,9 @@ mod tests {
         assert_eq!(sort_by_value(input, &config), result);
     }
 
-    #[test]
-    fn sort_by_datetime_works() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn sort_by_datetime_works() {
+        let config = test::fixtures::config().await;
         let no_date = Task {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
@@ -847,9 +847,9 @@ mod tests {
         assert_eq!(sort_by_datetime(input, &config), result);
     }
 
-    #[test]
-    fn is_overdue_works() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn is_overdue_works() {
+        let config = test::fixtures::config().await;
         let task = Task {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
@@ -921,6 +921,7 @@ mod tests {
             .create_async()
             .await;
         let config = test::fixtures::config()
+            .await
             .mock_select(1)
             .mock_url(server.url());
 
@@ -943,6 +944,7 @@ mod tests {
 
         let task = test::fixtures::task();
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(0);
         let mut task_count = 3;

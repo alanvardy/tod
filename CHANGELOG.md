@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Changed file system calls to asynchronous `tokio` calls
+
 ## 2024-05-18 v0.6.5
 
 - Internal refactoring to use an error struct and provide better errors

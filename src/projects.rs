@@ -106,19 +106,19 @@ async fn count_processable_tasks(config: &Config, project: &Project) -> Result<u
 }
 
 /// Add a project to the projects HashMap in Config
-pub fn add(config: &mut Config, project: &Project) -> Result<String, Error> {
+pub async fn add(config: &mut Config, project: &Project) -> Result<String, Error> {
     config.add_project(project.clone());
-    config.save()
+    config.save().await
 }
 
 /// Remove a project from the projects HashMap in Config
-pub fn remove(config: &mut Config, project: &Project) -> Result<String, Error> {
+pub async fn remove(config: &mut Config, project: &Project) -> Result<String, Error> {
     config.remove_project(project);
-    config.save()
+    config.save().await
 }
 
 /// Rename a project in config
-pub fn rename(config: Config, project: &Project) -> Result<String, Error> {
+pub async fn rename(config: Config, project: &Project) -> Result<String, Error> {
     let new_name = input::string_with_default("Input new project name", &project.name)?;
 
     let mut config = config;
@@ -127,15 +127,15 @@ pub fn rename(config: Config, project: &Project) -> Result<String, Error> {
         name: new_name,
         ..project.clone()
     };
-    remove(&mut config, project)?;
-    add(&mut config, &new_project)
+    remove(&mut config, project).await?;
+    add(&mut config, &new_project).await
 }
 
 /// Get the next task by priority and save its id to config
 pub async fn next_task(config: Config, project: &Project) -> Result<String, Error> {
     match fetch_next_task(&config, project).await {
         Ok(Some((task, remaining))) => {
-            config.set_next_id(&task.id).save()?;
+            config.set_next_id(&task.id).save().await?;
             let task_string = task.fmt(&config, FormatType::Single, false);
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
@@ -167,7 +167,7 @@ pub async fn remove_auto(config: &mut Config) -> Result<String, Error> {
     for project in &missing_projects {
         config.remove_project(project);
     }
-    config.save()?;
+    config.save().await?;
     let project_names = missing_projects
         .iter()
         .map(|p| p.name.clone())
@@ -178,7 +178,7 @@ pub async fn remove_auto(config: &mut Config) -> Result<String, Error> {
 }
 
 /// Removes all projects from config
-pub fn remove_all(config: &mut Config) -> Result<String, Error> {
+pub async fn remove_all(config: &mut Config) -> Result<String, Error> {
     let options = vec!["Cancel", "Confirm"];
     let selection = input::select(
         "Confirm removing all projects from config",
@@ -197,7 +197,7 @@ pub fn remove_all(config: &mut Config) -> Result<String, Error> {
     for project in &config.projects.clone().unwrap_or_default() {
         config.remove_project(project);
     }
-    config.save()?;
+    config.save().await?;
     let message = String::from("Removed all projects from config");
     Ok(color::green_string(&message))
 }
@@ -219,7 +219,7 @@ pub async fn import(config: &mut Config) -> Result<String, Error> {
     let projects = todoist::projects(config).await?;
     let new_projects = filter_new_projects(config, projects);
     for project in new_projects {
-        maybe_add_project(config, project)?;
+        maybe_add_project(config, project).await?;
     }
     Ok(color::green_string("No more projects"))
 }
@@ -242,13 +242,13 @@ fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> 
 }
 
 /// Prompt the user if they want to add project to config and maybe add
-fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, Error> {
+async fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, Error> {
     let options = vec!["add", "skip"];
     println!("{}", project);
     match input::select("Select an option", options.clone(), config.mock_select) {
         Ok(string) => {
             if string == "add" {
-                add(config, &project)
+                add(config, &project).await
             } else if string == "skip" {
                 Ok(String::from("Skipped"))
             } else {
@@ -269,7 +269,7 @@ pub async fn process_tasks(config: &Config, project: &Project) -> Result<String,
     let mut handles = Vec::new();
     for task in tasks {
         println!(" ");
-        match tasks::process_task(&config.reload()?, task, &mut task_count, false).await {
+        match tasks::process_task(&config.reload().await?, task, &mut task_count, false).await {
             Some(handle) => handles.push(handle),
             None => return Ok(color::green_string("Exited")),
         }
@@ -506,17 +506,17 @@ mod tests {
     /// Need to adjust this value forward or back an hour when timezone changes
     const TIME: &str = "16:59";
 
-    #[test]
-    fn should_add_and_remove_projects() {
-        let config = test::fixtures::config().create().unwrap();
+    #[tokio::test]
+    async fn should_add_and_remove_projects() {
+        let config = test::fixtures::config().await.create().await.unwrap();
 
         let mut config = config;
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let result = remove(&mut config, project);
+        let result = remove(&mut config, project).await;
         assert_eq!(Ok("✓".to_string()), result);
-        let result = add(&mut config, project);
+        let result = add(&mut config, project).await;
         assert_eq!(Ok("✓".to_string()), result);
     }
     #[tokio::test]
@@ -530,7 +530,7 @@ mod tests {
             .create_async()
             .await;
 
-        let mut config = test::fixtures::config().mock_url(server.url());
+        let mut config = test::fixtures::config().await.mock_url(server.url());
 
         let str = "Projects                           # Tasks\n - Doomsday                      ";
 
@@ -545,11 +545,11 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks())
+            .with_body(test::responses::post_tasks().await)
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
 
@@ -562,7 +562,7 @@ mod tests {
         let binding = config_with_timezone.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        config_with_timezone.clone().create().unwrap();
+        config_with_timezone.clone().create().await.unwrap();
 
         assert_eq!(
             next_task(config_with_timezone, project).await,
@@ -579,11 +579,11 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks())
+            .with_body(test::responses::post_tasks().await)
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
@@ -615,9 +615,11 @@ mod tests {
             .await;
 
         let mut config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(0)
             .create()
+            .await
             .unwrap();
 
         assert_eq!(
@@ -626,7 +628,7 @@ mod tests {
         );
         mock.assert();
 
-        let config = config.reload().unwrap();
+        let config = config.reload().await.unwrap();
         let config_keys: Vec<String> = config
             .projects
             .unwrap_or_default()
@@ -643,7 +645,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks())
+            .with_body(test::responses::post_tasks().await)
             .create_async()
             .await;
 
@@ -656,9 +658,11 @@ mod tests {
             .await;
 
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(0)
             .create()
+            .await
             .unwrap();
 
         let binding = config.projects.clone().unwrap_or_default();
@@ -685,8 +689,10 @@ mod tests {
             .await;
 
         let mut config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .create()
+            .await
             .unwrap();
 
         let result = remove_auto(&mut config);
@@ -699,9 +705,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_remove_all() {
-        let mut config = test::fixtures::config().mock_select(1).create().unwrap();
+        let mut config = test::fixtures::config()
+            .await
+            .mock_select(1)
+            .create()
+            .await
+            .unwrap();
 
-        let result = remove_all(&mut config);
+        let result = remove_all(&mut config).await;
         let expected: Result<String, Error> = Ok(String::from("Removed all projects from config"));
         assert_eq!(result, expected);
 
@@ -716,7 +727,7 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks())
+            .with_body(test::responses::post_tasks().await)
             .create_async()
             .await;
 
@@ -737,6 +748,7 @@ mod tests {
             .await;
 
         let mut config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_string("newtext")
             .mock_select(0);
@@ -760,11 +772,11 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks())
+            .with_body(test::responses::post_tasks().await)
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
@@ -779,7 +791,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_move_task_to_project() {
-        let config = test::fixtures::config().mock_select(2);
+        let config = test::fixtures::config().await.mock_select(2);
         let task = test::fixtures::task();
 
         move_task_to_project(&config, task)
@@ -796,11 +808,12 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks())
+            .with_body(test::responses::post_tasks().await)
             .create_async()
             .await;
 
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(0);
         let binding = config.projects.clone().unwrap_or_default();
@@ -833,6 +846,7 @@ mod tests {
             .await;
 
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(1)
             .mock_string("tod");

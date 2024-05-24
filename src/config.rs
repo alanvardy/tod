@@ -6,8 +6,8 @@ use chrono_tz::TZ_VARIANTS;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::fs;
-use std::io::{Read, Write};
+use tokio::fs;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -113,7 +113,7 @@ impl Config {
                         VERSION,
                         color::cyan_string("cargo install tod --force")
                     );
-                    new_config.clone().save()?;
+                    new_config.clone().save().await?;
                 }
                 Ok(Version::Latest) => (),
                 Err(err) => println!(
@@ -127,7 +127,7 @@ impl Config {
         Ok(())
     }
 
-    pub fn check_for_timezone(self: Config) -> Result<Config, Error> {
+    pub async fn check_for_timezone(self: Config) -> Result<Config, Error> {
         if self.timezone.is_none() {
             let desc = "Please select your timezone";
             let mut options = TZ_VARIANTS
@@ -143,7 +143,7 @@ impl Config {
                 ..self
             };
 
-            config.clone().save()?;
+            config.clone().save().await?;
 
             Ok(config)
         } else {
@@ -157,17 +157,21 @@ impl Config {
         Config { next_id, ..self }
     }
 
-    pub fn create(self) -> Result<Config, Error> {
+    pub async fn create(self) -> Result<Config, Error> {
         let json = json!(self).to_string();
-        let mut file = fs::File::create(&self.path)?;
-        file.write_all(json.as_bytes())?;
+        let mut file = fs::File::create(&self.path).await?;
+        // file.write_all(json.as_bytes())?;
+        fs::File::write_all(&mut file, json.as_bytes()).await?;
         println!("Config successfully created in {}", &self.path);
         Ok(self)
     }
 
-    pub fn load(path: &str) -> Result<Config, Error> {
+    pub async fn load(path: &str) -> Result<Config, Error> {
         let mut json = String::new();
-        fs::File::open(path)?.read_to_string(&mut json)?;
+        fs::File::open(path)
+            .await?
+            .read_to_string(&mut json)
+            .await?;
         let config = serde_json::from_str::<Config>(&json)?;
 
         match config.sort_value {
@@ -179,9 +183,9 @@ impl Config {
         }
     }
 
-    pub fn new(token: &str) -> Result<Config, Error> {
+    pub async fn new(token: &str) -> Result<Config, Error> {
         Ok(Config {
-            path: generate_path()?,
+            path: generate_path().await?,
             token: String::from(token),
             next_id: None,
             last_version_check: None,
@@ -203,8 +207,8 @@ impl Config {
         })
     }
 
-    pub fn reload(&self) -> Result<Self, Error> {
-        Config::load(&self.path)
+    pub async fn reload(&self) -> Result<Self, Error> {
+        Config::load(&self.path).await
     }
 
     pub fn add_project(&mut self, project: Project) {
@@ -230,9 +234,9 @@ impl Config {
         self.projects = Some(projects);
     }
 
-    pub fn save(&mut self) -> std::result::Result<String, Error> {
+    pub async fn save(&mut self) -> std::result::Result<String, Error> {
         // We don't want to overwrite verbose in the config
-        let config = match Config::load(&self.path) {
+        let config = match Config::load(&self.path).await {
             Ok(Config { verbose, .. }) => Config {
                 verbose,
                 ..self.clone()
@@ -246,8 +250,10 @@ impl Config {
             .write(true)
             .read(true)
             .truncate(true)
-            .open(&self.path)?
-            .write_all(string.as_bytes())?;
+            .open(&self.path)
+            .await?
+            .write_all(string.as_bytes())
+            .await?;
 
         Ok(color::green_string("✓"))
     }
@@ -262,24 +268,24 @@ impl Config {
     }
 }
 
-pub fn get_or_create(
+pub async fn get_or_create(
     config_path: Option<String>,
     verbose: bool,
     timeout: Option<u64>,
 ) -> Result<Config, Error> {
     let path: String = match config_path {
-        None => generate_path()?,
+        None => generate_path().await?,
         Some(path) => maybe_expand_home_dir(path)?,
     };
 
-    match fs::File::open(&path) {
-        Ok(_) => Config::load(&path),
+    match fs::File::open(&path).await {
+        Ok(_) => Config::load(&path).await,
         Err(_) => {
             let desc =
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
             let token = input::string(desc, Some(String::new()))?;
-            Config::new(&token)?.create()
+            Config::new(&token).await?.create().await
         }
     }
     .map(|config| Config {
@@ -288,14 +294,14 @@ pub fn get_or_create(
     })
 }
 
-pub fn generate_path() -> Result<String, Error> {
+pub async fn generate_path() -> Result<String, Error> {
     let config_directory = dirs::config_dir()
         .ok_or_else(|| error::new("dirs", "Could not find config directory"))?
         .to_str()
         .ok_or_else(|| error::new("dirs", "Could not convert config directory to string"))?
         .to_owned();
     if cfg!(test) {
-        _ = fs::create_dir(format!("{config_directory}/tod_test"));
+        _ = fs::create_dir(format!("{config_directory}/tod_test")).await;
         let random_string = Alphanumeric.sample_string(&mut rand::thread_rng(), 30);
         Ok(format!("tests/{random_string}.testcfg"))
     } else {
@@ -354,27 +360,27 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn new_should_generate_config() {
-        let config = Config::new("something").unwrap();
+    #[tokio::test]
+    async fn new_should_generate_config() {
+        let config = Config::new("something").await.unwrap();
         assert_eq!(config.token, String::from("something"));
     }
 
-    #[test]
-    fn reload_config_should_work() {
-        let config = test::fixtures::config();
-        let mut config = config.create().expect("Failed to create test config");
+    #[tokio::test]
+    async fn reload_config_should_work() {
+        let config = test::fixtures::config().await;
+        let mut config = config.create().await.expect("Failed to create test config");
         let project = test::fixtures::project();
         config.add_project(project);
         let projects = config.projects.clone().unwrap_or_default();
         assert!(!&projects.is_empty());
 
-        config.reload().expect("Failed to reload config");
+        config.reload().await.expect("Failed to reload config");
     }
 
-    #[test]
-    fn set_and_clear_next_id_should_work() {
-        let config = test::fixtures::config();
+    #[tokio::test]
+    async fn set_and_clear_next_id_should_work() {
+        let config = test::fixtures::config().await;
         assert_eq!(config.next_id, None);
         let config = config.set_next_id(&String::from("123123"));
         assert_eq!(config.next_id, Some(String::from("123123")));
@@ -382,9 +388,9 @@ mod tests {
         assert_eq!(config.next_id, None);
     }
 
-    #[test]
-    fn add_project_should_work() {
-        let mut config = test::fixtures::config();
+    #[tokio::test]
+    async fn add_project_should_work() {
+        let mut config = test::fixtures::config().await;
         let projects_count = config.projects.clone().unwrap_or_default().len();
         assert_eq!(projects_count, 1);
         config.add_project(test::fixtures::project());
@@ -392,9 +398,9 @@ mod tests {
         assert_eq!(projects_count, 2);
     }
 
-    #[test]
-    fn remove_project_should_work() {
-        let mut config = test::fixtures::config();
+    #[tokio::test]
+    async fn remove_project_should_work() {
+        let mut config = test::fixtures::config().await;
         let projects = config.projects.clone().unwrap_or_default();
         let project = projects.first().unwrap();
         let projects_count = config.projects.clone().unwrap_or_default().len();
@@ -422,21 +428,21 @@ mod tests {
         assert_eq!(split.next(), Some("tod.cfg"));
     }
 
-    #[test]
-    fn config_tests() {
+    #[tokio::test]
+    async fn config_tests() {
         // These need to be run sequentially as they write to the filesystem.
 
-        let server = mockito::Server::new();
+        let server = mockito::Server::new_async().await;
 
         // create and load
-        let new_config = test::fixtures::config();
-        let created_config = new_config.clone().create().unwrap();
+        let new_config = test::fixtures::config().await;
+        let created_config = new_config.clone().create().await.unwrap();
         assert_eq!(new_config, created_config);
-        let loaded_config = Config::load(&new_config.path).unwrap();
+        let loaded_config = Config::load(&new_config.path).await.unwrap();
         assert_eq!(created_config, loaded_config);
 
         // get_or_create (create)
-        let config = get_or_create(None, false, None);
+        let config = get_or_create(None, false, None).await;
         assert_eq!(
             config,
             Ok(Config {
@@ -461,15 +467,17 @@ mod tests {
                 mock_select: None,
             })
         );
-        delete_config(&config.unwrap().path);
+        delete_config(&config.unwrap().path).await;
 
         // get_or_create (load)
         test::fixtures::config()
+            .await
             .mock_url(server.url())
             .create()
+            .await
             .unwrap();
 
-        let config = get_or_create(None, false, None);
+        let config = get_or_create(None, false, None).await;
 
         assert_eq!(
             config,
@@ -495,10 +503,11 @@ mod tests {
                 mock_select: None,
             })
         );
-        delete_config(&config.unwrap().path);
+
+        delete_config(&config.unwrap().path).await;
     }
 
-    fn delete_config(path: &str) {
-        assert_matches!(fs::remove_file(path), Ok(_));
+    async fn delete_config(path: &str) {
+        assert_matches!(fs::remove_file(path).await, Ok(_));
     }
 }

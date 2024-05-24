@@ -28,7 +28,7 @@ pub mod fixtures {
         }
     }
 
-    pub fn config() -> Config {
+    pub async fn config() -> Config {
         Config {
             token: String::from("alreadycreated"),
             sort_value: Some(SortValue::default()),
@@ -46,7 +46,7 @@ pub mod fixtures {
                 url: "www.google.com".to_string(),
                 parent_id: None,
             }]),
-            path: config::generate_path().unwrap(),
+            path: config::generate_path().await.unwrap(),
             next_id: None,
             args: Args {
                 timeout: None,
@@ -130,7 +130,7 @@ pub mod responses {
         )
     }
 
-    pub fn post_tasks() -> String {
+    pub async fn post_tasks() -> String {
         format!(
             "{{\
         \"items\":\
@@ -165,10 +165,10 @@ pub mod responses {
                 }}
             ]
         }}",
-            time::today_string(&fixtures::config()).unwrap()
+            time::today_string(&fixtures::config().await).unwrap()
         )
     }
-    pub fn get_tasks() -> String {
+    pub async fn get_tasks() -> String {
         format!(
             "
             [
@@ -202,7 +202,7 @@ pub mod responses {
                 }}
             ]
         ",
-            time::today_string(&fixtures::config()).unwrap()
+            time::today_string(&fixtures::config().await).unwrap()
         )
     }
 

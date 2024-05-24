@@ -73,7 +73,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let response = get_latest_version(config).await;
         mock.assert();

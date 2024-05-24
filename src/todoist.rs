@@ -209,7 +209,7 @@ pub async fn complete_task(config: &Config, task_id: &str, spinner: bool) -> Res
     request::post_todoist_sync(config, url, body, spinner).await?;
 
     if !cfg!(test) {
-        config.clone().clear_next_id().save()?;
+        config.clone().clear_next_id().save().await?;
     }
 
     // Does not pass back a task
@@ -244,7 +244,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         assert_eq!(
             quick_add_task(&config, "testy test").await,
@@ -277,7 +277,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let project = test::fixtures::project();
 
@@ -321,11 +321,11 @@ mod tests {
             .mock("POST", "/sync/v9/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks())
+            .with_body(test::responses::post_tasks().await)
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
             ..config
@@ -373,7 +373,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let response = complete_task(&config, "112233", false).await;
         mock.assert();
@@ -393,7 +393,7 @@ mod tests {
             .await;
 
         let task = test::fixtures::task();
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let config = Config {
             mock_url: Some(server.url()),
@@ -422,7 +422,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let response = update_task_priority(&config, task, Priority::High).await;
         mock.assert();
@@ -443,7 +443,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let response = update_task_due(&config, task, "today".to_string(), true).await;
         mock.assert();

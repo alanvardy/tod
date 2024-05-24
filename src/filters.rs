@@ -85,7 +85,7 @@ async fn label_task(
 pub async fn next_task(config: Config, filter: &str) -> Result<String, Error> {
     match fetch_next_task(&config, filter).await {
         Ok(Some((task, remaining))) => {
-            config.set_next_id(&task.id).save()?;
+            config.set_next_id(&task.id).save().await?;
             let task_string = task.fmt(&config, FormatType::Single, true);
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
@@ -205,11 +205,11 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let config_with_timezone = Config {
             timezone: Some(String::from("US/Pacific")),
@@ -235,11 +235,12 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
 
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(0);
 
@@ -257,11 +258,11 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
 
@@ -272,7 +273,7 @@ mod tests {
             ..config
         };
 
-        config_with_timezone.clone().create().unwrap();
+        config_with_timezone.clone().create().await.unwrap();
 
         let filter = String::from("today");
         assert_eq!(
@@ -289,7 +290,7 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
 
@@ -297,11 +298,11 @@ mod tests {
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
 
-        let config = test::fixtures::config().mock_url(server.url());
+        let config = test::fixtures::config().await.mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
 
@@ -313,7 +314,7 @@ mod tests {
             ..config
         };
 
-        config_with_timezone.clone().create().unwrap();
+        config_with_timezone.clone().create().await.unwrap();
 
         let filter = String::from("today");
         let labels = vec![String::from("thing")];
@@ -333,7 +334,7 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
 
@@ -346,9 +347,11 @@ mod tests {
             .await;
 
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(0)
             .create()
+            .await
             .unwrap();
         let filter = String::from("today");
 
@@ -381,6 +384,7 @@ mod tests {
             .await;
 
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(1)
             .mock_string("tod");
@@ -411,18 +415,19 @@ mod tests {
             .mock("GET", "/rest/v2/tasks/?filter=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
         let mock2 = server
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks())
+            .with_body(test::responses::get_tasks().await)
             .create_async()
             .await;
 
         let config = test::fixtures::config()
+            .await
             .mock_url(server.url())
             .mock_select(1);
 

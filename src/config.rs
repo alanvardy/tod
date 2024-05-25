@@ -143,28 +143,33 @@ impl Config {
         Ok(())
     }
 
-    pub async fn check_for_timezone(self: Config) -> Result<Config, Error> {
+    pub async fn check_for_timezone(self) -> Result<Config, Error> {
         if self.timezone.is_none() {
-            let desc = "Please select your timezone. This should match your Timezone setting within Todoist";
-            let mut options = TZ_VARIANTS
-                .to_vec()
-                .iter()
-                .map(|v| v.to_string())
-                .collect::<Vec<String>>();
-            options.sort();
-
-            let tz = input::select(desc, options, self.mock_select)?;
-            let config = Config {
-                timezone: Some(tz),
-                ..self
-            };
-
-            config.clone().save().await?;
-
+            let config = self.set_timezone().await?;
             Ok(config)
         } else {
             Ok(self)
         }
+    }
+
+    async fn set_timezone(self) -> Result<Config, Error> {
+        let desc = "Please select your timezone. This should match your Timezone setting within Todoist.";
+        let mut options = TZ_VARIANTS
+            .to_vec()
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>();
+        options.sort();
+
+        let tz = input::select(desc, options, self.mock_select)?;
+        let config = Config {
+            timezone: Some(tz),
+            ..self
+        };
+
+        config.clone().save().await?;
+
+        Ok(config)
     }
 
     pub fn clear_next_id(self) -> Config {

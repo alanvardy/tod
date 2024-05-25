@@ -246,7 +246,7 @@ mod tests {
         assert_eq!(
             all_tasks(&config_with_timezone, &filter).await,
             Ok(format!(
-                "Tasks for filter: 'today'\n- Put out recycling\n  ! {TIME} ↻ every other mon at 16:30\n# Project not in config\n"
+                "Tasks for filter: 'today'\n- Put out recycling\n  ! {TIME} ↻ every other mon at 16:30\n# Project not in config\nUse tod project import --auto to import missing projects\n"
             ))
         );
         mock.assert();
@@ -303,7 +303,7 @@ mod tests {
         assert_eq!(
             next_task(config_with_timezone, &filter).await,
             Ok(format!(
-                "Put out recycling\n! {TIME} ↻ every other mon at 16:30\n# Project not in config\n\n1 task(s) remaining"
+                "Put out recycling\n! {TIME} ↻ every other mon at 16:30\n# Project not in config\nUse tod project import --auto to import missing projects\n\n1 task(s) remaining"
             ))
         );
     }

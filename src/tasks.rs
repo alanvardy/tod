@@ -119,7 +119,10 @@ impl Task {
 
             match maybe_project.first() {
                 Some(Project { name, .. }) => format!("\n{project_icon} {name}"),
-                None => format!("\n{project_icon} Project not in config"),
+                None => {
+                    let command = color::cyan_string("tod project import --auto");
+                    format!("\n{project_icon} Project not in config\nUse {command} to import missing projects")
+                }
             }
         } else {
             String::new()
@@ -674,7 +677,7 @@ mod tests {
 
         assert_eq!(
             format!("{}", task.fmt(&config, FormatType::Single, true)),
-            "Get gifts for the twins\n! Today @ computer\n# Project not in config\n"
+            "Get gifts for the twins\n! Today @ computer\n# Project not in config\nUse tod project import --auto to import missing projects\n"
         );
     }
 

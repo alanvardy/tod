@@ -5,6 +5,7 @@
 - Changed file system calls to asynchronous `tokio` calls
 - Asynchronous errors are now sent to a channel, so they can be printed at the end rather than when the error occurs (which can disrupt the formatting of any menu that the user is currently in)
 - Add `auto` to `project import`, which imports any projects not in config
+- Add additional instructions to project missing error
 
 ## 2024-05-18 v0.6.5
 

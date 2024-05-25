@@ -5,6 +5,7 @@ use futures::future;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::fmt::Display;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
 pub mod priority;
@@ -372,6 +373,7 @@ pub async fn process_task(
     task: Task,
     task_count: &mut i32,
     with_project: bool,
+    tx: UnboundedSender<Error>,
 ) -> Option<JoinHandle<()>> {
     let options = ["Complete", "Skip", "Delete", "Quit"]
         .iter()
@@ -383,9 +385,9 @@ pub async fn process_task(
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "Complete" {
-                Some(spawn_complete_task(config.clone(), task))
+                Some(spawn_complete_task(config.clone(), task, tx))
             } else if string == "Delete" {
-                Some(spawn_delete_task(config.clone(), task))
+                Some(spawn_delete_task(config.clone(), task, tx))
             } else if string == "Skip" {
                 // Do nothing
                 Some(tokio::spawn(async move {}))
@@ -395,35 +397,46 @@ pub async fn process_task(
             }
         }
         Err(e) => {
-            let handle = tokio::spawn(async move { println!("{e}") });
+            let handle = tokio::spawn(async move {
+                tx.send(e).unwrap();
+            });
             Some(handle)
         }
     }
 }
 
 // Completes task inside another thread
-pub fn spawn_complete_task(config: Config, task: Task) -> JoinHandle<()> {
+pub fn spawn_complete_task(
+    config: Config,
+    task: Task,
+    tx: UnboundedSender<Error>,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
         if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
-            println!("{e}");
+            tx.send(e).unwrap();
         }
     })
 }
 
 // Deletes task inside another thread
-pub fn spawn_delete_task(config: Config, task: Task) -> JoinHandle<()> {
+pub fn spawn_delete_task(config: Config, task: Task, tx: UnboundedSender<Error>) -> JoinHandle<()> {
     tokio::spawn(async move {
         if let Err(e) = todoist::delete_task(&config, &task, false).await {
-            println!("{e}");
+            tx.send(e).unwrap();
         }
     })
 }
 
 // Deletes task inside another thread
-pub fn spawn_update_task_due(config: Config, task: Task, due_string: String) -> JoinHandle<()> {
+pub fn spawn_update_task_due(
+    config: Config,
+    task: Task,
+    due_string: String,
+    tx: UnboundedSender<Error>,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
         if let Err(e) = todoist::update_task_due(&config, task, due_string, false).await {
-            println!("{e}");
+            tx.send(e).unwrap();
         }
     })
 }
@@ -469,7 +482,11 @@ pub fn filter_not_in_future(tasks: Vec<Task>, config: &Config) -> Result<Vec<Tas
 // We don't want to process parent tasks when child tasks are unchecked, or child tasks when they are checked
 // We additionally need to make sure that parent tasks are not in the future
 
-pub async fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task> {
+pub async fn reject_parent_tasks(
+    tasks: Vec<Task>,
+    config: &Config,
+    tx: UnboundedSender<Error>,
+) -> Vec<Task> {
     let parent_ids: Vec<String> = tasks
         .clone()
         .into_iter()
@@ -484,10 +501,11 @@ pub async fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task>
         let parent_ids = parent_ids.clone();
         let tasks = tasks.clone();
 
+        let tx = tx.clone();
         let handle = tokio::spawn(async move {
             if !parent_ids.contains(&task.id)
                 && !task.checked.unwrap_or_default()
-                && !parent_in_future(task.clone(), tasks, &config).await
+                && !parent_in_future(task.clone(), tasks, &config, tx).await
             {
                 Some(task)
             } else {
@@ -507,7 +525,12 @@ pub async fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task>
 }
 
 // Need to make sure that we are not completing a subtask for a parent task that is in the future
-async fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool {
+async fn parent_in_future(
+    task: Task,
+    tasks: Vec<Task>,
+    config: &Config,
+    tx: UnboundedSender<Error>,
+) -> bool {
     let task_ids: Vec<String> = tasks.clone().into_iter().map(|task| task.id).collect();
 
     match task {
@@ -523,8 +546,8 @@ async fn parent_in_future(task: Task, tasks: Vec<Task>, config: &Config) -> bool
             } else {
                 // look up id and see if it is in the future
                 match todoist::get_task(config, &parent_id).await {
-                    Err(_) => {
-                        println!("Could not fetch task for id: {parent_id}");
+                    Err(e) => {
+                        tx.send(e).unwrap();
                         false
                     }
                     Ok(task) => {
@@ -542,6 +565,7 @@ pub async fn set_priority(
     config: &Config,
     task: Task,
     with_project: bool,
+    tx: UnboundedSender<Error>,
 ) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, with_project));
 
@@ -560,7 +584,7 @@ pub async fn set_priority(
     let config = config.clone();
     Ok(tokio::spawn(async move {
         if let Err(e) = todoist::update_task_priority(&config, task, priority).await {
-            println!("{e}");
+            tx.send(e).unwrap();
         }
     }))
 }
@@ -925,7 +949,8 @@ mod tests {
             .mock_select(1)
             .mock_url(server.url());
 
-        let future = set_priority(&config, task, false).await.unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        let future = set_priority(&config, task, false, tx).await.unwrap();
 
         tokio::join!(future).0.unwrap();
         mock.assert();
@@ -948,7 +973,8 @@ mod tests {
             .mock_url(server.url())
             .mock_select(0);
         let mut task_count = 3;
-        process_task(&config, task, &mut task_count, true)
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        process_task(&config, task, &mut task_count, true, tx)
             .await
             .unwrap()
             .await

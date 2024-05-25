@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Changed file system calls to asynchronous `tokio` calls
+- Asynchronous errors are now sent to a channel so they can be printed at the end rather than when the error occurs (which can disrupt the formatting of any menu that the user is currently in)
 
 ## 2024-05-18 v0.6.5
 

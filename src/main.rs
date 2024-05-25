@@ -113,7 +113,11 @@ enum ProjectCommands {
 struct ProjectList {}
 
 #[derive(Parser, Debug, Clone)]
-struct ProjectImport {}
+struct ProjectImport {
+    #[arg(short = 'a', long, default_value_t = false)]
+    /// Add all projects to config that are not there aleady
+    auto: bool,
+}
 
 #[derive(Parser, Debug, Clone)]
 struct ProjectRemove {
@@ -604,12 +608,13 @@ async fn project_rename(
 #[cfg(not(tarpaulin_include))]
 async fn project_import(
     cli: Cli,
-    _args: &ProjectImport,
+    args: &ProjectImport,
     tx: UnboundedSender<Error>,
 ) -> Result<String, Error> {
     let mut config = fetch_config(cli, tx).await?;
+    let ProjectImport { auto } = args;
 
-    projects::import(&mut config).await
+    projects::import(&mut config, auto).await
 }
 
 #[cfg(not(tarpaulin_include))]

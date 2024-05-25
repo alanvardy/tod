@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::mpsc::UnboundedSender;
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -97,7 +98,10 @@ impl Config {
         Ok(color::green_string("✓"))
     }
 
-    pub async fn check_for_latest_version(self: Config) -> Result<(), Error> {
+    pub async fn check_for_latest_version(
+        self: Config,
+        tx: UnboundedSender<Error>,
+    ) -> Result<(), Error> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
             last_version_check: Some(time::today_string(&self)?),
@@ -107,20 +111,20 @@ impl Config {
         if last_version != Some(time::today_string(&self)?) {
             match cargo::compare_versions(self).await {
                 Ok(Version::Dated(version)) => {
-                    println!(
+                    let message = format!(
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
                         version,
                         VERSION,
                         color::cyan_string("cargo install tod --force")
                     );
+                    tx.send(Error {
+                        message,
+                        source: String::from("Crates.io"),
+                    })?;
                     new_config.clone().save().await?;
                 }
                 Ok(Version::Latest) => (),
-                Err(err) => println!(
-                    "{}, {:?}",
-                    color::red_string("Could not fetch Tod version from Cargo.io"),
-                    err
-                ),
+                Err(err) => tx.send(err)?,
             };
         };
 

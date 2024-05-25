@@ -31,6 +31,15 @@ impl From<std::io::Error> for Error {
     }
 }
 
+impl From<tokio::sync::mpsc::error::SendError<Error>> for Error {
+    fn from(value: tokio::sync::mpsc::error::SendError<Error>) -> Self {
+        Self {
+            source: String::from("tokio mpsc"),
+            message: format!("{value}"),
+        }
+    }
+}
+
 impl From<chrono_tz::ParseError> for Error {
     fn from(value: chrono_tz::ParseError) -> Self {
         Self {

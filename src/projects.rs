@@ -216,11 +216,11 @@ fn filter_missing_projects(config: &Config, projects: Vec<Project>) -> Vec<Proje
 }
 
 /// Fetch projects and prompt to add them to config one by one
-pub async fn import(config: &mut Config) -> Result<String, Error> {
+pub async fn import(config: &mut Config, auto: &bool) -> Result<String, Error> {
     let projects = todoist::projects(config).await?;
     let new_projects = filter_new_projects(config, projects);
     for project in new_projects {
-        maybe_add_project(config, project).await?;
+        maybe_add_project(config, project, auto).await?;
     }
     Ok(color::green_string("No more projects"))
 }
@@ -243,7 +243,16 @@ fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> 
 }
 
 /// Prompt the user if they want to add project to config and maybe add
-async fn maybe_add_project(config: &mut Config, project: Project) -> Result<String, Error> {
+async fn maybe_add_project(
+    config: &mut Config,
+    project: Project,
+    auto: &bool,
+) -> Result<String, Error> {
+    if *auto {
+        println!("Adding {}", project);
+        return add(config, &project).await;
+    }
+
     let options = vec!["add", "skip"];
     println!("{}", project);
     match input::select("Select an option", options.clone(), config.mock_select) {
@@ -654,7 +663,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            import(&mut config).await,
+            import(&mut config, &false).await,
             Ok("No more projects".to_string())
         );
         mock.assert();

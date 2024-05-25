@@ -3,12 +3,13 @@
 ## Unreleased (on main branch only)
 
 - Changed file system calls to asynchronous `tokio` calls
-- Asynchronous errors are now sent to a channel so they can be printed at the end rather than when the error occurs (which can disrupt the formatting of any menu that the user is currently in)
+- Asynchronous errors are now sent to a channel, so they can be printed at the end rather than when the error occurs (which can disrupt the formatting of any menu that the user is currently in)
+- Add `auto` to `project import`, which imports any projects not in config
 
 ## 2024-05-18 v0.6.5
 
 - Internal refactoring to use an error struct and provide better errors
-- Ask for labels in `list label` when labels are not provided. Previously just showed an error.
+- Ask for labels in `list label` when labels are not provided. Previously just showed an error
 - Check Cargo version asynchronously
 - Make `list schedule` calls asynchronously
 - Make `list label` calls asynchronously
@@ -35,8 +36,8 @@
 
 ## 2024-05-04 v0.6.0
 
-- **BREAKING CHANGE** Rewrote the external API, both to make it more coherent for the end user and to make it easier to add to from a development perspective. No functionality lost. The main change is that instead of using the `project` or `filter` command for searching for lists of tasks, we now use the `list` command that can take either `--project` or `--filter` flags. This is a change needed to proceed with planned features.
-- Added short commands for all subcommands and flags
+- **BREAKING CHANGE** Rewrote the external API, both to make it more coherent for the end user and to make it easier to add to from a development perspective. No functionality lost. The main change is that instead of using the `project` or `filter` command for searching for lists of tasks, we now use the `list` command that can take either `--project` or `--filter` flags. This is a change needed to proceed with planned features
+- Added short commands for all sub commands and flags
 - Switch back to Sync API for completing tasks, because REST API doesn't handle subtasks correctly
 - Config path now supports expanding `~` into the home directory
 - Add `config reset` command that deletes config
@@ -55,7 +56,7 @@
 
 ## 2024-03-26 v0.5.11
 
-- Added more quickadd examples
+- Added more `quickadd` examples
 - Don't `empty` subtasks
 - Add delete option to `empty` and `process`
 - Stopped overwriting verbose in config when using `verbose` flag
@@ -68,7 +69,7 @@
 
 ## 2024-03-10 v0.5.9
 
-- Add tasks remaining counter to `process` subcommands
+- Add tasks remaining counter to `process` sub commands
 
 ## 2024-03-07 v0.5.8
 
@@ -93,7 +94,7 @@
 - Add labels to formatted tasks
 - Improve task formatting
 - Add `filter` flag to `task list`
-- Remove `scheduled` flag from `task list`, the `filter` flag covers this use case now. Use `today & !no time`.
+- Remove `scheduled` flag from `task list`, the `filter` flag covers this use case now. Use `today & !no time`
 - Add `filter` flag to `task edit` and `task next`
 - Add `filter label`
 - Add `filter schedule`
@@ -103,9 +104,9 @@
 
 - Add `verbose` flag
 - BREAKING CHANGE changed character flag for `overdue` from `v` to `u`
-- Put single quotes around project names when printing them in terminal.
-- Re-enable `project schedule` for recurring tasks.
-- Add `skip-recurring` flag to `project schedule`.
+- Put single quotes around project names when printing them in terminal
+- Re-enable `project schedule` for recurring tasks
+- Add `skip-recurring` flag to `project schedule`
 - Display due string when formatting task
 
 ## 2023-09-18 v0.5.2
@@ -118,13 +119,13 @@
 
 - Add details about configuration file
 - Fix `spinners` config check
-- Don't prompt for project when there is only one project in configuration file, just use it.
+- Don't prompt for project when there is only one project in configuration file, just use it
 - `task create` asks for section when project has sections
 - Add a `natural_language_only` option to config
 
 ## 2023-07-30 v0.5.0
 
-- Use structs for projects instead storing as a `HashMap` in config. This means that projects need to imported again with `project import`, sorry for the inconvenience. The tech debt around project handling was slowing down development.
+- Use structs for projects instead storing as a `HashMap` in config. This means that projects need to imported again with `project import`, sorry for the inconvenience. The tech debt around project handling was slowing down development
 - Put date picker option first when scheduling
 - Remove `project add` as only `project import` can be used now
 - Rename Items to Tasks internally
@@ -182,7 +183,7 @@
 
 ## 2023-05-06 v0.4.0
 
-- Break the whole API and move over to GitHub CLI inspired commands i.e. `task create` instead of `-tp`. This opens the path to adding many new features and eases the maintenance burden.
+- Break the whole API and move over to GitHub CLI inspired commands i.e. `task create` instead of `-tp`. This opens the path to adding many new features and eases the maintenance burden
 
 ## 2023-04-15 v0.3.11
 
@@ -208,7 +209,7 @@
 
 ## 2023-04-03 v0.3.6
 
-- Re-releasing due to an HTTP error on publish that could not be redone with the same version number.
+- Re-releasing due to an HTTP error on publish that could not be redone with the same version number
 
 ## 2023-04-03 v0.3.5
 
@@ -232,7 +233,7 @@
 
 ## 2022-10-18 v0.3.1
 
-- Fix for deprecation of token passed in the request body (using Bearer Token header now), previous versions of Tod do not work anymore.
+- Fix for deprecation of token passed in the request body (using Bearer Token header now), previous versions of Tod do not work now
 - Add a message when the config file is created
 - Differentiate between no flags and wrong flags when unrecognized input
 
@@ -333,10 +334,10 @@
 
 ## 2021-09-14 v0.2.0
 
-- Breaking changes to command line arguments. Switched over to Clap crate for parsing arguments which will help handle additional features.
+- Breaking changes to command line arguments. Switched over to Clap crate for parsing arguments which will help handle additional features
 - Add `--complete` feature
 - Set priority of no date to 80
-- Set the date as Today when it is... today.
+- Set the date as Today when it is... today
 - Add `--sort` feature
 - Add `--prioritize` feature
 - Don't show items that are not today in the `--next` command

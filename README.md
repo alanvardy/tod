@@ -10,8 +10,6 @@ Get started with
 cargo install tod
 ```
 
-![Tod](tod.gif)
-
 - [Installation](/docs/installation.md)
 - [Usage](/docs/usage.md)
 - [Configuration](/docs/configuration.md)

@@ -1,7 +1,6 @@
 use futures::future;
 use pad::PadStr;
 use std::fmt::Display;
-use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
 use crate::config::Config;
@@ -270,27 +269,15 @@ async fn maybe_add_project(
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub async fn process_tasks(
-    config: &Config,
-    project: &Project,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+pub async fn process_tasks(config: &Config, project: &Project) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
     let tasks = tasks::filter_not_in_future(tasks, config)?;
     let tasks = tasks::sort_by_value(tasks, config);
-    let tasks = tasks::reject_parent_tasks(tasks, config, tx.clone()).await;
+    let tasks = tasks::reject_parent_tasks(tasks, config).await;
     let mut task_count = tasks.len() as i32;
     let mut handles = Vec::new();
     for task in tasks {
-        match tasks::process_task(
-            &config.reload().await?,
-            task,
-            &mut task_count,
-            false,
-            tx.clone(),
-        )
-        .await
-        {
+        match tasks::process_task(&config.reload().await?, task, &mut task_count, false).await {
             Some(handle) => handles.push(handle),
             None => return Ok(color::green_string("Exited")),
         }
@@ -341,11 +328,7 @@ pub async fn all_tasks(config: &Config, project: &Project) -> Result<String, Err
 }
 
 /// Empty a project by sending tasks to other projects one at a time
-pub async fn empty(
-    config: &mut Config,
-    project: &Project,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     if tasks.is_empty() {
@@ -361,7 +344,7 @@ pub async fn empty(
 
         let mut handles = Vec::new();
         for task in tasks.iter() {
-            match move_task_to_project(config, task.to_owned(), tx.clone()).await {
+            match move_task_to_project(config, task.to_owned()).await {
                 Ok(handle) => handles.push(handle),
                 Err(e) => return Err(e),
             };
@@ -375,11 +358,7 @@ pub async fn empty(
 }
 
 /// Prioritize all unprioritized tasks in a project
-pub async fn prioritize_tasks(
-    config: &Config,
-    project: &Project,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+pub async fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     let unprioritized_tasks: Vec<Task> = tasks
@@ -395,7 +374,7 @@ pub async fn prioritize_tasks(
     } else {
         let mut handles = Vec::new();
         for task in unprioritized_tasks.iter() {
-            let handle = tasks::set_priority(config, task.to_owned(), false, tx.clone()).await?;
+            let handle = tasks::set_priority(config, task.to_owned(), false).await?;
             handles.push(handle);
         }
 
@@ -413,7 +392,6 @@ pub async fn schedule(
     project: &Project,
     filter: TaskFilter,
     skip_recurring: bool,
-    tx: UnboundedSender<Error>,
 ) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
@@ -447,20 +425,15 @@ pub async fn schedule(
             )?;
             match datetime_input {
                 input::DateTimeInput::Complete => {
-                    let handle =
-                        tasks::spawn_complete_task(config.clone(), task.clone(), tx.clone());
+                    let handle = tasks::spawn_complete_task(config.clone(), task.clone());
                     handles.push(handle);
                 }
 
                 DateTimeInput::Skip => (),
 
                 input::DateTimeInput::Text(due_string) => {
-                    let handle = tasks::spawn_update_task_due(
-                        config.clone(),
-                        task.clone(),
-                        due_string,
-                        tx.clone(),
-                    );
+                    let handle =
+                        tasks::spawn_update_task_due(config.clone(), task.clone(), due_string);
                     handles.push(handle);
                 }
                 input::DateTimeInput::None => {
@@ -468,7 +441,6 @@ pub async fn schedule(
                         config.clone(),
                         task.clone(),
                         "No date".to_string(),
-                        tx.clone(),
                     );
                     handles.push(handle);
                 }
@@ -483,11 +455,7 @@ pub async fn schedule(
     }
 }
 
-pub async fn move_task_to_project(
-    config: &Config,
-    task: Task,
-    tx: UnboundedSender<Error>,
-) -> Result<JoinHandle<()>, Error> {
+pub async fn move_task_to_project(config: &Config, task: Task) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, false));
 
     let options = ["Pick project", "Complete", "Skip", "Delete"]
@@ -497,9 +465,9 @@ pub async fn move_task_to_project(
     let selection = input::select("Choose", options, config.mock_select)?;
 
     match selection.as_str() {
-        "Complete" => Ok(tasks::spawn_complete_task(config.clone(), task, tx)),
+        "Complete" => Ok(tasks::spawn_complete_task(config.clone(), task)),
 
-        "Delete" => Ok(tasks::spawn_delete_task(config.clone(), task, tx)),
+        "Delete" => Ok(tasks::spawn_delete_task(config.clone(), task)),
         "Skip" => Ok(tokio::spawn(async move {})),
         _ => {
             let projects = config.projects.clone().unwrap_or_default();
@@ -513,7 +481,7 @@ pub async fn move_task_to_project(
                     if let Err(e) =
                         todoist::move_task_to_project(&config, task, &project, false).await
                     {
-                        tx.send(e).unwrap();
+                        config.tx().send(e).unwrap();
                     }
                 }))
             } else {
@@ -529,7 +497,7 @@ pub async fn move_task_to_project(
                     if let Err(e) =
                         todoist::move_task_to_section(&config, task, &section, false).await
                     {
-                        tx.send(e).unwrap();
+                        config.tx().send(e).unwrap();
                     }
                 }))
             }
@@ -708,8 +676,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = process_tasks(&config, project, tx).await;
+        let result = process_tasks(&config, project).await;
         assert_eq!(
             result,
             Ok("There are no more tasks in 'myproject'".to_string())
@@ -796,8 +763,7 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = empty(&mut config, project, tx);
+        let result = empty(&mut config, project);
         assert_eq!(
             result.await,
             Ok(String::from("Successfully emptied 'myproject'"))
@@ -822,9 +788,8 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
 
-        let result = prioritize_tasks(&config, project, tx);
+        let result = prioritize_tasks(&config, project);
         assert_eq!(
             result.await,
             Ok(String::from("No tasks to prioritize in 'myproject'"))
@@ -837,8 +802,7 @@ mod tests {
         let config = test::fixtures::config().await.mock_select(2);
         let task = test::fixtures::task();
 
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        move_task_to_project(&config, task, tx)
+        move_task_to_project(&config, task)
             .await
             .unwrap()
             .await
@@ -897,8 +861,7 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = schedule(&config, project, TaskFilter::Unscheduled, false, tx);
+        let result = schedule(&config, project, TaskFilter::Unscheduled, false);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
@@ -908,8 +871,7 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = schedule(&config, project, TaskFilter::Overdue, false, tx);
+        let result = schedule(&config, project, TaskFilter::Overdue, false);
         assert_eq!(
             result.await,
             Ok("No tasks to schedule in 'myproject'".to_string())
@@ -919,15 +881,13 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = schedule(&config, project, TaskFilter::Unscheduled, false, tx);
+        let result = schedule(&config, project, TaskFilter::Unscheduled, false);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
         );
 
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = schedule(&config, project, TaskFilter::Unscheduled, true, tx);
+        let result = schedule(&config, project, TaskFilter::Unscheduled, true);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())

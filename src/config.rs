@@ -11,7 +11,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
-#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
     /// The Todoist Api token
     pub token: String,
@@ -41,12 +41,21 @@ pub struct Config {
     /// For storing arguments from the commandline
     #[serde(skip)]
     pub args: Args,
+
+    /// For storing arguments from the commandline
+    #[serde(skip)]
+    pub internal: Internal,
 }
 
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub struct Args {
     pub verbose: bool,
     pub timeout: Option<u64>,
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct Internal {
+    pub tx: Option<UnboundedSender<Error>>,
 }
 
 // Determining how
@@ -98,10 +107,13 @@ impl Config {
         Ok(color::green_string("✓"))
     }
 
-    pub async fn check_for_latest_version(
-        self: Config,
-        tx: UnboundedSender<Error>,
-    ) -> Result<(), Error> {
+    /// Fetches a sender for the error channel
+    /// Use this to end errors from an async process
+    pub fn tx(self) -> UnboundedSender<Error> {
+        self.internal.tx.expect("No tx in Config")
+    }
+
+    pub async fn check_for_latest_version(self: Config) -> Result<(), Error> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
             last_version_check: Some(time::today_string(&self)?),
@@ -109,7 +121,7 @@ impl Config {
         };
 
         if last_version != Some(time::today_string(&self)?) {
-            match cargo::compare_versions(self).await {
+            match cargo::compare_versions(self.clone()).await {
                 Ok(Version::Dated(version)) => {
                     let message = format!(
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
@@ -117,14 +129,14 @@ impl Config {
                         VERSION,
                         color::cyan_string("cargo install tod --force")
                     );
-                    tx.send(Error {
+                    self.tx().send(Error {
                         message,
                         source: String::from("Crates.io"),
                     })?;
                     new_config.clone().save().await?;
                 }
                 Ok(Version::Latest) => (),
-                Err(err) => tx.send(err)?,
+                Err(err) => self.tx().send(err)?,
             };
         };
 
@@ -187,7 +199,7 @@ impl Config {
         }
     }
 
-    pub async fn new(token: &str) -> Result<Config, Error> {
+    pub async fn new(token: &str, tx: UnboundedSender<Error>) -> Result<Config, Error> {
         Ok(Config {
             path: generate_path().await?,
             token: String::from(token),
@@ -203,6 +215,7 @@ impl Config {
             mock_string: None,
             mock_select: None,
             verbose: None,
+            internal: Internal { tx: Some(tx) },
             args: Args {
                 verbose: false,
                 timeout: None,
@@ -212,7 +225,10 @@ impl Config {
     }
 
     pub async fn reload(&self) -> Result<Self, Error> {
-        Config::load(&self.path).await
+        Config::load(&self.path).await.map(|config| Config {
+            internal: self.internal.clone(),
+            ..config
+        })
     }
 
     pub fn add_project(&mut self, project: Project) {
@@ -276,6 +292,7 @@ pub async fn get_or_create(
     config_path: Option<String>,
     verbose: bool,
     timeout: Option<u64>,
+    tx: UnboundedSender<Error>,
 ) -> Result<Config, Error> {
     let path: String = match config_path {
         None => generate_path().await?,
@@ -289,11 +306,12 @@ pub async fn get_or_create(
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
             let token = input::string(desc, Some(String::new()))?;
-            Config::new(&token).await?.create().await
+            Config::new(&token, tx.clone()).await?.create().await
         }
     }
     .map(|config| Config {
         args: Args { timeout, verbose },
+        internal: Internal { tx: Some(tx) },
         ..config
     })
 }
@@ -364,9 +382,14 @@ mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
+    fn tx() -> UnboundedSender<Error> {
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        tx
+    }
+
     #[tokio::test]
     async fn new_should_generate_config() {
-        let config = Config::new("something").await.unwrap();
+        let config = Config::new("something", tx()).await.unwrap();
         assert_eq!(config.token, String::from("something"));
     }
 
@@ -438,40 +461,27 @@ mod tests {
 
         let server = mockito::Server::new_async().await;
 
-        // create and load
+        // create
+
         let new_config = test::fixtures::config().await;
-        let created_config = new_config.clone().create().await.unwrap();
-        assert_eq!(new_config, created_config);
+        Config {
+            token: String::from("created"),
+            ..new_config.clone()
+        }
+        .create()
+        .await
+        .unwrap();
+
+        // load
+
         let loaded_config = Config::load(&new_config.path).await.unwrap();
-        assert_eq!(created_config, loaded_config);
+        assert_matches!(loaded_config.token.as_str(), "created");
 
         // get_or_create (create)
-        let config = get_or_create(None, false, None).await;
-        assert_eq!(
-            config,
-            Ok(Config {
-                token: String::new(),
-                projects: Some(Vec::new()),
-                path: config.clone().unwrap().path,
-                timeout: None,
-                no_sections: None,
-                next_id: None,
-                args: Args {
-                    verbose: false,
-                    timeout: None,
-                },
-                spinners: Some(true),
-                sort_value: Some(SortValue::default()),
-                last_version_check: None,
-                timezone: None,
-                natural_language_only: None,
-                mock_url: None,
-                verbose: None,
-                mock_string: None,
-                mock_select: None,
-            })
-        );
-        delete_config(&config.unwrap().path).await;
+        let config = get_or_create(None, false, None, tx())
+            .await
+            .expect("Could not get or create");
+        delete_config(&config.path).await;
 
         // get_or_create (load)
         test::fixtures::config()
@@ -481,30 +491,13 @@ mod tests {
             .await
             .unwrap();
 
-        let config = get_or_create(None, false, None).await;
+        let config = get_or_create(None, false, None, tx()).await;
 
-        assert_eq!(
+        assert_matches!(
             config,
             Ok(Config {
-                token: String::new(),
-                projects: Some(Vec::new()),
-                path: config.clone().unwrap().path,
-                sort_value: Some(SortValue::default()),
-                next_id: None,
-                timeout: None,
-                args: Args {
-                    verbose: false,
-                    timeout: None,
-                },
-                no_sections: None,
-                spinners: Some(true),
-                last_version_check: None,
-                timezone: None,
-                natural_language_only: None,
-                verbose: None,
-                mock_url: None,
-                mock_string: None,
-                mock_select: None,
+                internal: Internal { tx: Some(_) },
+                ..
             })
         );
 

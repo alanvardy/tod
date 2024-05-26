@@ -1,5 +1,5 @@
 use futures::future;
-use tokio::{sync::mpsc::UnboundedSender, task::JoinHandle};
+use tokio::task::JoinHandle;
 
 use crate::{
     color,
@@ -51,16 +51,11 @@ pub async fn rename_task(config: &Config, filter: String) -> Result<String, Erro
     todoist::update_task_name(config, selected_task, new_task_content).await
 }
 
-pub async fn label(
-    config: &Config,
-    filter: &str,
-    labels: &Vec<String>,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
     let mut handles = Vec::new();
     for task in tasks {
-        let future = label_task(config, task, labels, tx.clone()).await?;
+        let future = label_task(config, task, labels).await?;
         handles.push(future);
     }
 
@@ -74,7 +69,6 @@ async fn label_task(
     config: &Config,
     task: Task,
     labels: &Vec<String>,
-    tx: UnboundedSender<Error>,
 ) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, true));
     let label = input::select("Select label", labels.to_owned(), config.mock_select)?;
@@ -82,7 +76,7 @@ async fn label_task(
     let config = config.clone();
     Ok(tokio::spawn(async move {
         if let Err(e) = todoist::add_task_label(&config, task, label).await {
-            tx.send(e).unwrap();
+            config.tx().send(e).unwrap();
         }
     }))
 }
@@ -108,19 +102,15 @@ async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, 
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub async fn process_tasks(
-    config: &Config,
-    filter: &String,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
     let tasks = tasks::sort_by_value(tasks, config);
-    let tasks = tasks::reject_parent_tasks(tasks, config, tx.clone()).await;
+    let tasks = tasks::reject_parent_tasks(tasks, config).await;
     let mut task_count = tasks.len() as i32;
     let mut handles = Vec::new();
     for task in tasks {
         println!(" ");
-        match tasks::process_task(config, task, &mut task_count, true, tx.clone()).await {
+        match tasks::process_task(config, task, &mut task_count, true).await {
             Some(handle) => handles.push(handle),
             None => return Ok(color::green_string("Exited")),
         }
@@ -132,11 +122,7 @@ pub async fn process_tasks(
 }
 
 /// Prioritize all unprioritized tasks in a project
-pub async fn prioritize_tasks(
-    config: &Config,
-    filter: &String,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
@@ -146,7 +132,7 @@ pub async fn prioritize_tasks(
     } else {
         let mut handles = Vec::new();
         for task in tasks.iter() {
-            let handle = tasks::set_priority(config, task.to_owned(), true, tx.clone()).await?;
+            let handle = tasks::set_priority(config, task.to_owned(), true).await?;
             handles.push(handle);
         }
         future::join_all(handles).await;
@@ -157,11 +143,7 @@ pub async fn prioritize_tasks(
 }
 
 /// Put dates on all tasks without dates
-pub async fn schedule(
-    config: &Config,
-    filter: &String,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
@@ -179,19 +161,14 @@ pub async fn schedule(
             )?;
             match datetime_input {
                 input::DateTimeInput::Complete => {
-                    let handle =
-                        tasks::spawn_complete_task(config.clone(), task.clone(), tx.clone());
+                    let handle = tasks::spawn_complete_task(config.clone(), task.clone());
                     handles.push(handle);
                 }
                 DateTimeInput::Skip => (),
 
                 input::DateTimeInput::Text(due_string) => {
-                    let handle = tasks::spawn_update_task_due(
-                        config.clone(),
-                        task.clone(),
-                        due_string,
-                        tx.clone(),
-                    );
+                    let handle =
+                        tasks::spawn_update_task_due(config.clone(), task.clone(), due_string);
                     handles.push(handle);
                 }
                 input::DateTimeInput::None => {
@@ -199,7 +176,6 @@ pub async fn schedule(
                         config.clone(),
                         task.clone(),
                         "No date".to_string(),
-                        tx.clone(),
                     );
                     handles.push(handle);
                 }
@@ -343,9 +319,8 @@ mod tests {
         let filter = String::from("today");
         let labels = vec![String::from("thing")];
 
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
         assert_eq!(
-            label(&config_with_timezone, &filter, &labels, tx).await,
+            label(&config_with_timezone, &filter, &labels).await,
             Ok(String::from("There are no more tasks for filter: 'today'"))
         );
         mock.assert();
@@ -379,9 +354,8 @@ mod tests {
             .await
             .unwrap();
         let filter = String::from("today");
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
 
-        let result = process_tasks(&config, &filter, tx);
+        let result = process_tasks(&config, &filter);
         assert_eq!(
             result.await,
             Ok("There are no more tasks for filter: 'today'".to_string())
@@ -416,8 +390,7 @@ mod tests {
             .mock_string("tod");
 
         let filter = String::from("today");
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = schedule(&config, &filter, tx);
+        let result = schedule(&config, &filter);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'today'".to_string())
@@ -426,8 +399,7 @@ mod tests {
         let config = config.mock_select(2);
 
         let filter = String::from("today");
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = schedule(&config, &filter, tx);
+        let result = schedule(&config, &filter);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'today'".to_string())
@@ -460,8 +432,7 @@ mod tests {
             .mock_select(1);
 
         let filter = String::from("today");
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        let result = prioritize_tasks(&config, &filter, tx);
+        let result = prioritize_tasks(&config, &filter);
         assert_eq!(
             result.await,
             Ok(String::from("Successfully prioritized 'today'"))

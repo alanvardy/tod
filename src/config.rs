@@ -145,8 +145,7 @@ impl Config {
 
     pub async fn check_for_timezone(self) -> Result<Config, Error> {
         if self.timezone.is_none() {
-            let config = self.set_timezone().await?;
-            Ok(config)
+            self.set_timezone().await
         } else {
             Ok(self)
         }

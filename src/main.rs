@@ -351,7 +351,12 @@ struct ConfigCheckVersion {}
 struct ConfigReset {}
 
 #[derive(Parser, Debug, Clone)]
-struct ConfigSetTimezone {}
+struct ConfigSetTimezone {
+    #[arg(short, long)]
+    /// TimeZone to add, i.e. "Canada/Pacific"
+    timezone: Option<String>,
+
+}
 
 enum Flag {
     Project(Project),

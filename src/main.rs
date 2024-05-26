@@ -764,7 +764,7 @@ async fn tz_reset(cli: Cli, _args: &ConfigSetTimezone, tx: UnboundedSender<Error
     let config = fetch_config(cli, tx).await?;
 
     match config.set_timezone().await {
-        Ok(_) => Ok(format!("Timezone set successfully")),
+        Ok(_) => Ok("Timezone set successfully.".to_string()),
         Err(e) => Err(error::new(
             "tz_reset",
             &format!("Could not reset timezone in config. {e}"),

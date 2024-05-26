@@ -338,6 +338,10 @@ enum ConfigCommands {
     #[clap(alias = "r")]
     /// (r) Delete the configuration file
     Reset(ConfigReset),
+
+    #[clap(alias = "tz")]
+    /// (tz) Change the timezone in the configuration file
+    SetTimezone(ConfigSetTimezone),
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -345,6 +349,9 @@ struct ConfigCheckVersion {}
 
 #[derive(Parser, Debug, Clone)]
 struct ConfigReset {}
+
+#[derive(Parser, Debug, Clone)]
+struct ConfigSetTimezone {}
 
 enum Flag {
     Project(Project),
@@ -406,6 +413,7 @@ async fn main() {
             config_check_version(cli.clone(), args, tx).await
         }
         Commands::Config(ConfigCommands::Reset(args)) => config_reset(cli.clone(), args, tx).await,
+        Commands::Config(ConfigCommands::SetTimezone(args)) => tz_reset(cli.clone(), args, tx).await,
     };
 
     while let Some(e) = rx.recv().await {
@@ -747,6 +755,19 @@ async fn config_reset(
         Err(e) => Err(error::new(
             "config_reset",
             &format!("Could not delete config at path: {path}, {e}"),
+        )),
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+async fn tz_reset(cli: Cli, _args: &ConfigSetTimezone, tx: UnboundedSender<Error>) -> Result<String, Error> {
+    let config = fetch_config(cli, tx).await?;
+
+    match config.set_timezone().await {
+        Ok(_) => Ok(format!("Timezone set successfully")),
+        Err(e) => Err(error::new(
+            "tz_reset",
+            &format!("Could not reset timezone in config. {e}"),
         )),
     }
 }

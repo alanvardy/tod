@@ -140,7 +140,7 @@ impl Config {
         }
     }
 
-    async fn set_timezone(self) -> Result<Config, Error> {
+    pub async fn set_timezone(self) -> Result<Config, Error> {
         let desc = "Please select your timezone. This should match your Timezone setting within Todoist.";
         let mut options = TZ_VARIANTS
             .to_vec()

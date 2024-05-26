@@ -1,10 +1,18 @@
 #[cfg(test)]
 pub mod fixtures {
 
-    use crate::config::{self, Args, Config, SortValue};
+    use tokio::sync::mpsc::UnboundedSender;
+
+    use crate::config::{self, Args, Config, Internal, SortValue};
+    use crate::error::Error;
     use crate::projects::Project;
     use crate::sections::Section;
     use crate::tasks::{DateInfo, Task};
+
+    fn tx() -> Option<UnboundedSender<Error>> {
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        Some(tx)
+    }
 
     pub fn task() -> Task {
         Task {
@@ -32,6 +40,7 @@ pub mod fixtures {
         Config {
             token: String::from("alreadycreated"),
             sort_value: Some(SortValue::default()),
+            internal: Internal { tx: tx() },
             projects: Some(vec![Project {
                 id: "123".to_string(),
                 name: "myproject".to_string(),

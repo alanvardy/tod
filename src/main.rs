@@ -638,7 +638,7 @@ async fn project_empty(
         _ => unreachable!(),
     };
 
-    projects::empty(&mut config, &project, tx).await
+    projects::empty(&mut config, &project).await
 }
 
 // --- LIST ---
@@ -656,7 +656,7 @@ async fn list_label(
     let config = fetch_config(cli, tx.clone()).await?;
     let labels = maybe_fetch_labels(&config, labels)?;
     match fetch_filter(filter, &config)? {
-        Flag::Filter(filter) => filters::label(&config, &filter, &labels, tx).await,
+        Flag::Filter(filter) => filters::label(&config, &filter, &labels).await,
         _ => unreachable!(),
     }
 }
@@ -668,10 +668,10 @@ async fn list_process(
     tx: UnboundedSender<Error>,
 ) -> Result<String, Error> {
     let ListProcess { project, filter } = args;
-    let config = fetch_config(cli, tx.clone()).await?;
+    let config = fetch_config(cli, tx).await?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::process_tasks(&config, &filter, tx).await,
-        Flag::Project(project) => projects::process_tasks(&config, &project, tx).await,
+        Flag::Filter(filter) => filters::process_tasks(&config, &filter).await,
+        Flag::Project(project) => projects::process_tasks(&config, &project).await,
     }
 }
 
@@ -684,8 +684,8 @@ async fn list_prioritize(
     let ListPrioritize { project, filter } = args;
     let config = fetch_config(cli, tx.clone()).await?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter, tx).await,
-        Flag::Project(project) => projects::prioritize_tasks(&config, &project, tx).await,
+        Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter).await,
+        Flag::Project(project) => projects::prioritize_tasks(&config, &project).await,
     }
 }
 
@@ -703,7 +703,7 @@ async fn list_schedule(
     } = args;
     let config = fetch_config(cli, tx.clone()).await?;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::schedule(&config, &filter, tx).await,
+        Flag::Filter(filter) => filters::schedule(&config, &filter).await,
         Flag::Project(project) => {
             let task_filter = if *overdue {
                 projects::TaskFilter::Overdue
@@ -711,7 +711,7 @@ async fn list_schedule(
                 projects::TaskFilter::Unscheduled
             };
 
-            projects::schedule(&config, &project, task_filter, *skip_recurring, tx).await
+            projects::schedule(&config, &project, task_filter, *skip_recurring).await
         }
     }
 }
@@ -783,11 +783,11 @@ async fn fetch_config(cli: Cli, tx: UnboundedSender<Error>) -> Result<Config, Er
         command: _,
     } = cli;
 
-    let config = config::get_or_create(config_path, verbose, timeout).await?;
+    let config = config::get_or_create(config_path, verbose, timeout, tx).await?;
 
     let async_config = config.clone();
 
-    tokio::spawn(async move { async_config.check_for_latest_version(tx).await });
+    tokio::spawn(async move { async_config.check_for_latest_version().await });
 
     config.check_for_timezone().await
 }

@@ -2,6 +2,10 @@
 
 ## Unreleased (on main branch only)
 
+- Put the error channel transmitter in `Config`, removing the need to pass around the additional argument in many places
+
+## 2024-05-26 v0.6.6
+
 - Changed file system calls to asynchronous `tokio` calls
 - Asynchronous errors are now sent to a channel, so they can be printed at the end rather than when the error occurs (which can disrupt the formatting of any menu that the user is currently in)
 - Add `auto` to `project import`, which imports any projects not in config

@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Put the error channel transmitter in `Config`, removing the need to pass around the additional argument in many places
+- Add `config set-timezone`
 
 ## 2024-05-26 v0.6.6
 

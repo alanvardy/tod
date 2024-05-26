@@ -355,7 +355,6 @@ struct ConfigSetTimezone {
     #[arg(short, long)]
     /// TimeZone to add, i.e. "Canada/Pacific"
     timezone: Option<String>,
-
 }
 
 enum Flag {
@@ -418,7 +417,9 @@ async fn main() {
             config_check_version(cli.clone(), args, tx).await
         }
         Commands::Config(ConfigCommands::Reset(args)) => config_reset(cli.clone(), args, tx).await,
-        Commands::Config(ConfigCommands::SetTimezone(args)) => tz_reset(cli.clone(), args, tx).await,
+        Commands::Config(ConfigCommands::SetTimezone(args)) => {
+            tz_reset(cli.clone(), args, tx).await
+        }
     };
 
     while let Some(e) = rx.recv().await {
@@ -765,7 +766,11 @@ async fn config_reset(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn tz_reset(cli: Cli, _args: &ConfigSetTimezone, tx: UnboundedSender<Error>) -> Result<String, Error> {
+async fn tz_reset(
+    cli: Cli,
+    _args: &ConfigSetTimezone,
+    tx: UnboundedSender<Error>,
+) -> Result<String, Error> {
     let config = fetch_config(cli, tx).await?;
 
     match config.set_timezone().await {

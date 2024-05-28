@@ -4,6 +4,8 @@
 
 - Put the error channel transmitter in `Config`, removing the need to pass around the additional argument in many places
 - Add `config set-timezone`
+- Format markdown links as as OSC8 links in supported terminals. Falls back in unsupported terminal
+- Added `disable-links` configuration option
 
 ## 2024-05-26 v0.6.6
 

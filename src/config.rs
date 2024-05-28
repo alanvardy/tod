@@ -31,6 +31,8 @@ pub struct Config {
     pub mock_select: Option<usize>,
     /// Whether spinners are enabled
     pub spinners: Option<bool>,
+    #[serde(default = "default_disable_links")]
+    pub disable_links: bool,
     pub verbose: Option<bool>,
     /// Don't ask for sections
     pub no_sections: Option<bool>,
@@ -45,6 +47,10 @@ pub struct Config {
     /// For storing arguments from the commandline
     #[serde(skip)]
     pub internal: Internal,
+}
+
+fn default_disable_links() -> bool {
+    false
 }
 
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
@@ -213,6 +219,7 @@ impl Config {
             timeout: None,
             sort_value: Some(SortValue::default()),
             timezone: None,
+            disable_links: false,
             spinners: Some(true),
             mock_url: None,
             no_sections: None,

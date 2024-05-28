@@ -4,10 +4,8 @@
 - [Configuration](#configuration)
   - [Location](#location)
   - [Values](#values)
+    - [disable_links](#disablelinks)
     - [last_version_check](#lastversioncheck)
-    - [mock_select](#mockselect)
-    - [mock_string](#mockstring)
-    - [mock_url](#mockurl)
     - [next_id](#nextid)
     - [path](#path)
     - [natural_language_only](#naturallanguageonly)
@@ -31,6 +29,15 @@
 
 ## Values
 
+### disable_links
+
+```
+  type: boolean
+  default: false
+```
+
+If true, disables OSC8 linking and just displays plain text
+
 ### last_version_check
 
 ```
@@ -40,36 +47,6 @@
 ```
 
 Holds a string date, i.e. `"2023-08-30"` representing the last time crates.io was checked for the latest `tod` version. Tod will check crates.io a maximum of once per day.
-
-### mock_select
-
-```
-  type: nullable non-negative integer
-  default: null
-  possible values: any integer 0 or greater
-```
-
-Used in test only, instead of displaying a select picker in test instead the zero-based number will be used to choose the item.
-
-### mock_string
-
-```
-  type: nullable string
-  default: null
-  possible values: any string
-```
-
-Used in test only, instead of displaying a text in test instead the string will be returned.
-
-### mock_url
-
-```
-  type: nullable string
-  default: null
-  possible values: any URL
-```
-
-Used in test only, gives the location of the mock server so that external APIs are not used in test.
 
 ### next_id
 

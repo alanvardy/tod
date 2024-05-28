@@ -40,6 +40,7 @@ pub mod fixtures {
         Config {
             token: String::from("alreadycreated"),
             sort_value: Some(SortValue::default()),
+            disable_links: false,
             internal: Internal { tx: tx() },
             projects: Some(vec![Project {
                 id: "123".to_string(),

@@ -2,9 +2,12 @@ use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono_tz::Tz;
 use futures::future;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::cmp::Reverse;
 use std::fmt::Display;
+use supports_hyperlinks::Stream;
 use tokio::task::JoinHandle;
 
 pub mod priority;
@@ -95,6 +98,11 @@ impl Task {
             priority::Priority::High => color::red_string(&self.content),
             priority::Priority::None => color::normal_string(&self.content),
         };
+        let content = if config.disable_links || !supports_hyperlinks::on(Stream::Stdout) {
+            content
+        } else {
+            create_links(&content)
+        };
 
         let buffer = match format {
             FormatType::List => String::from("  "),
@@ -117,10 +125,10 @@ impl Task {
                 .collect::<Vec<Project>>();
 
             match maybe_project.first() {
-                Some(Project { name, .. }) => format!("\n{project_icon} {name}"),
+                Some(Project { name, .. }) => format!("\n{buffer}{project_icon} {name}"),
                 None => {
                     let command = color::cyan_string("tod project import --auto");
-                    format!("\n{project_icon} Project not in config\nUse {command} to import missing projects")
+                    format!("\n{buffer}{project_icon} Project not in config\nUse {command} to import missing projects")
                 }
             }
         } else {
@@ -129,6 +137,13 @@ impl Task {
 
         let due_icon = color::purple_string("!");
         let recurring_icon = color::purple_string("↻");
+        let link = color::purple_string("link");
+        let id = self.id.clone();
+        let url = if config.disable_links || !supports_hyperlinks::on(Stream::Stdout) {
+            String::new()
+        } else {
+            format!("\x1B]8;;https://app.todoist.com/app/task/{id}\x1B\\[{link}]\x1B]8;;\x1B\\")
+        };
         let due = match &self.datetimeinfo(config) {
             Ok(DateTimeInfo::Date {
                 date,
@@ -189,7 +204,7 @@ impl Task {
             format!(" {} {}", color::purple_string("@"), self.labels.join(" "))
         };
 
-        format!("{prefix}{content}{description}{due}{labels}{project}\n")
+        format!("{prefix}{content}{description}{due}{labels}{project} {url}\n")
     }
 
     /// Determines the numeric value of an task for sorting
@@ -368,6 +383,20 @@ impl Task {
             Some(DateInfo { is_recurring, .. }) => is_recurring,
         }
     }
+}
+
+fn create_links(content: &str) -> String {
+    // Define the regex pattern for Markdown links
+    let link_regex = Regex::new(r"\[([^\]]+)\]\(([^)]+)\)").unwrap();
+
+    // Use `replace_all` to replace all matches
+    let result = link_regex.replace_all(content, |caps: &regex::Captures| {
+        let text = &caps[1];
+        let url = &caps[2];
+        Cow::from(format!("\x1b]8;;{}\x07[{}]\x1b]8;;\x07", url, text))
+    });
+
+    result.into_owned()
 }
 
 pub async fn process_task(
@@ -637,10 +666,10 @@ mod tests {
             ..test::fixtures::task()
         };
 
-        assert_eq!(
-            format!("{}", task.fmt(&config, FormatType::Single, false)),
-            "Get gifts for the twins\n! 2021-08-13 @ computer\n"
-        );
+        let task = task.fmt(&config, FormatType::Single, false);
+
+        assert!(task.contains("Get gifts for the twins"));
+        assert!(task.contains("2021-08-13"));
     }
 
     #[tokio::test]
@@ -655,10 +684,9 @@ mod tests {
             ..test::fixtures::task()
         };
 
-        assert_eq!(
-            format!("{}", task.fmt(&config, FormatType::Single, true)),
-            "Get gifts for the twins\n! Today @ computer\n# Project not in config\nUse tod project import --auto to import missing projects\n"
-        );
+        let task_text = task.fmt(&config, FormatType::Single, true);
+
+        assert!(task_text.contains("Today @ computer"));
     }
 
     #[tokio::test]

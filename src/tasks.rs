@@ -2,21 +2,17 @@ use chrono::DateTime;
 use chrono::NaiveDate;
 use chrono_tz::Tz;
 use futures::future;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use std::cmp::Reverse;
 use std::fmt::Display;
-use supports_hyperlinks::Stream;
 use tokio::task::JoinHandle;
 
+pub mod format;
 pub mod priority;
-use crate::color;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::error::Error;
 use crate::projects;
-use crate::projects::Project;
 use crate::tasks::priority::Priority;
 use crate::{input, time, todoist};
 
@@ -92,116 +88,39 @@ enum DateTimeInfo {
 
 impl Task {
     pub fn fmt(&self, config: &Config, format: FormatType, with_project: bool) -> String {
-        let content = match self.priority {
-            priority::Priority::Low => color::blue_string(&self.content),
-            priority::Priority::Medium => color::yellow_string(&self.content),
-            priority::Priority::High => color::red_string(&self.content),
-            priority::Priority::None => color::normal_string(&self.content),
-        };
-        let content = if config.disable_links || !supports_hyperlinks::on(Stream::Stdout) {
-            content
-        } else {
-            create_links(&content)
-        };
-
+        let content = format::content(self, config);
         let buffer = match format {
             FormatType::List => String::from("  "),
-            FormatType::Single => String::from(""),
+            FormatType::Single => String::new(),
         };
 
         let description = match &*self.description {
-            "" => String::from(""),
+            "" => String::new(),
             _ => format!("\n{buffer}{}", self.description),
         };
 
         let project = if with_project {
-            let project_icon = color::purple_string("#");
-            let maybe_project = config
-                .projects
-                .clone()
-                .unwrap_or_default()
-                .into_iter()
-                .filter(|p| p.id == self.project_id)
-                .collect::<Vec<Project>>();
-
-            match maybe_project.first() {
-                Some(Project { name, .. }) => format!("\n{buffer}{project_icon} {name}"),
-                None => {
-                    let command = color::cyan_string("tod project import --auto");
-                    format!("\n{buffer}{project_icon} Project not in config\nUse {command} to import missing projects")
-                }
-            }
+            format::project(self, config, &buffer)
         } else {
             String::new()
         };
 
-        let due_icon = color::purple_string("!");
-        let recurring_icon = color::purple_string("↻");
-        let link = color::purple_string("link");
-        let id = self.id.clone();
-        let url = if config.disable_links || !supports_hyperlinks::on(Stream::Stdout) {
+        let url = if format::disable_links(config) {
             String::new()
         } else {
-            format!("\x1B]8;;https://app.todoist.com/app/task/{id}\x1B\\[{link}]\x1B]8;;\x1B\\")
-        };
-        let due = match &self.datetimeinfo(config) {
-            Ok(DateTimeInfo::Date {
-                date,
-                is_recurring,
-                string,
-            }) => {
-                let recurring_icon = if *is_recurring {
-                    format!(" {recurring_icon} {string}")
-                } else {
-                    String::new()
-                };
-                let date_string = time::format_date(date, config).unwrap_or_default();
-
-                format!("\n{buffer}{due_icon} {date_string}{recurring_icon}")
-            }
-            Ok(DateTimeInfo::DateTime {
-                datetime,
-                is_recurring,
-                string,
-            }) => {
-                let recurring_icon = if *is_recurring {
-                    format!(" {recurring_icon} {string}")
-                } else {
-                    String::new()
-                };
-                let datetime_string = time::format_datetime(datetime, config).unwrap_or_default();
-
-                let duration_string = match self.duration {
-                    None => String::new(),
-                    Some(Duration {
-                        amount: 1,
-                        unit: Unit::Day,
-                    }) => String::from(" for 1 day"),
-                    Some(Duration {
-                        amount,
-                        unit: Unit::Day,
-                    }) => format!(" for {amount} days"),
-                    Some(Duration {
-                        amount,
-                        unit: Unit::Minute,
-                    }) => format!(" for {amount} min"),
-                };
-
-                format!("\n{buffer}{due_icon} {datetime_string}{duration_string}{recurring_icon}")
-            }
-            Ok(DateTimeInfo::NoDateTime) => String::from(""),
-            Err(e) => e.to_string(),
+            format::task_url(&self.id)
         };
 
+        let due = format::due(self, config, &buffer);
         let prefix = match format {
             FormatType::List => String::from("- "),
-            FormatType::Single => String::from(""),
+            FormatType::Single => String::new(),
         };
 
         let labels = if self.labels.is_empty() {
             String::new()
         } else {
-            format!(" {} {}", color::purple_string("@"), self.labels.join(" "))
+            format::labels(self)
         };
 
         format!("{prefix}{content}{description}{due}{labels}{project} {url}\n")
@@ -383,20 +302,6 @@ impl Task {
             Some(DateInfo { is_recurring, .. }) => is_recurring,
         }
     }
-}
-
-fn create_links(content: &str) -> String {
-    // Define the regex pattern for Markdown links
-    let link_regex = Regex::new(r"\[([^\]]+)\]\(([^)]+)\)").unwrap();
-
-    // Use `replace_all` to replace all matches
-    let result = link_regex.replace_all(content, |caps: &regex::Captures| {
-        let text = &caps[1];
-        let url = &caps[2];
-        Cow::from(format!("\x1b]8;;{}\x07[{}]\x1b]8;;\x07", url, text))
-    });
-
-    result.into_owned()
 }
 
 pub async fn process_task(

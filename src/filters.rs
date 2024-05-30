@@ -75,7 +75,7 @@ async fn label_task(
 
     let config = config.clone();
     Ok(tokio::spawn(async move {
-        if let Err(e) = todoist::add_task_label(&config, task, label).await {
+        if let Err(e) = todoist::add_task_label(&config, task, label, false).await {
             config.tx().send(e).unwrap();
         }
     }))

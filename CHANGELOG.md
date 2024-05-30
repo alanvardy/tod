@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Don't show spinner for `list label` asynchronous requests
+
 ## 2024-05-28 v0.6.7
 
 - Put the error channel transmitter in `Config`, removing the need to pass around the additional argument in many places

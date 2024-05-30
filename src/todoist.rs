@@ -156,13 +156,18 @@ pub async fn update_task_priority(
 }
 
 /// Add a label to task by ID
-pub async fn add_task_label(config: &Config, task: Task, label: String) -> Result<String, Error> {
+pub async fn add_task_label(
+    config: &Config,
+    task: Task,
+    label: String,
+    spinner: bool,
+) -> Result<String, Error> {
     let mut labels = task.labels;
     labels.push(label);
     let body = json!({ "labels": labels});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, true).await?;
+    request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }

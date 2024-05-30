@@ -22,6 +22,12 @@ pub struct Config {
     pub path: String,
     /// The ID of the next task
     pub next_id: Option<String>,
+    /// Whether to trigger terminal bell on success
+    #[serde(default)]
+    pub bell_on_success: bool,
+    /// Whether to trigger terminal bell on error
+    #[serde(default = "bell_on_failure")]
+    pub bell_on_failure: bool,
     pub timezone: Option<String>,
     pub timeout: Option<u64>,
     /// The last time we checked crates.io for the version
@@ -31,7 +37,7 @@ pub struct Config {
     pub mock_select: Option<usize>,
     /// Whether spinners are enabled
     pub spinners: Option<bool>,
-    #[serde(default = "default_disable_links")]
+    #[serde(default)]
     pub disable_links: bool,
     pub verbose: Option<bool>,
     /// Don't ask for sections
@@ -49,8 +55,8 @@ pub struct Config {
     pub internal: Internal,
 }
 
-fn default_disable_links() -> bool {
-    false
+fn bell_on_failure() -> bool {
+    true
 }
 
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
@@ -217,6 +223,8 @@ impl Config {
             next_id: None,
             last_version_check: None,
             timeout: None,
+            bell_on_success: false,
+            bell_on_failure: true,
             sort_value: Some(SortValue::default()),
             timezone: None,
             disable_links: false,

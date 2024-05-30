@@ -29,6 +29,24 @@
 
 ## Values
 
+### bell_on_success
+
+```
+  type: boolean
+  default: false
+```
+
+Triggers the terminal bell on successful completion of a command
+
+### bell_on_failure
+
+```
+  type: boolean
+  default: true
+```
+
+Triggers the terminal bell on an error
+
 ### disable_links
 
 ```

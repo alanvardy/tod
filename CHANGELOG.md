@@ -5,6 +5,7 @@
 - Don't show spinner for `list label` asynchronous requests
 - Add `Skip` option to `tod list label`
 - Sort the tasks returned from `list label`
+- Add configurable terminal bell with `bell_on_success` and `bell_on_failure`
 
 ## 2024-05-28 v0.6.7
 

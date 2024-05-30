@@ -35,4 +35,4 @@ cargo aur
 
 9. Publish to Cargo with `cargo publish`
 10. Push to AUR with `./push_aur.sh`
-
+11. Delete any merged branches with `git-delete-merged-branches --yes`

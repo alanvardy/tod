@@ -4,12 +4,13 @@
 
 - Don't show spinner for `list label` asynchronous requests
 - Add `Skip` option to `tod list label`
+- Sort the tasks returned from `list label`
 
 ## 2024-05-28 v0.6.7
 
 - Put the error channel transmitter in `Config`, removing the need to pass around the additional argument in many places
 - Add `config set-timezone`
-- Format markdown links as as OSC8 links in supported terminals. Falls back in unsupported terminal
+- Format Markdown links as OSC8 links in supported terminals. Falls back in unsupported terminal
 - Added `disable-links` configuration option
 
 ## 2024-05-26 v0.6.6

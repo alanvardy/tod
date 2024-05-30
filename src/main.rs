@@ -7,6 +7,7 @@ extern crate matches;
 extern crate clap;
 
 use std::fmt::Display;
+use std::io::Write;
 
 use cargo::Version;
 use clap::{Parser, Subcommand};
@@ -384,56 +385,87 @@ async fn main() {
     // Channel for sending errors from async processes
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Error>();
 
-    let result: Result<String, Error> = match &cli.command {
-        Commands::Project(ProjectCommands::List(args)) => project_list(cli.clone(), args, tx).await,
-        Commands::Project(ProjectCommands::Remove(args)) => {
-            project_remove(cli.clone(), args, tx).await
-        }
-        Commands::Project(ProjectCommands::Rename(args)) => {
-            project_rename(cli.clone(), args, tx).await
-        }
-        Commands::Project(ProjectCommands::Import(args)) => {
-            project_import(cli.clone(), args, tx).await
-        }
-        Commands::Project(ProjectCommands::Empty(args)) => {
-            project_empty(cli.clone(), args, tx).await
-        }
+    match select_command(cli, tx).await {
+        (bell_success, _bell_error, Ok(text)) => {
+            while let Some(e) = rx.recv().await {
+                eprintln!("Error from async process: {e}");
+            }
 
-        Commands::Task(TaskCommands::QuickAdd(args)) => task_quick_add(cli.clone(), args, tx).await,
-        Commands::Task(TaskCommands::Create(args)) => task_create(cli.clone(), args, tx).await,
-        Commands::Task(TaskCommands::Edit(args)) => task_edit(cli.clone(), args, tx).await,
-        Commands::Task(TaskCommands::Next(args)) => task_next(cli.clone(), args, tx).await,
-        Commands::Task(TaskCommands::Complete(args)) => task_complete(cli.clone(), args, tx).await,
-
-        Commands::List(ListCommands::View(args)) => list_view(cli.clone(), args, tx).await,
-        Commands::List(ListCommands::Process(args)) => list_process(cli.clone(), args, tx).await,
-        Commands::List(ListCommands::Prioritize(args)) => {
-            list_prioritize(cli.clone(), args, tx).await
-        }
-        Commands::List(ListCommands::Label(args)) => list_label(cli.clone(), args, tx).await,
-        Commands::List(ListCommands::Schedule(args)) => list_schedule(cli.clone(), args, tx).await,
-
-        Commands::Config(ConfigCommands::CheckVersion(args)) => {
-            config_check_version(cli.clone(), args, tx).await
-        }
-        Commands::Config(ConfigCommands::Reset(args)) => config_reset(cli.clone(), args, tx).await,
-        Commands::Config(ConfigCommands::SetTimezone(args)) => {
-            tz_reset(cli.clone(), args, tx).await
-        }
-    };
-
-    while let Some(e) = rx.recv().await {
-        eprintln!("Error from async process: {e}");
-    }
-
-    match result {
-        Ok(text) => {
+            if bell_success {
+                terminal_bell()
+            }
             println!("{text}");
             std::process::exit(0);
         }
-        Err(e) => {
+        (_bell_success, bell_error, Err(e)) => {
+            while let Some(e) = rx.recv().await {
+                eprintln!("Error from async process: {e}");
+            }
+
+            if bell_error {
+                terminal_bell()
+            }
             eprintln!("\n\n{e}");
             std::process::exit(1);
+        }
+    }
+}
+
+fn terminal_bell() {
+    print!("\x07");
+    std::io::stdout().flush().unwrap();
+}
+
+async fn select_command(
+    cli: Cli,
+    tx: UnboundedSender<Error>,
+) -> (bool, bool, Result<String, Error>) {
+    match fetch_config(&cli, tx).await {
+        Err(e) => (true, true, Err(e)),
+        Ok(config) => {
+            let bell_on_success = config.bell_on_success;
+            let bell_on_failure = config.bell_on_failure;
+            let result: Result<String, Error> = match &cli.command {
+                // Project
+                Commands::Project(ProjectCommands::List(args)) => project_list(config, args).await,
+                Commands::Project(ProjectCommands::Remove(args)) => {
+                    project_remove(config, args).await
+                }
+                Commands::Project(ProjectCommands::Rename(args)) => {
+                    project_rename(config, args).await
+                }
+                Commands::Project(ProjectCommands::Import(args)) => {
+                    project_import(config, args).await
+                }
+                Commands::Project(ProjectCommands::Empty(args)) => {
+                    project_empty(config, args).await
+                }
+
+                // Task
+                Commands::Task(TaskCommands::QuickAdd(args)) => task_quick_add(config, args).await,
+                Commands::Task(TaskCommands::Create(args)) => task_create(config, args).await,
+                Commands::Task(TaskCommands::Edit(args)) => task_edit(config, args).await,
+                Commands::Task(TaskCommands::Next(args)) => task_next(config, args).await,
+                Commands::Task(TaskCommands::Complete(args)) => task_complete(config, args).await,
+
+                // List
+                Commands::List(ListCommands::View(args)) => list_view(config, args).await,
+                Commands::List(ListCommands::Process(args)) => list_process(config, args).await,
+                Commands::List(ListCommands::Prioritize(args)) => {
+                    list_prioritize(config, args).await
+                }
+                Commands::List(ListCommands::Label(args)) => list_label(config, args).await,
+                Commands::List(ListCommands::Schedule(args)) => list_schedule(config, args).await,
+
+                // Config
+                Commands::Config(ConfigCommands::CheckVersion(args)) => {
+                    config_check_version(config, args).await
+                }
+                Commands::Config(ConfigCommands::Reset(args)) => config_reset(config, args).await,
+                Commands::Config(ConfigCommands::SetTimezone(args)) => tz_reset(config, args).await,
+            };
+
+            (bell_on_success, bell_on_failure, result)
         }
     }
 }
@@ -441,13 +473,8 @@ async fn main() {
 // --- TASK ---
 
 #[cfg(not(tarpaulin_include))]
-async fn task_quick_add(
-    cli: Cli,
-    args: &TaskQuickAdd,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, Error> {
     let TaskQuickAdd { content } = args;
-    let config = fetch_config(cli, tx).await?;
 
     let content = fetch_string(&content.as_ref().map(|c| c.join(" ")), &config, "CONTENT")?;
     todoist::quick_add_task(&config, &content).await?;
@@ -455,11 +482,7 @@ async fn task_quick_add(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn task_create(
-    cli: Cli,
-    args: &TaskCreate,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error> {
     let TaskCreate {
         project,
         due,
@@ -469,7 +492,6 @@ async fn task_create(
         priority,
         label: labels,
     } = args;
-    let config = fetch_config(cli, tx).await?;
     let content = fetch_string(content, &config, "CONTENT")?;
     let priority = fetch_priority(priority, &config)?;
     let project = match fetch_project(project, &config)? {
@@ -509,8 +531,7 @@ async fn task_create(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn task_edit(cli: Cli, args: &TaskEdit, tx: UnboundedSender<Error>) -> Result<String, Error> {
-    let config = fetch_config(cli, tx).await?;
+async fn task_edit(config: Config, args: &TaskEdit) -> Result<String, Error> {
     let TaskEdit { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Project(project) => projects::rename_task(&config, &project).await,
@@ -518,9 +539,8 @@ async fn task_edit(cli: Cli, args: &TaskEdit, tx: UnboundedSender<Error>) -> Res
     }
 }
 #[cfg(not(tarpaulin_include))]
-async fn task_next(cli: Cli, args: &TaskNext, tx: UnboundedSender<Error>) -> Result<String, Error> {
+async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {
     let TaskNext { project, filter } = args;
-    let config = fetch_config(cli, tx).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Project(project) => projects::next_task(config, &project).await,
         Flag::Filter(filter) => filters::next_task(config, &filter).await,
@@ -528,12 +548,7 @@ async fn task_next(cli: Cli, args: &TaskNext, tx: UnboundedSender<Error>) -> Res
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn task_complete(
-    cli: Cli,
-    _args: &TaskComplete,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
-    let config = fetch_config(cli, tx).await?;
+async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, Error> {
     match config.next_id.as_ref() {
         Some(id) => todoist::complete_task(&config, id, true).await,
         None => Err(error::new(
@@ -546,8 +561,7 @@ async fn task_complete(
 // --- LIST ---
 
 #[cfg(not(tarpaulin_include))]
-async fn list_view(cli: Cli, args: &ListView, tx: UnboundedSender<Error>) -> Result<String, Error> {
-    let config = fetch_config(cli, tx).await?;
+async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
     let ListView { project, filter } = args;
 
     match fetch_project_or_filter(project, filter, &config)? {
@@ -559,29 +573,20 @@ async fn list_view(cli: Cli, args: &ListView, tx: UnboundedSender<Error>) -> Res
 // --- PROJECT ---
 
 #[cfg(not(tarpaulin_include))]
-async fn project_list(
-    cli: Cli,
-    _args: &ProjectList,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
-    let mut config = fetch_config(cli, tx).await?;
-
+async fn project_list(config: Config, _args: &ProjectList) -> Result<String, Error> {
+    let mut config = config.clone();
     projects::list(&mut config).await
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_remove(
-    cli: Cli,
-    args: &ProjectRemove,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, Error> {
     let ProjectRemove {
         all,
         auto,
         project,
         repeat,
     } = args;
-    let mut config = fetch_config(cli, tx).await?;
+    let mut config = config.clone();
     match (all, auto) {
         (true, false) => projects::remove_all(&mut config).await,
         (false, true) => projects::remove_auto(&mut config).await,
@@ -601,12 +606,7 @@ async fn project_remove(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_rename(
-    cli: Cli,
-    args: &ProjectRename,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
-    let config = fetch_config(cli, tx).await?;
+async fn project_rename(config: Config, args: &ProjectRename) -> Result<String, Error> {
     let ProjectRename { project } = args;
     let project = match fetch_project(project, &config)? {
         Flag::Project(project) => project,
@@ -620,46 +620,33 @@ async fn project_rename(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_import(
-    cli: Cli,
-    args: &ProjectImport,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
-    let mut config = fetch_config(cli, tx).await?;
+async fn project_import(config: Config, args: &ProjectImport) -> Result<String, Error> {
     let ProjectImport { auto } = args;
 
+    let mut config = config.clone();
     projects::import(&mut config, auto).await
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn project_empty(
-    cli: Cli,
-    args: &ProjectEmpty,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn project_empty(config: Config, args: &ProjectEmpty) -> Result<String, Error> {
     let ProjectEmpty { project } = args;
-    let mut config = fetch_config(cli, tx.clone()).await?;
     let project = match fetch_project(project, &config)? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
 
+    let mut config = config.clone();
     projects::empty(&mut config, &project).await
 }
 
 // --- LIST ---
 
 #[cfg(not(tarpaulin_include))]
-async fn list_label(
-    cli: Cli,
-    args: &ListLabel,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
     let ListLabel {
         filter,
         label: labels,
     } = args;
-    let config = fetch_config(cli, tx.clone()).await?;
     let labels = maybe_fetch_labels(&config, labels)?;
     match fetch_filter(filter, &config)? {
         Flag::Filter(filter) => filters::label(&config, &filter, &labels).await,
@@ -668,13 +655,8 @@ async fn list_label(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn list_process(
-    cli: Cli,
-    args: &ListProcess,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn list_process(config: Config, args: &ListProcess) -> Result<String, Error> {
     let ListProcess { project, filter } = args;
-    let config = fetch_config(cli, tx).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::process_tasks(&config, &filter).await,
         Flag::Project(project) => projects::process_tasks(&config, &project).await,
@@ -682,13 +664,8 @@ async fn list_process(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn list_prioritize(
-    cli: Cli,
-    args: &ListPrioritize,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String, Error> {
     let ListPrioritize { project, filter } = args;
-    let config = fetch_config(cli, tx.clone()).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter).await,
         Flag::Project(project) => projects::prioritize_tasks(&config, &project).await,
@@ -696,18 +673,13 @@ async fn list_prioritize(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn list_schedule(
-    cli: Cli,
-    args: &ListSchedule,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Error> {
     let ListSchedule {
         project,
         filter,
         skip_recurring,
         overdue,
     } = args;
-    let config = fetch_config(cli, tx.clone()).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::schedule(&config, &filter).await,
         Flag::Project(project) => {
@@ -725,13 +697,7 @@ async fn list_schedule(
 // // --- CONFIG ---
 
 #[cfg(not(tarpaulin_include))]
-async fn config_check_version(
-    cli: Cli,
-    _args: &ConfigCheckVersion,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
-    let config = fetch_config(cli, tx).await?;
-
+async fn config_check_version(config: Config, _args: &ConfigCheckVersion) -> Result<String, Error> {
     match cargo::compare_versions(config).await {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
         Ok(Version::Dated(version)) => Err(error::new(
@@ -746,14 +712,9 @@ async fn config_check_version(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn config_reset(
-    cli: Cli,
-    _args: &ConfigReset,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
+async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Error> {
     use tokio::fs;
 
-    let config = fetch_config(cli, tx).await?;
     let path = config.path;
 
     match fs::remove_file(path.clone()).await {
@@ -766,13 +727,7 @@ async fn config_reset(
 }
 
 #[cfg(not(tarpaulin_include))]
-async fn tz_reset(
-    cli: Cli,
-    _args: &ConfigSetTimezone,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
-    let config = fetch_config(cli, tx).await?;
-
+async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, Error> {
     match config.set_timezone().await {
         Ok(_) => Ok("Timezone set successfully.".to_string()),
         Err(e) => Err(error::new(
@@ -785,13 +740,17 @@ async fn tz_reset(
 // --- VALUE HELPERS ---
 
 #[cfg(not(tarpaulin_include))]
-async fn fetch_config(cli: Cli, tx: UnboundedSender<Error>) -> Result<Config, Error> {
+async fn fetch_config(cli: &Cli, tx: UnboundedSender<Error>) -> Result<Config, Error> {
     let Cli {
         verbose,
         config: config_path,
         timeout,
         command: _,
     } = cli;
+
+    let config_path = config_path.to_owned();
+    let verbose = verbose.to_owned();
+    let timeout = timeout.to_owned();
 
     let config = config::get_or_create(config_path, verbose, timeout, tx).await?;
 

@@ -71,11 +71,14 @@ async fn label_task(
     labels: &Vec<String>,
 ) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, true));
-    let label = input::select("Select label", labels.to_owned(), config.mock_select)?;
+    let mut options = labels.to_owned();
+    options.push(String::from("Skip"));
+    let label = input::select("Select label", options, config.mock_select)?;
 
     let config = config.clone();
     Ok(tokio::spawn(async move {
-        if let Err(e) = todoist::add_task_label(&config, task, label, false).await {
+        if label.as_str() == "Skip" {
+        } else if let Err(e) = todoist::add_task_label(&config, task, label, false).await {
             config.tx().send(e).unwrap();
         }
     }))

@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Don't show spinner for `list label` asynchronous requests
+- Add `Skip` option to `tod list label`
 
 ## 2024-05-28 v0.6.7
 

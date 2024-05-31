@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, num::ParseIntError};
 
 use crate::color;
 use homedir::GetHomeError;
@@ -31,6 +31,15 @@ impl From<std::io::Error> for Error {
     }
 }
 
+impl From<chrono::LocalResult<chrono::DateTime<chrono_tz::Tz>>> for Error {
+    fn from(value: chrono::LocalResult<chrono::DateTime<chrono_tz::Tz>>) -> Self {
+        Self {
+            source: String::from("chrono"),
+            message: format!("{value:?}"),
+        }
+    }
+}
+
 impl From<tokio::sync::mpsc::error::SendError<Error>> for Error {
     fn from(value: tokio::sync::mpsc::error::SendError<Error>) -> Self {
         Self {
@@ -44,6 +53,15 @@ impl From<chrono_tz::ParseError> for Error {
     fn from(value: chrono_tz::ParseError) -> Self {
         Self {
             source: String::from("chrono_tz"),
+            message: format!("{value}"),
+        }
+    }
+}
+
+impl From<ParseIntError> for Error {
+    fn from(value: ParseIntError) -> Self {
+        Self {
+            source: String::from("ParseIntError"),
             message: format!("{value}"),
         }
     }

@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Add `list timebox`
+
 ## 2024-05-30 v0.6.8
 
 - Don't show spinner for `list label` asynchronous requests

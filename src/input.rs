@@ -48,11 +48,7 @@ pub fn datetime(
             }
         }
         "Pick Date" => {
-            let string = DateSelect::new("Select Date")
-                .prompt()
-                .map_err(Error::from)?
-                .to_string();
-
+            let string = date()?;
             Ok(DateTimeInput::Text(string))
         }
 
@@ -64,6 +60,15 @@ pub fn datetime(
             source: String::from("Datetime Input"),
         }),
     }
+}
+
+pub fn date() -> Result<String, Error> {
+    let string = DateSelect::new("Select Date")
+        .prompt()
+        .map_err(Error::from)?
+        .to_string();
+
+    Ok(string)
 }
 
 /// Get text input from user

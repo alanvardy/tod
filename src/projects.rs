@@ -289,6 +289,30 @@ pub async fn process_tasks(config: &Config, project: &Project) -> Result<String,
     )))
 }
 
+// Gives all tasks durations
+pub async fn timebox_tasks(config: &Config, project: &Project) -> Result<String, Error> {
+    let tasks = todoist::tasks_for_project(config, project).await?;
+    let tasks = tasks::sort_by_value(tasks, config);
+    let tasks = tasks
+        .iter()
+        .filter(|t| t.duration.is_none())
+        .map(|t| t.to_owned())
+        .collect::<Vec<Task>>();
+    let mut task_count = tasks.len() as i32;
+    let mut handles = Vec::new();
+    for task in tasks {
+        match tasks::timebox_task(&config.reload().await?, task, &mut task_count, false).await {
+            Some(handle) => handles.push(handle),
+            None => return Ok(color::green_string("Exited")),
+        }
+    }
+    future::join_all(handles).await;
+    let project_name = project.clone().name;
+    Ok(color::green_string(&format!(
+        "There are no more tasks in '{project_name}'"
+    )))
+}
+
 pub async fn rename_task(config: &Config, project: &Project) -> Result<String, Error> {
     let project_tasks = todoist::tasks_for_project(config, project).await?;
 
@@ -432,8 +456,12 @@ pub async fn schedule(
                 DateTimeInput::Skip => (),
 
                 input::DateTimeInput::Text(due_string) => {
-                    let handle =
-                        tasks::spawn_update_task_due(config.clone(), task.clone(), due_string);
+                    let handle = tasks::spawn_update_task_due(
+                        config.clone(),
+                        task.clone(),
+                        due_string,
+                        None,
+                    );
                     handles.push(handle);
                 }
                 input::DateTimeInput::None => {
@@ -441,6 +469,7 @@ pub async fn schedule(
                         config.clone(),
                         task.clone(),
                         "No date".to_string(),
+                        None,
                     );
                     handles.push(handle);
                 }
@@ -885,6 +914,58 @@ mod tests {
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
         );
+        mock.expect(2);
+        mock2.expect(2);
+    }
+    #[tokio::test]
+    async fn test_timebox_tasks() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/sync/v9/projects/get_data")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::post_unscheduled_tasks())
+            .create_async()
+            .await;
+
+        let mock2 = server
+            .mock("POST", "/rest/v2/tasks/999999")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::task())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config()
+            .await
+            .mock_url(server.url())
+            .mock_select(1)
+            .mock_string("tod")
+            .create()
+            .await
+            .unwrap();
+
+        let binding = config.projects.clone().unwrap_or_default();
+        let project = binding.first().unwrap();
+        let result = timebox_tasks(&config, project);
+        assert_eq!(result.await, Ok("Exited".to_string()));
+
+        let config = config.mock_select(2);
+
+        let binding = config.projects.clone().unwrap_or_default();
+        let project = binding.first().unwrap();
+        let result = timebox_tasks(&config, project);
+        assert_eq!(result.await, Ok("Exited".to_string()));
+
+        let config = config.mock_select(3);
+
+        let binding = config.projects.clone().unwrap_or_default();
+        let project = binding.first().unwrap();
+        let result = timebox_tasks(&config, project).await;
+        assert_eq!(result, Ok("Exited".to_string()));
+
+        let result = timebox_tasks(&config, project).await;
+        assert_eq!(result, Ok("Exited".to_string()));
         mock.expect(2);
         mock2.expect(2);
     }

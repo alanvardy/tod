@@ -173,10 +173,11 @@ pub async fn add_task_label(
 }
 
 /// Update due date for task using natural language
-pub async fn update_task_due(
+pub async fn update_task_due_natural_language(
     config: &Config,
     task: Task,
     due_string: String,
+    duration: Option<u32>,
     spinner: bool,
 ) -> Result<String, Error> {
     let due_string = if task.is_recurring() {
@@ -184,11 +185,15 @@ pub async fn update_task_due(
     } else {
         due_string
     };
-    let body = json!({ "due_string": due_string });
+    let body = if let Some(duration) = duration {
+        json!({ "due_string": due_string, "duration": duration, "duration_unit": "minute" })
+    } else {
+        json!({ "due_string": due_string })
+    };
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body, spinner).await?;
-    // Does not pass back an task
+    // Does not pass back a task
     Ok(String::from("✓"))
 }
 
@@ -450,7 +455,8 @@ mod tests {
 
         let config = test::fixtures::config().await.mock_url(server.url());
 
-        let response = update_task_due(&config, task, "today".to_string(), true).await;
+        let response =
+            update_task_due_natural_language(&config, task, "today".to_string(), None, true).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

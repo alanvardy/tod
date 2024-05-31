@@ -256,6 +256,10 @@ enum ListCommands {
     /// (z) Give every task a priority
     Prioritize(ListPrioritize),
 
+    #[clap(alias = "t")]
+    /// (t) Give every task at date, time, and length
+    Timebox(ListTimebox),
+
     #[clap(alias = "l")]
     /// (l) Iterate through tasks and apply labels from defined choices
     Label(ListLabel),
@@ -284,6 +288,17 @@ struct ListProcess {
 
     #[arg(short, long)]
     /// The filter containing the tasks
+    filter: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListTimebox {
+    #[arg(short, long)]
+    /// Timebox all tasks without durations
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the tasks, does not filter out tasks with durations unless specified in filter
     filter: Option<String>,
 }
 
@@ -456,6 +471,7 @@ async fn select_command(
                 }
                 Commands::List(ListCommands::Label(args)) => list_label(config, args).await,
                 Commands::List(ListCommands::Schedule(args)) => list_schedule(config, args).await,
+                Commands::List(ListCommands::Timebox(args)) => list_timebox(config, args).await,
 
                 // Config
                 Commands::Config(ConfigCommands::CheckVersion(args)) => {
@@ -660,6 +676,15 @@ async fn list_process(config: Config, args: &ListProcess) -> Result<String, Erro
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::process_tasks(&config, &filter).await,
         Flag::Project(project) => projects::process_tasks(&config, &project).await,
+    }
+}
+
+#[cfg(not(tarpaulin_include))]
+async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Error> {
+    let ListTimebox { project, filter } = args;
+    match fetch_project_or_filter(project, filter, &config)? {
+        Flag::Filter(filter) => filters::timebox_tasks(&config, &filter).await,
+        Flag::Project(project) => projects::timebox_tasks(&config, &project).await,
     }
 }
 

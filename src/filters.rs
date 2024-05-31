@@ -124,6 +124,25 @@ pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, E
     )))
 }
 
+// Gives all tasks durations
+pub async fn timebox_tasks(config: &Config, filter: &String) -> Result<String, Error> {
+    let tasks = todoist::tasks_for_filter(config, filter).await?;
+    let tasks = tasks::sort_by_value(tasks, config);
+    let mut task_count = tasks.len() as i32;
+    let mut handles = Vec::new();
+    for task in tasks {
+        println!(" ");
+        match tasks::timebox_task(config, task, &mut task_count, true).await {
+            Some(handle) => handles.push(handle),
+            None => return Ok(color::green_string("Exited")),
+        }
+    }
+    future::join_all(handles).await;
+    Ok(color::green_string(&format!(
+        "There are no more tasks for filter: '{filter}'"
+    )))
+}
+
 /// Prioritize all unprioritized tasks in a project
 pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
@@ -170,8 +189,12 @@ pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error>
                 DateTimeInput::Skip => (),
 
                 input::DateTimeInput::Text(due_string) => {
-                    let handle =
-                        tasks::spawn_update_task_due(config.clone(), task.clone(), due_string);
+                    let handle = tasks::spawn_update_task_due(
+                        config.clone(),
+                        task.clone(),
+                        due_string,
+                        None,
+                    );
                     handles.push(handle);
                 }
                 input::DateTimeInput::None => {
@@ -179,6 +202,7 @@ pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error>
                         config.clone(),
                         task.clone(),
                         "No date".to_string(),
+                        None,
                     );
                     handles.push(handle);
                 }

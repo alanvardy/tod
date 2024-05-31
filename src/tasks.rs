@@ -341,6 +341,87 @@ pub async fn process_task(
     }
 }
 
+pub async fn timebox_task(
+    config: &Config,
+    task: Task,
+    task_count: &mut i32,
+    with_project: bool,
+) -> Option<JoinHandle<()>> {
+    let options = ["Timebox", "Complete", "Skip", "Delete", "Quit"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let formatted_task = task.fmt(config, FormatType::Single, with_project);
+    println!("{formatted_task}{task_count} task(s) remaining");
+    *task_count -= 1;
+    match input::select("Select an option", options, config.mock_select) {
+        Ok(string) => {
+            if string == "Timebox" {
+                match get_timebox(config, &task) {
+                    Ok((due_string, duration)) => Some(spawn_update_task_due(
+                        config.clone(),
+                        task,
+                        due_string,
+                        Some(duration),
+                    )),
+
+                    Err(e) => {
+                        config.clone().tx().send(e).unwrap();
+                        Some(tokio::spawn(async move {}))
+                    }
+                }
+                // Some(spawn_complete_task(config.clone(), task))
+            } else if string == "Delete" {
+                Some(spawn_delete_task(config.clone(), task))
+            } else if string == "Skip" {
+                // Do nothing
+                Some(tokio::spawn(async move {}))
+            } else {
+                // The quit clause
+                None
+            }
+        }
+        Err(e) => {
+            let config = config.clone();
+            let handle = tokio::spawn(async move {
+                config.tx().send(e).unwrap();
+            });
+            Some(handle)
+        }
+    }
+}
+
+/// Returns Date, time and duration for a task, uses the date and time on task if available, otherwise prompts. Always prompts for duration.
+fn get_timebox(config: &Config, task: &Task) -> Result<(String, u32), Error> {
+    let datetime = match task {
+        Task {
+            due: Some(DateInfo { date, .. }),
+            ..
+        } => {
+            if time::is_date(date) {
+                let time =
+                    input::string("Input time, i.e. 3pm or 1500", config.mock_string.clone())?;
+
+                format!("{date} {time}")
+            } else {
+                let tz = time::timezone_from_str(&config.timezone)?;
+                time::datetime_from_str(date, tz)?
+                    .format("%Y-%m-%d %H:%M")
+                    .to_string()
+            }
+        }
+        _ => {
+            let date = input::date()?;
+            let time = input::string("Input time, i.e. 3pm or 1500", config.mock_string.clone())?;
+            format!("{date} {time}")
+        }
+    };
+
+    let duration = input::string("Input duration in minutes", config.mock_string.clone())?;
+
+    Ok((datetime, duration.parse::<u32>()?))
+}
+
 // Completes task inside another thread
 pub fn spawn_complete_task(config: Config, task: Task) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -360,9 +441,17 @@ pub fn spawn_delete_task(config: Config, task: Task) -> JoinHandle<()> {
 }
 
 // Deletes task inside another thread
-pub fn spawn_update_task_due(config: Config, task: Task, due_string: String) -> JoinHandle<()> {
+pub fn spawn_update_task_due(
+    config: Config,
+    task: Task,
+    due_string: String,
+    duration: Option<u32>,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
-        if let Err(e) = todoist::update_task_due(&config, task, due_string, false).await {
+        if let Err(e) =
+            todoist::update_task_due_natural_language(&config, task, due_string, duration, false)
+                .await
+        {
             config.tx().send(e).unwrap();
         }
     })

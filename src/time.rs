@@ -54,22 +54,28 @@ pub fn format_datetime(datetime: &DateTime<Tz>, config: &Config) -> Result<Strin
 
 /// Parse DateTime
 pub fn datetime_from_str(str: &str, timezone: Tz) -> Result<DateTime<Tz>, Error> {
-    let datetime = match str.len() {
-        19 => NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%S")
-            .expect("could not parse DateTime")
-            .and_local_timezone(timezone),
-        20 => NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%SZ")
-            .expect("could not parse DateTime")
-            .and_local_timezone(Tz::UTC),
-        _ => {
-            return Err(error::new(
-                "datetime_from_str",
-                "cannot parse DateTime: {str}",
-            ))
-        }
-    };
+    match str.len() {
+        19 => parse_datetime_from_19(str, timezone),
+        20 => parse_datetime_from_20(str),
+        _ => Err(error::new(
+            "datetime_from_str",
+            "cannot parse DateTime: {str}",
+        )),
+    }
+}
 
-    Ok(datetime.unwrap())
+pub fn parse_datetime_from_19(str: &str, timezone: Tz) -> Result<DateTime<Tz>, Error> {
+    let tz = NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%S")?
+        .and_local_timezone(timezone)
+        .unwrap();
+    Ok(tz)
+}
+
+pub fn parse_datetime_from_20(str: &str) -> Result<DateTime<Tz>, Error> {
+    let tz = NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%SZ")?
+        .and_local_timezone(Tz::UTC)
+        .unwrap();
+    Ok(tz)
 }
 
 pub fn timezone_from_str(timezone_string: &Option<String>) -> Result<Tz, Error> {
@@ -90,7 +96,7 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
         .ok_or_else(|| error::new("parse_timezone", "Could not get offset"))?;
     let offset = offset.replace(":00", "");
     let offset = offset.replace(':', "");
-    let offset_num = offset.parse::<i32>().unwrap();
+    let offset_num = offset.parse::<i32>()?;
 
     let tz_string = format!(
         "Etc/GMT{}",
@@ -106,9 +112,6 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
 /// Parse Date
 pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
     let date = match str.len() {
-        // 19 => NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%S")
-        //     .expect("could not parse DateTime")
-        //     .and_local_timezone(timezone),
         10 => NaiveDate::parse_from_str(str, "%Y-%m-%d")?,
         19 => NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%S")?
             .and_local_timezone(timezone)

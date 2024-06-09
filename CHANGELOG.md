@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-06-09 v0.6.9
+
 - Add `list timebox`
 - Adjust page size of select options based on terminal size
 

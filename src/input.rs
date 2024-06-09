@@ -1,7 +1,7 @@
-use std::fmt::Display;
-
 use crate::error::Error;
 use inquire::{DateSelect, Select, Text};
+use std::fmt::Display;
+use terminal_size::{terminal_size, Height, Width};
 
 pub enum DateTimeInput {
     Skip,
@@ -112,9 +112,23 @@ pub fn select<T: Display>(
             panic!("Must set mock_select in config")
         }
     } else {
-        Select::new(desc, options).prompt().map_err(Error::from)
+        Select::new(desc, options)
+            .with_page_size(page_size())
+            .prompt()
+            .map_err(Error::from)
     }
 }
+
+/// Gets the desired number of visible options for select menu
+fn page_size() -> usize {
+    match terminal_size() {
+        Some((Width(_), Height(height))) if height >= 6 => (height - 3).into(),
+        // We don't want less than 3 options
+        Some(_) => 3,
+        None => 7,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -82,8 +82,10 @@ pub struct SortValue {
     pub not_recurring: u8,
     pub today: u8,
     pub overdue: u8,
+    pub overdue_skew: u8,
     /// Happens now plus or minus 15min
     pub now: u8,
+    
 }
 
 impl Default for SortValue {
@@ -95,6 +97,7 @@ impl Default for SortValue {
             priority_high: 4,
             no_due_date: 80,
             overdue: 150,
+            overdue_skew: 1,
             not_recurring: 50,
             today: 100,
             now: 200,

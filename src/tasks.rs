@@ -140,32 +140,41 @@ impl Task {
             no_due_date,
             today,
             overdue,
+            overdue_skew, 
             now,
             not_recurring,
             ..
         } = config.sort_value.clone().unwrap_or_default();
 
-        match &self.datetimeinfo(config) {
-            Ok(DateTimeInfo::NoDateTime) => no_due_date,
-            Ok(DateTimeInfo::Date {
-                date, is_recurring, ..
-            }) => {
-                let today_value = if *date == time::today_date(config).unwrap_or_default() {
-                    today
-                } else {
-                    0
-                };
-                let overdue_value = if self.is_overdue(config).unwrap_or_default() {
-                    overdue
-                } else {
-                    0
-                };
-                let recurring_value = if is_recurring.to_owned() {
-                    0
-                } else {
-                    not_recurring
-                };
-                today_value + overdue_value + recurring_value
+           match &self.datetimeinfo(config) {
+        Ok(DateTimeInfo::NoDateTime) => no_due_date,
+        Ok(DateTimeInfo::Date {
+            date, is_recurring, ..
+        }) => {
+            let today_value = if *date == time::today_date(config).unwrap_or_default() {
+                today
+            } else {
+                0
+            };
+
+            let overdue_value = if self.is_overdue(config).unwrap_or_default() {
+                let overdue_days = (time::today_date(config).unwrap_or_default() - *date).num_days();
+                overdue.saturating_add((overdue_days as u8).saturating_mul(overdue_skew))
+            } else {
+                0
+            };
+
+            let recurring_value = if is_recurring.to_owned() {
+                0
+            } else {
+                not_recurring
+            };
+
+            let total_value = today_value
+                .saturating_add(overdue_value)
+                .saturating_add(recurring_value);
+
+            total_value
             }
             Ok(DateTimeInfo::DateTime {
                 datetime,
@@ -478,7 +487,7 @@ pub fn sort_by_value(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {
 }
 
 pub fn sort_by_datetime(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {
-    tasks.sort_by_key(|i| i.datetime(config));
+    tasks.sort_by_key(|i| Reverse (i.datetime(config)) );
     tasks
 }
 

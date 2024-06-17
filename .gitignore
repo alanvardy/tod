@@ -4,4 +4,8 @@ lcov.info
 *.tar.gz
 PKGBUILD
 tests/*.testcfg
+<<<<<<< Updated upstream
 .vscode/launch.json
+=======
+/.vscode
+>>>>>>> Stashed changes

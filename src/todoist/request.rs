@@ -59,7 +59,6 @@ pub async fn post_todoist_rest(
 ) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let token = &config.token;
-
     let request_url = format!("{base_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
     let spinner = maybe_start_spinner(config, spinner);

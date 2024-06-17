@@ -438,6 +438,7 @@ async fn select_command(
     match fetch_config(&cli, tx).await {
         Err(e) => (true, true, Err(e)),
         Ok(config) => {
+
             let bell_on_success = config.bell_on_success;
             let bell_on_failure = config.bell_on_failure;
             let result: Result<String, Error> = match &cli.command {
@@ -578,6 +579,7 @@ async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, E
 
 #[cfg(not(tarpaulin_include))]
 async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
+
     let ListView { project, filter } = args;
 
     match fetch_project_or_filter(project, filter, &config)? {

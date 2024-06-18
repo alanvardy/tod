@@ -196,7 +196,18 @@ impl Task {
     fn datetime(&self, config: &Config) -> Option<DateTime<Tz>> {
         match self.datetimeinfo(config) {
             Ok(DateTimeInfo::DateTime { datetime, .. }) => Some(datetime),
-            _ => None,
+            Ok(DateTimeInfo::Date { date, .. }) => {
+                let naive_datetime = date.and_hms_opt(23, 59, 00)?;
+
+                let now = time::now(config).ok()?;
+
+                Some(DateTime::from_naive_utc_and_offset(
+                    naive_datetime,
+                    *now.offset(),
+                ))
+            }
+            Ok(DateTimeInfo::NoDateTime) => None,
+            Err(_) => None,
         }
     }
 
@@ -708,7 +719,7 @@ mod tests {
             ..test::fixtures::task()
         };
 
-        assert_eq!(task.datetime(&config), None);
+        assert!(task.datetime(&config).is_some());
     }
 
     #[tokio::test]
@@ -866,12 +877,12 @@ mod tests {
 
         let input = vec![
             future.clone(),
-            past.clone(),
             present.clone(),
+            past.clone(),
             no_date.clone(),
             date_not_datetime.clone(),
         ];
-        let result = vec![no_date, date_not_datetime, past, present, future];
+        let result = vec![no_date, past, present, date_not_datetime, future];
 
         assert_eq!(sort_by_datetime(input, &config), result);
     }

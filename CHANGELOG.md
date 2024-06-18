@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Divide page size (from term size in last commit) by two to fix prompt spacing bug.
+
 ## 2024-06-09 v0.6.9
 
 - Add `list timebox`

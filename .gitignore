@@ -4,3 +4,4 @@ lcov.info
 *.tar.gz
 PKGBUILD
 tests/*.testcfg
+/.vscode

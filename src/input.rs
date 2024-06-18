@@ -58,8 +58,7 @@ pub fn datetime(
         _ => Err(Error {
             message: String::from("Unrecognized input"),
             source: String::from("Datetime Input"),
-        })
-        ,
+        }),
     }
 }
 
@@ -129,9 +128,6 @@ fn page_size() -> usize {
         None => 7,
     }
 }
-
-
-
 
 #[cfg(test)]
 mod tests {

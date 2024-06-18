@@ -3,7 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Improve `reqwest` errors
-- Divide page size (from term size in last v0.6.9) by two to fix prompt spacing bug.
+- Divide page size (from term size in last commit) by two to fix prompt spacing bug.
 
 ## 2024-06-18 v0.6.10
 

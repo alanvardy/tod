@@ -142,10 +142,11 @@ async fn handle_response(
     body: serde_json::Value,
 ) -> Result<String, Error> {
     if response.status().is_success() {
-        let text = response.text().await.unwrap();
+        let text = response.text().await?;
         debug::print(config, format!("{method} {url}\nresponse: {text}"));
         Ok(text)
     } else {
+        let text = response.text().await?;
         Err(error::new(
             "reqwest",
             &format!(
@@ -153,8 +154,7 @@ async fn handle_response(
             method: {method}
             url: {url}
             body: {body}
-            Error: {:?}",
-                response
+            response: {text}",
             ),
         ))
     }

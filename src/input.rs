@@ -122,10 +122,14 @@ pub fn select<T: Display>(
 
 /// Gets the desired number of visible options for select menu
 fn page_size() -> usize {
-       terminal_size() {
-        Some((Width(_), Height(height)))  => height as usize - 2, // Subtracting 2 for the prompt and the footer  
+    match terminal_size() {
+        Some((Width(_), Height(height))) if height >= 6 => (height - 3).into(),
+        // We don't want less than 3 options
+        Some(_) => 3,
+        None => 7,
     }
-} 
+}
+
 
 
 

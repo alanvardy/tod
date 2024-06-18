@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Fix datetime sorting
+
 ## 2024-06-09 v0.6.9
 
 - Add `list timebox`

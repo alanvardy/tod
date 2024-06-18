@@ -5,7 +5,6 @@
 - Improve `reqwest` errors
 - Divide page size (from term size in last commit) by two to fix prompt spacing bug.
 
-
 ## 2024-06-18 v0.6.10
 
 - Fix `DateTime` sorting
@@ -76,6 +75,7 @@
 
 ## 2024-03-28 v0.5.13
 
+- Add spaces in between tasks in `process`
 - Add spaces in between tasks in `process`
 - Show JSON responses when using `verbose` flag
 

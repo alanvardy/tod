@@ -58,7 +58,8 @@ pub fn datetime(
         _ => Err(Error {
             message: String::from("Unrecognized input"),
             source: String::from("Datetime Input"),
-        }),
+        })
+        ,
     }
 }
 
@@ -113,7 +114,7 @@ pub fn select<T: Display>(
         }
     } else {
         Select::new(desc, options)
-            .with_page_size(page_size() / 2) //Fixing bug with page size
+            .with_page_size(page_size()) //Fixing bug with page size
             .prompt()
             .map_err(Error::from)
     }
@@ -121,13 +122,12 @@ pub fn select<T: Display>(
 
 /// Gets the desired number of visible options for select menu
 fn page_size() -> usize {
-    match terminal_size() {
-        Some((Width(_), Height(height))) if height >= 6 => (height - 3).into(),
-        // We don't want less than 3 options
-        Some(_) => 3,
-        None => 7,
+       terminal_size() {
+        Some((Width(_), Height(height)))  => height as usize - 2, // Subtracting 2 for the prompt and the footer  
     }
-}
+} 
+
+
 
 #[cfg(test)]
 mod tests {

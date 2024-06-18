@@ -2,9 +2,11 @@
 
 ## Unreleased (on main branch only)
 
+- Improve `reqwest` errors
+
 ## 2024-06-18 v0.6.10
 
-- Fix datetime sorting
+- Fix `DateTime` sorting
 
 ## 2024-06-09 v0.6.9
 

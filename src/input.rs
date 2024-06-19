@@ -113,7 +113,7 @@ pub fn select<T: Display>(
         }
     } else {
         Select::new(desc, options)
-            .with_page_size(page_size())
+            .with_page_size(page_size() / 2) //Fixing bug with page size
             .prompt()
             .map_err(Error::from)
     }

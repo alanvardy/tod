@@ -32,5 +32,3 @@ Temporary Items
 *.pdb
 
 # End of https://www.toptal.com/developers/gitignore/api/rust,macos
-.rusty-hook.toml
-.rusty-hook.toml

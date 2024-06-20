@@ -3,7 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Improve `reqwest` errors
-- Divide page size (from term size in last commit) by two to fix prompt spacing bug.
+- Divide page size (from `term_size` in last commit) by two to fix prompt spacing bug.
 
 
 ## 2024-06-18 v0.6.10
@@ -26,7 +26,7 @@
 
 - Put the error channel transmitter in `Config`, removing the need to pass around the additional argument in many places
 - Add `config set-timezone`
-- Format Markdown links as OSC8 links in supported terminals. Falls back in unsupported terminal
+- Format Markdown links as OSC8 links in supported terminals using `supports-hyperlinks` crate. Falls back in unsupported terminal
 - Added `disable-links` configuration option
 
 ## 2024-05-26 v0.6.6

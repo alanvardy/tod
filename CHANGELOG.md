@@ -2,9 +2,12 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-06-21 v0.6.11
+
 - Improve `reqwest` errors
 - Divide page size (from `term_size` in last commit) by two to fix prompt spacing bug.
-
+- Add `rusty-hook` git hooks
+- Add ability to schedule tasks in `list process`
 
 ## 2024-06-18 v0.6.10
 

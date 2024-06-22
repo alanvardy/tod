@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-06-21 v0.6.11
+
 - Improve `reqwest` errors
 - Divide page size (from term size in last commit) by two to fix prompt spacing bug.
 - Add `rusty-hook` git hooks

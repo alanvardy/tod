@@ -321,7 +321,7 @@ pub async fn process_task(
     task_count: &mut i32,
     with_project: bool,
 ) -> Option<JoinHandle<()>> {
-    let options = ["Complete", "Skip", "Delete", "Quit"]
+    let options = ["Complete", "Skip", "Schedule", "Delete", "Quit"]
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -334,6 +334,9 @@ pub async fn process_task(
                 Some(spawn_complete_task(config.clone(), task))
             } else if string == "Delete" {
                 Some(spawn_delete_task(config.clone(), task))
+            } else if string == "Schedule" {
+                let date = input::date().ok()?;
+                Some(spawn_update_task_due(config.clone(), task, date, None))
             } else if string == "Skip" {
                 // Do nothing
                 Some(tokio::spawn(async move {}))

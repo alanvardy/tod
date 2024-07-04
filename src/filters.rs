@@ -362,7 +362,7 @@ mod tests {
             .await;
 
         let mock2 = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/sync/v10/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())

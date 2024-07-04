@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Switch from sync v9 to v10 endpoints, as v9 is deprecated
+
 ## 2024-06-21 v0.6.11
 
 - Improve `reqwest` errors

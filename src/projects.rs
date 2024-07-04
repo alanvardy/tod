@@ -576,7 +576,7 @@ mod tests {
     async fn test_get_next_task() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks().await)
@@ -608,7 +608,7 @@ mod tests {
     async fn test_all_tasks() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks().await)
@@ -672,7 +672,7 @@ mod tests {
     async fn test_process_tasks() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks().await)
@@ -680,7 +680,7 @@ mod tests {
             .await;
 
         let mock2 = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/sync/v10/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
@@ -754,7 +754,7 @@ mod tests {
     async fn test_empty() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks().await)
@@ -762,7 +762,7 @@ mod tests {
             .await;
 
         let mock2 = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/sync/v10/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
@@ -799,7 +799,7 @@ mod tests {
     async fn test_prioritize_tasks_with_no_tasks() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks().await)
@@ -835,7 +835,7 @@ mod tests {
     async fn test_rename_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks().await)
@@ -860,7 +860,7 @@ mod tests {
     async fn test_schedule() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_unscheduled_tasks())
@@ -921,7 +921,7 @@ mod tests {
     async fn test_timebox_tasks() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_unscheduled_tasks())

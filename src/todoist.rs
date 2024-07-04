@@ -13,9 +13,9 @@ use crate::tasks::Task;
 use crate::{projects, sections, tasks, time};
 
 // TODOIST URLS
-const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
-const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
-const SYNC_URL: &str = "/sync/v9/sync";
+const QUICK_ADD_URL: &str = "/sync/v10/quick/add";
+const PROJECT_DATA_URL: &str = "/sync/v10/projects/get_data";
+const SYNC_URL: &str = "/sync/v10/sync";
 pub const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
@@ -247,7 +247,7 @@ mod tests {
     async fn test_quick_add_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/quick/add")
+            .mock("POST", "/sync/v10/quick/add")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())
@@ -328,7 +328,7 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
 
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("POST", "/sync/v10/projects/get_data")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::post_tasks().await)
@@ -376,7 +376,7 @@ mod tests {
     async fn should_complete_a_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/sync/v10/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())
@@ -395,7 +395,7 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
 
         let mock = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/sync/v10/sync")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sync())

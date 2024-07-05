@@ -353,8 +353,8 @@ pub async fn generate_path() -> Result<String, Error> {
 
 fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
     if path.starts_with('~') {
-        let home = homedir::get_my_home()?
-            .ok_or_else(|| error::new("homedir", "Could not get homedir"))?;
+        let home =
+            homedir::my_home()?.ok_or_else(|| error::new("homedir", "Could not get homedir"))?;
         let mut path = path;
         path.replace_range(
             ..1,
@@ -457,22 +457,17 @@ mod tests {
         assert_eq!(projects_count, 0);
     }
 
-    // #[test]
-    // fn test_maybe_expand_home_dir() {
-    //     let expected = Ok(String::from("~/tod.cfg")); // This is machine/user dependent
-    //     let actual = maybe_expand_home_dir(expected.clone().unwrap());
-    //     assert_eq!(expected, actual);
+    #[test]
+    fn test_maybe_expand_home_dir() {
+        let actual = maybe_expand_home_dir("/Users/tod.cfg".to_string());
 
-    //     let actual = maybe_expand_home_dir("/Users/tod.cfg".to_string());
+        let split = actual.unwrap();
+        let mut split = split.split('/');
 
-    //     let split = actual.unwrap();
-    //     let mut split = split.split('/');
-
-    //     assert_eq!(split.next(), Some(""));
-    //     assert_eq!(split.next(), Some("home"));
-    //     split.next();
-    //     assert_eq!(split.next(), Some("tod.cfg"));
-    // }
+        assert_eq!(split.next(), Some(""));
+        split.next();
+        assert_eq!(split.next(), Some("tod.cfg"));
+    }
 
     #[tokio::test]
     async fn config_tests() {

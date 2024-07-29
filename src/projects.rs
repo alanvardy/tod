@@ -144,6 +144,24 @@ pub async fn next_task(config: Config, project: &Project) -> Result<String, Erro
     }
 }
 
+pub async fn label(
+    config: &Config,
+    project: &Project,
+    labels: &Vec<String>,
+) -> Result<String, Error> {
+    let tasks = todoist::tasks_for_project(config, project).await?;
+    let mut handles = Vec::new();
+    for task in tasks::sort_by_value(tasks, config) {
+        let future = tasks::label_task(config, task, labels).await?;
+        handles.push(future);
+    }
+
+    future::join_all(handles).await;
+    Ok(color::green_string(&format!(
+        "There are no more tasks for project: '{project}'"
+    )))
+}
+
 async fn fetch_next_task(
     config: &Config,
     project: &Project,

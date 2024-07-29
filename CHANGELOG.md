@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-07-29 v0.6.12
+
 - Support using `list label` with projects
 
 ## 2024-06-21 v0.6.11

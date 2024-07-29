@@ -320,6 +320,10 @@ struct ListLabel {
     filter: Option<String>,
 
     #[arg(short, long)]
+    /// The project containing the tasks
+    project: Option<String>,
+
+    #[arg(short, long)]
     /// Labels to select from
     label: Vec<String>,
 }
@@ -392,7 +396,6 @@ impl Display for FlagOptions {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -488,7 +491,6 @@ async fn select_command(
 
 // --- TASK ---
 
-#[cfg(not(tarpaulin_include))]
 async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, Error> {
     let TaskQuickAdd { content } = args;
 
@@ -497,7 +499,6 @@ async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, E
     Ok(color::green_string("✓"))
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error> {
     let TaskCreate {
         project,
@@ -546,7 +547,6 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
     Ok(color::green_string("✓"))
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn task_edit(config: Config, args: &TaskEdit) -> Result<String, Error> {
     let TaskEdit { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -554,7 +554,6 @@ async fn task_edit(config: Config, args: &TaskEdit) -> Result<String, Error> {
         Flag::Filter(filter) => filters::rename_task(&config, filter).await,
     }
 }
-#[cfg(not(tarpaulin_include))]
 async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {
     let TaskNext { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -563,7 +562,6 @@ async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, Error> {
     match config.next_id.as_ref() {
         Some(id) => todoist::complete_task(&config, id, true).await,
@@ -576,7 +574,6 @@ async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, E
 
 // --- LIST ---
 
-#[cfg(not(tarpaulin_include))]
 async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
     let ListView { project, filter } = args;
 
@@ -588,13 +585,11 @@ async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
 
 // --- PROJECT ---
 
-#[cfg(not(tarpaulin_include))]
 async fn project_list(config: Config, _args: &ProjectList) -> Result<String, Error> {
     let mut config = config.clone();
     projects::list(&mut config).await
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, Error> {
     let ProjectRemove {
         all,
@@ -621,7 +616,6 @@ async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, 
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn project_rename(config: Config, args: &ProjectRename) -> Result<String, Error> {
     let ProjectRename { project } = args;
     let project = match fetch_project(project, &config)? {
@@ -635,7 +629,6 @@ async fn project_rename(config: Config, args: &ProjectRename) -> Result<String, 
     projects::rename(config, &project).await
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn project_import(config: Config, args: &ProjectImport) -> Result<String, Error> {
     let ProjectImport { auto } = args;
 
@@ -643,7 +636,6 @@ async fn project_import(config: Config, args: &ProjectImport) -> Result<String, 
     projects::import(&mut config, auto).await
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn project_empty(config: Config, args: &ProjectEmpty) -> Result<String, Error> {
     let ProjectEmpty { project } = args;
     let project = match fetch_project(project, &config)? {
@@ -657,20 +649,19 @@ async fn project_empty(config: Config, args: &ProjectEmpty) -> Result<String, Er
 
 // --- LIST ---
 
-#[cfg(not(tarpaulin_include))]
 async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
     let ListLabel {
         filter,
+        project,
         label: labels,
     } = args;
     let labels = maybe_fetch_labels(&config, labels)?;
-    match fetch_filter(filter, &config)? {
+    match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::label(&config, &filter, &labels).await,
-        _ => unreachable!(),
+        Flag::Project(project) => projects::label(&config, &project, &labels).await,
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn list_process(config: Config, args: &ListProcess) -> Result<String, Error> {
     let ListProcess { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -679,7 +670,6 @@ async fn list_process(config: Config, args: &ListProcess) -> Result<String, Erro
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Error> {
     let ListTimebox { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -688,7 +678,6 @@ async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Erro
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String, Error> {
     let ListPrioritize { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
@@ -697,7 +686,6 @@ async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Error> {
     let ListSchedule {
         project,
@@ -721,7 +709,6 @@ async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Er
 
 // // --- CONFIG ---
 
-#[cfg(not(tarpaulin_include))]
 async fn config_check_version(config: Config, _args: &ConfigCheckVersion) -> Result<String, Error> {
     match cargo::compare_versions(config).await {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
@@ -736,7 +723,6 @@ async fn config_check_version(config: Config, _args: &ConfigCheckVersion) -> Res
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Error> {
     use tokio::fs;
 
@@ -751,7 +737,6 @@ async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Err
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, Error> {
     match config.set_timezone().await {
         Ok(_) => Ok("Timezone set successfully.".to_string()),
@@ -764,7 +749,6 @@ async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, E
 
 // --- VALUE HELPERS ---
 
-#[cfg(not(tarpaulin_include))]
 async fn fetch_config(cli: &Cli, tx: UnboundedSender<Error>) -> Result<Config, Error> {
     let Cli {
         verbose,
@@ -786,7 +770,6 @@ async fn fetch_config(cli: &Cli, tx: UnboundedSender<Error>) -> Result<Config, E
     config.check_for_timezone().await
 }
 
-#[cfg(not(tarpaulin_include))]
 fn fetch_string(
     maybe_string: &Option<String>,
     config: &Config,
@@ -798,7 +781,6 @@ fn fetch_string(
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Error> {
     let projects = config.projects.clone().unwrap_or_default();
     if projects.is_empty() {
@@ -826,7 +808,6 @@ fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Erro
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, Error> {
     match filter {
         Some(string) => Ok(Flag::Filter(string.to_owned())),
@@ -837,7 +818,6 @@ fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, Error>
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn fetch_project_or_filter(
     project: &Option<String>,
     filter: &Option<String>,
@@ -860,7 +840,6 @@ fn fetch_project_or_filter(
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, Error> {
     match priority::from_integer(priority) {
         Some(priority) => Ok(priority),
@@ -880,7 +859,6 @@ fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, Er
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<String>, Error> {
     if labels.is_empty() {
         let labels = input::string(

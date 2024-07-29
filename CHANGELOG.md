@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Support using `list label` with projects
+
 ## 2024-06-21 v0.6.11
 
 - Improve `reqwest` errors

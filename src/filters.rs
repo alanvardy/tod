@@ -1,5 +1,4 @@
 use futures::future;
-use tokio::task::JoinHandle;
 
 use crate::{
     color,
@@ -55,7 +54,7 @@ pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Resul
     let tasks = todoist::tasks_for_filter(config, filter).await?;
     let mut handles = Vec::new();
     for task in tasks::sort_by_value(tasks, config) {
-        let future = label_task(config, task, labels).await?;
+        let future = tasks::label_task(config, task, labels).await?;
         handles.push(future);
     }
 
@@ -63,25 +62,6 @@ pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Resul
     Ok(color::green_string(&format!(
         "There are no more tasks for filter: '{filter}'"
     )))
-}
-
-async fn label_task(
-    config: &Config,
-    task: Task,
-    labels: &Vec<String>,
-) -> Result<JoinHandle<()>, Error> {
-    println!("{}", task.fmt(config, FormatType::Single, true));
-    let mut options = labels.to_owned();
-    options.push(String::from("Skip"));
-    let label = input::select("Select label", options, config.mock_select)?;
-
-    let config = config.clone();
-    Ok(tokio::spawn(async move {
-        if label.as_str() == "Skip" {
-        } else if let Err(e) = todoist::add_task_label(&config, task, label, false).await {
-            config.tx().send(e).unwrap();
-        }
-    }))
 }
 
 /// Get the next task by priority and save its id to config

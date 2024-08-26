@@ -64,6 +64,9 @@ pub fn datetime(
 
 pub fn date() -> Result<String, Error> {
     let string = DateSelect::new("Select Date")
+        .with_help_message(
+            "arrows to move, []{} move months and years, enter to select, esc to cancel",
+        )
         .prompt()
         .map_err(Error::from)?
         .to_string();

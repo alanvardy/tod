@@ -36,7 +36,7 @@ homedir = "0.3.3"
 tokio = { version = "1.40.0", features = ["full"] }
 futures = "0.3.30"
 supports-hyperlinks = "3.0.0"
-terminal_size = "0.3.0"
+terminal_size = "0.4.0"
 
 [dev-dependencies]
 mockito = "1.4.0"

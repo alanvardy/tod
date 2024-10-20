@@ -50,7 +50,7 @@ pub struct DateInfo {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Duration {
-    pub amount: u8,
+    pub amount: u32,
     pub unit: Unit,
 }
 

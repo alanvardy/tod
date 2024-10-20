@@ -2,6 +2,10 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-10-20 v0.6.13
+
+- Fix bug where durations larger than u8 were not supported
+
 ## 2024-07-29 v0.6.12
 
 - Support using `list label` with projects

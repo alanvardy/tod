@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Show sync status errors correctly
+
 ## 2024-10-20 v0.6.13
 
 - Fix bug where durations larger than u8 were not supported

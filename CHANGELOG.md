@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-10-30 v0.6.14
+
 - Show sync status errors correctly
 - Speed up project empty by prefetching sections for all projects in parallel
 

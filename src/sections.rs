@@ -1,6 +1,6 @@
+use crate::{config::Config, error::Error, todoist};
+use futures::future;
 use serde::Deserialize;
-
-use crate::error::Error;
 
 // Projects are split into sections
 #[derive(PartialEq, Deserialize, Clone, Debug)]
@@ -9,6 +9,22 @@ pub struct Section {
     pub project_id: String,
     pub order: u8,
     pub name: String,
+}
+
+// Fetch all sections for all projects
+pub async fn all_sections(config: &Config) -> Vec<Section> {
+    let projects = config.projects.clone().unwrap_or_default();
+
+    let mut handles = Vec::new();
+    for project in projects.iter() {
+        let handle = todoist::sections_for_project(config, project);
+
+        handles.push(handle);
+    }
+
+    let var = future::join_all(handles).await;
+
+    var.into_iter().filter_map(Result::ok).flatten().collect()
 }
 
 pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {

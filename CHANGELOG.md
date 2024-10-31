@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Show sync status errors correctly
+- Speed up project empty by prefetching sections for all projects in parallel
 
 ## 2024-10-20 v0.6.13
 

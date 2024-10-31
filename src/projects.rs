@@ -6,9 +6,10 @@ use tokio::task::JoinHandle;
 use crate::config::Config;
 use crate::error::{self, Error};
 use crate::input::DateTimeInput;
+use crate::sections::Section;
 use crate::tasks::priority::Priority;
 use crate::tasks::{FormatType, Task};
-use crate::{color, input, tasks, todoist};
+use crate::{color, input, sections, tasks, todoist};
 use serde::{Deserialize, Serialize};
 
 const PAD_WIDTH: usize = 30;
@@ -380,6 +381,8 @@ pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Err
             project.name
         )))
     } else {
+        let sections = sections::all_sections(config).await;
+
         let tasks = tasks
             .into_iter()
             .filter(|task| task.parent_id.is_none())
@@ -387,7 +390,7 @@ pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Err
 
         let mut handles = Vec::new();
         for task in tasks.iter() {
-            match move_task_to_project(config, task.to_owned()).await {
+            match move_task_to_project(config, task.to_owned(), &sections).await {
                 Ok(handle) => handles.push(handle),
                 Err(e) => return Err(e),
             };
@@ -503,7 +506,11 @@ pub async fn schedule(
     }
 }
 
-pub async fn move_task_to_project(config: &Config, task: Task) -> Result<JoinHandle<()>, Error> {
+pub async fn move_task_to_project(
+    config: &Config,
+    task: Task,
+    sections: &[Section],
+) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, false));
 
     let options = ["Pick project", "Complete", "Skip", "Delete"]
@@ -521,7 +528,12 @@ pub async fn move_task_to_project(config: &Config, task: Task) -> Result<JoinHan
             let projects = config.projects.clone().unwrap_or_default();
             let project = input::select("Select project", projects, config.mock_select)?;
 
-            let sections = todoist::sections_for_project(config, &project).await?;
+            let sections: Vec<Section> = sections
+                .iter()
+                .filter(|s| s.project_id == project.id)
+                .cloned()
+                .collect();
+
             let section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
             if section_names.is_empty() || config.no_sections.unwrap_or_default() {
                 let config = config.clone();
@@ -842,8 +854,9 @@ mod tests {
     async fn test_move_task_to_project() {
         let config = test::fixtures::config().await.mock_select(2);
         let task = test::fixtures::task();
+        let sections: Vec<Section> = Vec::new();
 
-        move_task_to_project(&config, task)
+        move_task_to_project(&config, task, &sections)
             .await
             .unwrap()
             .await

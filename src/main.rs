@@ -25,6 +25,7 @@ mod debug;
 mod error;
 mod filters;
 mod input;
+mod labels;
 mod projects;
 mod sections;
 mod tasks;
@@ -324,7 +325,7 @@ struct ListLabel {
     project: Option<String>,
 
     #[arg(short, long)]
-    /// Labels to select from
+    /// Labels to select from, if left blank this will be fetched from API
     label: Vec<String>,
 }
 
@@ -655,7 +656,7 @@ async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
         project,
         label: labels,
     } = args;
-    let labels = maybe_fetch_labels(&config, labels)?;
+    let labels = maybe_fetch_labels(&config, labels).await?;
     match fetch_project_or_filter(project, filter, &config)? {
         Flag::Filter(filter) => filters::label(&config, &filter, &labels).await,
         Flag::Project(project) => projects::label(&config, &project, &labels).await,
@@ -859,15 +860,13 @@ fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, Er
     }
 }
 
-fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<String>, Error> {
+async fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<String>, Error> {
     if labels.is_empty() {
-        let labels = input::string(
-            "Enter labels to select from, separated by a space",
-            config.mock_string.clone(),
-        )?
-        .split(' ')
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
+        let labels = labels::get_labels(config)
+            .await?
+            .into_iter()
+            .map(|l| l.name)
+            .collect();
         Ok(labels)
     } else {
         Ok(labels.to_vec())

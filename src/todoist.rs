@@ -6,6 +6,7 @@ mod request;
 
 use crate::config::Config;
 use crate::error::Error;
+use crate::labels::{self, Label};
 use crate::projects::Project;
 use crate::sections::Section;
 use crate::tasks::priority::Priority;
@@ -19,6 +20,7 @@ const SYNC_URL: &str = "/sync/v9/sync";
 pub const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
+const LABELS_URL: &str = "/rest/v2/labels";
 
 /// Add a new task to the inbox with natural language support
 pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Error> {
@@ -112,6 +114,11 @@ pub async fn sections_for_project(
 pub async fn projects(config: &Config) -> Result<Vec<Project>, Error> {
     let json = request::get_todoist_rest(config, PROJECTS_URL.to_string()).await?;
     projects::json_to_projects(json)
+}
+
+pub async fn labels(config: &Config) -> Result<Vec<Label>, Error> {
+    let json = request::get_todoist_rest(config, LABELS_URL.to_string()).await?;
+    labels::json_to_labels(json)
 }
 
 /// Move an task to a different project

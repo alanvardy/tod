@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Pull labels from API if not provided when performing `list label`
+
 ## 2024-10-30 v0.6.14
 
 - Show sync status errors correctly

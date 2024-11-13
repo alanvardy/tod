@@ -10,6 +10,12 @@ use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Completed {
+    count: u32,
+    date: String,
+}
+
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -39,6 +45,7 @@ pub struct Config {
     pub spinners: Option<bool>,
     #[serde(default)]
     pub disable_links: bool,
+    pub completed: Option<Completed>,
     pub verbose: Option<bool>,
     /// Don't ask for sections
     pub no_sections: Option<bool>,
@@ -190,6 +197,29 @@ impl Config {
         Config { next_id, ..self }
     }
 
+    /// Increase the completed count for today
+    pub fn increment_completed(&self) -> Result<Config, Error> {
+        let date = time::today_date(self)?.to_string();
+        let completed = match &self.completed {
+            None => Some(Completed { date, count: 1 }),
+            Some(completed) => {
+                if completed.date == date {
+                    Some(Completed {
+                        count: completed.count + 1,
+                        ..completed.clone()
+                    })
+                } else {
+                    Some(Completed { date, count: 1 })
+                }
+            }
+        };
+
+        Ok(Config {
+            completed,
+            ..self.clone()
+        })
+    }
+
     pub async fn create(self) -> Result<Config, Error> {
         let json = json!(self).to_string();
         let mut file = fs::File::create(&self.path).await?;
@@ -227,6 +257,7 @@ impl Config {
             bell_on_failure: true,
             sort_value: Some(SortValue::default()),
             timezone: None,
+            completed: None,
             disable_links: false,
             spinners: Some(true),
             mock_url: None,
@@ -304,6 +335,20 @@ impl Config {
         Config {
             next_id,
             ..self.clone()
+        }
+    }
+
+    pub fn tasks_completed(&self) -> Result<u32, Error> {
+        let date = time::today_date(self)?.to_string();
+        match &self.completed {
+            None => Ok(0),
+            Some(completed) => {
+                if completed.date == date {
+                    Ok(completed.count)
+                } else {
+                    Ok(0)
+                }
+            }
         }
     }
 }

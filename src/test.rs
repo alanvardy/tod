@@ -41,6 +41,7 @@ pub mod fixtures {
             token: String::from("alreadycreated"),
             sort_value: Some(SortValue::default()),
             disable_links: false,
+            completed: None,
             bell_on_success: false,
             bell_on_failure: true,
             internal: Internal { tx: tx() },

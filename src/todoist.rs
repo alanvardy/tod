@@ -226,7 +226,7 @@ pub async fn complete_task(config: &Config, task_id: &str, spinner: bool) -> Res
     request::post_todoist_sync(config, url, body, spinner).await?;
 
     if !cfg!(test) {
-        config.clone().clear_next_id().save().await?;
+        config.reload().await?.clear_next_id().save().await?;
     }
 
     // Does not pass back a task

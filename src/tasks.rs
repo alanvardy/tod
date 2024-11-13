@@ -345,12 +345,20 @@ pub async fn process_task(
         .map(|s| s.to_string())
         .collect();
     let formatted_task = task.fmt(config, FormatType::Single, with_project);
-    println!("{formatted_task}{task_count} task(s) remaining");
+    let mut reloaded_config = config
+        .reload()
+        .await
+        .expect("Could not reload config")
+        .increment_completed()
+        .expect("Could not increment config");
+    let tasks_completed = reloaded_config.tasks_completed().unwrap_or_default();
+    println!("{formatted_task}{tasks_completed} completed today, {task_count} remaining");
     *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
             if string == "Complete" {
-                Some(spawn_complete_task(config.clone(), task))
+                reloaded_config.save().await.expect("Could not save config");
+                Some(spawn_complete_task(reloaded_config, task))
             } else if string == "Delete" {
                 Some(spawn_delete_task(config.clone(), task))
             } else if string == "Schedule" {
@@ -1008,7 +1016,11 @@ mod tests {
         let config = test::fixtures::config()
             .await
             .mock_url(server.url())
-            .mock_select(0);
+            .mock_select(0)
+            .create()
+            .await
+            .unwrap();
+
         let mut task_count = 3;
         process_task(&config, task, &mut task_count, true)
             .await

@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Pull labels from API if not provided when performing `list label`
+- Show number of tasks completed today when using `list process`
 
 ## 2024-10-30 v0.6.14
 

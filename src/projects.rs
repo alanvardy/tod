@@ -297,7 +297,7 @@ pub async fn process_tasks(config: &Config, project: &Project) -> Result<String,
     let mut handles = Vec::new();
     for task in tasks {
         println!(" ");
-        match tasks::process_task(&config.reload().await?, task, &mut task_count, false).await {
+        match tasks::process_task(config, task, &mut task_count, false).await {
             Some(handle) => handles.push(handle),
             None => return Ok(color::green_string("Exited")),
         }

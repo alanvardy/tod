@@ -39,5 +39,5 @@ supports-hyperlinks = "3.0.0"
 terminal_size = "0.4.0"
 
 [dev-dependencies]
-mockito = "1.4.0"
+mockito = "1.6.1"
 pretty_assertions = "1.4.1"

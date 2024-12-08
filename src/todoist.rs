@@ -11,6 +11,7 @@ use crate::projects::Project;
 use crate::sections::Section;
 use crate::tasks::priority::Priority;
 use crate::tasks::Task;
+use crate::user::{SyncResponse, User};
 use crate::{projects, sections, tasks, time};
 
 // TODOIST URLS
@@ -242,13 +243,50 @@ pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<
     Ok(String::from("✓"))
 }
 
+pub async fn get_user_data(config: &Config) -> Result<User, Error> {
+    let url = SYNC_URL.to_string();
+    let body = json!({"resource_types": ["user"], "sync_token": "*"});
+    let json = request::post_todoist_sync(config, url, body, true).await?;
+    sync_json_to_user(json)
+}
+
+pub fn sync_json_to_user(json: String) -> Result<User, Error> {
+    let sync_response: SyncResponse = serde_json::from_str(&json)?;
+    Ok(sync_response.user)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::tasks::priority::{self, Priority};
     use crate::tasks::{DateInfo, Task};
+    use crate::user::TzInfo;
     use crate::{test, time};
     use pretty_assertions::assert_eq;
+
+    #[tokio::test]
+    async fn test_get_user_data() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/sync/v9/sync")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::user())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+
+        assert_eq!(
+            get_user_data(&config).await,
+            Ok(User {
+                tz_info: TzInfo {
+                    timezone: "America/Vancouver".to_string()
+                }
+            })
+        );
+        mock.assert();
+    }
 
     #[tokio::test]
     async fn test_quick_add_task() {

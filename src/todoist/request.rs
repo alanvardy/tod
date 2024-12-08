@@ -45,7 +45,6 @@ pub async fn post_todoist_sync(
         .timeout(get_timeout(config))
         .send()
         .await?;
-
     maybe_stop_spinner(spinner);
     handle_response(config, response, "POST", url, body).await
 }

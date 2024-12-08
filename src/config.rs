@@ -2,7 +2,6 @@ use crate::cargo::Version;
 use crate::error::{self, Error};
 use crate::projects::Project;
 use crate::{cargo, color, input, time, todoist, VERSION};
-use chrono_tz::TZ_VARIANTS;
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -171,18 +170,9 @@ impl Config {
     }
 
     pub async fn set_timezone(self) -> Result<Config, Error> {
-        let desc =
-            "Please select your timezone. This should match your Timezone setting within Todoist.";
-        let mut options = TZ_VARIANTS
-            .to_vec()
-            .iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<String>>();
-        options.sort();
-
-        let tz = input::select(desc, options, self.mock_select)?;
+        let user = todoist::get_user_data(&self).await?;
         let config = Config {
-            timezone: Some(tz),
+            timezone: Some(user.tz_info.timezone),
             ..self
         };
 

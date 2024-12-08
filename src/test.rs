@@ -312,6 +312,18 @@ pub mod responses {
     }",
         )
     }
+
+    pub fn user() -> String {
+        String::from(
+            "\
+                {\"user\": {
+                  \"tz_info\": {
+                    \"timezone\": \"America/Vancouver\"
+                  }
+                }
+            }",
+        )
+    }
     pub fn sections() -> String {
         String::from(
             "[

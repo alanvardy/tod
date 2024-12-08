@@ -32,6 +32,7 @@ mod tasks;
 mod test;
 mod time;
 mod todoist;
+mod user;
 
 const NAME: &str = "Tod";
 const VERSION: &str = env!("CARGO_PKG_VERSION");

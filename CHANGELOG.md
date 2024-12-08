@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Fetch Timezone from API rather than prompting user
+
 ## 2024-11-13 v0.6.15
 
 - Pull labels from API if not provided when performing `list label`

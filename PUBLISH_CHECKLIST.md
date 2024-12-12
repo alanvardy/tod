@@ -8,7 +8,29 @@ Create `tod-bin` directory for pushing to AUR
 ./setup_aur.sh
 ```
 
-## Publish to Cargo and AUR
+## Experimental Publish Procedure
+
+1. Update `CHANGELOG.md` with version number
+2. Create PR with
+
+```bash
+VERSION=0.6.15 ./create_pr.sh
+```
+
+3. Wait for it to pass, then merge and pull in latest changes
+
+```bash
+gh pr merge -r --admin
+gs
+```
+
+4. Release it to all the places
+
+```bash
+./release.sh
+```
+
+## Publish to Cargo and AUR (older method)
 
 This checklist is just here for me to reduce the friction of publishing new versions.
 
@@ -33,9 +55,10 @@ cargo aur
 
 ```
 set VERSION "v0.6.16"
-gh release create "$VERSION" ./target/cargo-aur/*.tar.gz --title "$version"
+gh release create "$VERSION" ./target/cargo-aur/*.tar.gz --title "$VERSION" --generate-notes
 ```
 
 10. Publish to Cargo with `cargo publish`
 11. Push to AUR with `./push_aur.sh`
 12. Delete any merged branches with `git-delete-merged-branches --yes`
+

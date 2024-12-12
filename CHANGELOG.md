@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-12-11 v0.6.16
+
 - Fetch Timezone from API rather than prompting user
 
 ## 2024-11-13 v0.6.15

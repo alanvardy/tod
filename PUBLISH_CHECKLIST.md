@@ -14,13 +14,14 @@ This checklist is just here for me to reduce the friction of publishing new vers
 
 Code changes
 
-1. Change version in `Cargo.toml`
-2. Update and test with `./update_test.sh`
-3. Update `CHANGELOG.md` with version number
-4. Add any new examples to documentation
-5. Open PR for version and wait for it to pass
-6. Commit and merge PR
-7. Build release
+1. Change version in this file
+2. Change version in `Cargo.toml`
+3. Update and test with `./update_test.sh`
+4. Update `CHANGELOG.md` with version number
+5. Add any new examples to documentation
+6. Open PR for version and wait for it to pass
+7. Commit and merge PR
+8. Build release
 
 ```bash
 git checkout main
@@ -28,11 +29,13 @@ git pull
 cargo aur
 ```
 
-8. [Create a new release](https://github.com/alanvardy/tod/releases/new)
+9. Create a new release
 
-- Make sure to use the label and title in format `v0.3.8`
-- Add binary from `tod` directory
+```
+set VERSION "v0.6.16"
+gh release create "$VERSION" ./target/cargo-aur/*.tar.gz --title "$version"
+```
 
-9. Publish to Cargo with `cargo publish`
-10. Push to AUR with `./push_aur.sh`
-11. Delete any merged branches with `git-delete-merged-branches --yes`
+10. Publish to Cargo with `cargo publish`
+11. Push to AUR with `./push_aur.sh`
+12. Delete any merged branches with `git-delete-merged-branches --yes`

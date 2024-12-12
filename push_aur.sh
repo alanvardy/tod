@@ -9,7 +9,7 @@ cd ../tod/ || exit &&
 echo "=== MOVING PKGBUILD ===" &&
 mv target/cargo-aur/PKGBUILD ./PKGBUILD
 echo "=== RUNNING MAKEPKG ===" &&
-makepkg --printsrcinfo > ../tod-bin/.SRCINFO
+makepkg --printsrcinfo > ../tod-bin/.SRCINFO &&
 mv PKGBUILD ../tod-bin/ &&
 echo "=== DELETING TAR.GZ ===" &&
 rm target/cargo-aur/*.tar.gz &&
@@ -19,4 +19,4 @@ git add . &&
 git commit -m "new version" &&
 git push aur &&
 cd ../tod || exit &&
-echo "=== SUCCESS ===" &&
+echo "=== SUCCESS ===" 

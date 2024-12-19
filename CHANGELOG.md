@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Add multi-select to `task edit`, allowing editing of content, description, and priority
+
 ## 2024-12-11 v0.6.16
 
 - Fetch Timezone from API rather than prompting user

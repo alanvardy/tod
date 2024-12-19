@@ -9,6 +9,7 @@ use tokio::task::JoinHandle;
 
 pub mod format;
 pub mod priority;
+use crate::color;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::error::Error;
@@ -32,6 +33,31 @@ pub struct Task {
     /// only on sync api return value
     pub checked: Option<bool>,
     pub duration: Option<Duration>,
+}
+
+// Update task_attributes fn when adding here
+pub enum TaskAttribute {
+    Content,
+    Description,
+    Priority,
+}
+impl Display for TaskAttribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TaskAttribute::Content => write!(f, "Content"),
+            TaskAttribute::Description => write!(f, "Description"),
+            TaskAttribute::Priority => write!(f, "Priority"),
+        }
+    }
+}
+
+/// Used for selecting which attribute to set or edit in a task
+pub fn task_attributes() -> Vec<TaskAttribute> {
+    vec![
+        TaskAttribute::Content,
+        TaskAttribute::Description,
+        TaskAttribute::Priority,
+    ]
 }
 
 impl Display for Task {
@@ -311,6 +337,56 @@ impl Task {
         match self.due {
             None => false,
             Some(DateInfo { is_recurring, .. }) => is_recurring,
+        }
+    }
+}
+
+pub async fn update_task(
+    config: &Config,
+    task: &Task,
+    attribute: &TaskAttribute,
+) -> Result<String, Error> {
+    match attribute {
+        TaskAttribute::Content => {
+            let task_content = task.content.as_str();
+
+            let new_task_content =
+                input::string_with_default("Edit the task you selected:", task_content)?;
+
+            if task_content == new_task_content {
+                return Ok(color::green_string(
+                    "The content is the same, no need to change it",
+                ));
+            }
+
+            todoist::update_task_content(config, task, new_task_content).await
+        }
+        TaskAttribute::Description => {
+            let value = task.description.as_str();
+
+            let new_value = input::string_with_default("Edit the task you selected:", value)?;
+
+            if value == new_value {
+                return Ok(color::green_string(
+                    "The description is the same, no need to change it",
+                ));
+            }
+
+            todoist::update_task_description(config, task, new_value).await
+        }
+        TaskAttribute::Priority => {
+            let value = &task.priority;
+            let priorities = priority::all_priorities();
+
+            let new_value = input::select("select your priority:", priorities, config.mock_select)?;
+
+            if *value == new_value {
+                return Ok(color::green_string(
+                    "The priority is the same, no need to change it",
+                ));
+            }
+
+            todoist::update_task_priority(config, task, &new_value).await
         }
     }
 }
@@ -630,7 +706,7 @@ pub async fn set_priority(
 
     let config = config.clone();
     Ok(tokio::spawn(async move {
-        if let Err(e) = todoist::update_task_priority(&config, task, priority).await {
+        if let Err(e) = todoist::update_task_priority(&config, &task, &priority).await {
             config.tx().send(e).unwrap();
         }
     }))

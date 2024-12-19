@@ -333,25 +333,34 @@ pub async fn timebox_tasks(config: &Config, project: &Project) -> Result<String,
     )))
 }
 
-pub async fn rename_task(config: &Config, project: &Project) -> Result<String, Error> {
+pub async fn edit_task(config: &Config, project: &Project) -> Result<String, Error> {
     let project_tasks = todoist::tasks_for_project(config, project).await?;
 
-    let selected_task = input::select(
+    let task = input::select(
         "Choose a task of the project:",
         project_tasks,
         config.mock_select,
     )?;
-    let task_content = selected_task.content.as_str();
 
-    let new_task_content = input::string_with_default("Edit the task you selected:", task_content)?;
+    let options = tasks::task_attributes();
 
-    if task_content == new_task_content {
-        return Ok(color::green_string(
-            "The content is the same, no need to change it",
-        ));
+    let selections = input::multi_select("Choose attributes to edit", options, config.mock_select)?;
+
+    if selections.is_empty() {
+        return Err(Error {
+            message: "Nothing selected".to_string(),
+            source: "edit_task".to_string(),
+        });
     }
 
-    todoist::update_task_name(config, selected_task, new_task_content).await
+    let mut result = String::new();
+    for attribute in selections {
+        // Stops the inputs from rolling over each other in terminal
+        println!();
+        result = tasks::update_task(config, &task, &attribute).await?
+    }
+
+    Ok(result)
 }
 
 /// All tasks for a project
@@ -881,7 +890,7 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
-        let result = rename_task(&config, project);
+        let result = edit_task(&config, project);
         assert_eq!(
             result.await,
             Ok("The content is the same, no need to change it".to_string())

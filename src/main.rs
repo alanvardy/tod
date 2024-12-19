@@ -552,8 +552,8 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
 async fn task_edit(config: Config, args: &TaskEdit) -> Result<String, Error> {
     let TaskEdit { project, filter } = args;
     match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Project(project) => projects::rename_task(&config, &project).await,
-        Flag::Filter(filter) => filters::rename_task(&config, filter).await,
+        Flag::Project(project) => projects::edit_task(&config, &project).await,
+        Flag::Filter(filter) => filters::edit_task(&config, filter).await,
     }
 }
 async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {

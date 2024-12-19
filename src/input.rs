@@ -1,5 +1,5 @@
 use crate::error::Error;
-use inquire::{DateSelect, Select, Text};
+use inquire::{DateSelect, MultiSelect, Select, Text};
 use std::fmt::Display;
 use terminal_size::{terminal_size, Height, Width};
 
@@ -116,6 +116,30 @@ pub fn select<T: Display>(
         }
     } else {
         Select::new(desc, options)
+            .with_page_size(page_size() / 2) //Fixing bug with page size
+            .prompt()
+            .map_err(Error::from)
+    }
+}
+
+/// Select an input from a list
+pub fn multi_select<T: Display>(
+    desc: &str,
+    options: Vec<T>,
+    mock_select: Option<usize>,
+) -> Result<Vec<T>, Error> {
+    if cfg!(test) {
+        if let Some(index) = mock_select {
+            let value = options
+                .into_iter()
+                .nth(index)
+                .expect("Must provide a vector of options");
+            Ok(vec![value])
+        } else {
+            panic!("Must set mock_select in config")
+        }
+    } else {
+        MultiSelect::new(desc, options)
             .with_page_size(page_size() / 2) //Fixing bug with page size
             .prompt()
             .map_err(Error::from)

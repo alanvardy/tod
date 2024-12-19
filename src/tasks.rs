@@ -1029,4 +1029,11 @@ mod tests {
             .unwrap();
         mock.assert();
     }
+
+    #[tokio::test]
+    async fn test_display_task() {
+        let task = test::fixtures::task();
+        let string = String::from("Get gifts for the twins");
+        assert_eq!(string, task.to_string())
+    }
 }

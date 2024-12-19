@@ -42,6 +42,7 @@ pub enum TaskAttribute {
     Description,
     Priority,
     Due,
+    Labels,
 }
 impl Display for TaskAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -50,6 +51,7 @@ impl Display for TaskAttribute {
             TaskAttribute::Description => write!(f, "Description"),
             TaskAttribute::Priority => write!(f, "Priority"),
             TaskAttribute::Due => write!(f, "Due"),
+            TaskAttribute::Labels => write!(f, "Labels"),
         }
     }
 }
@@ -61,6 +63,7 @@ pub fn task_attributes() -> Vec<TaskAttribute> {
         TaskAttribute::Description,
         TaskAttribute::Priority,
         TaskAttribute::Due,
+        TaskAttribute::Labels,
     ]
 }
 
@@ -388,6 +391,20 @@ pub async fn update_task(
             }
         }
         TaskAttribute::Due => tasks::spawn_schedule_task(config.clone(), task.clone()),
+        TaskAttribute::Labels => {
+            let label_string = input::string(
+                "Enter labels separated by spaces:",
+                config.mock_string.clone(),
+            )?;
+
+            let labels = label_string
+                .split_whitespace()
+                .map(|s| s.to_owned())
+                .collect();
+
+            let handle = spawn_update_task_labels(config.clone(), task.clone(), labels);
+            Ok(Some(handle))
+        }
     }
 }
 
@@ -622,6 +639,15 @@ pub fn spawn_update_task_description(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         if let Err(e) = todoist::update_task_description(&config, &task, description, false).await {
+            config.tx().send(e).unwrap();
+        }
+    })
+}
+
+/// Updates task inside another thread
+pub fn spawn_update_task_labels(config: Config, task: Task, labels: Vec<String>) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::update_task_labels(&config, &task, labels, false).await {
             config.tx().send(e).unwrap();
         }
     })

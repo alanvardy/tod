@@ -4,6 +4,7 @@
 
 - Added due to multi-select in `task edit`
 - Make all updates selected in multi-select run asynchronously
+- Added labels to multi-select in `task edit`
 
 ## 2024-12-19 v0.6.17
 

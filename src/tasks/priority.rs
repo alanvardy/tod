@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+/// Add to all_priorities function if adding another priority
 #[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Priority {
@@ -40,4 +41,13 @@ pub fn from_integer(priority: &Option<u8>) -> Option<Priority> {
         Some(4) => Some(Priority::High),
         Some(_) => None,
     }
+}
+
+pub fn all_priorities() -> Vec<Priority> {
+    vec![
+        Priority::None,
+        Priority::Low,
+        Priority::Medium,
+        Priority::High,
+    ]
 }

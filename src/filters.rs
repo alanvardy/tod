@@ -29,25 +29,30 @@ pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, Error
     Ok(buffer)
 }
 
-pub async fn rename_task(config: &Config, filter: String) -> Result<String, Error> {
-    let project_tasks = todoist::tasks_for_filter(config, &filter).await?;
+pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error> {
+    let tasks = todoist::tasks_for_filter(config, &filter).await?;
 
-    let selected_task = input::select(
-        "Choose a task of the project:",
-        project_tasks,
-        config.mock_select,
-    )?;
-    let task_content = selected_task.content.as_str();
+    let task = input::select("Choose a task of the project:", tasks, config.mock_select)?;
 
-    let new_task_content = input::string_with_default("Edit the task you selected:", task_content)?;
+    let options = tasks::task_attributes();
 
-    if task_content == new_task_content {
-        return Ok(color::green_string(
-            "The content is the same, no need to change it",
-        ));
+    let selections = input::multi_select("Choose attributes to edit", options, config.mock_select)?;
+
+    if selections.is_empty() {
+        return Err(Error {
+            message: "Nothing selected".to_string(),
+            source: "edit_task".to_string(),
+        });
     }
 
-    todoist::update_task_name(config, selected_task, new_task_content).await
+    let mut result = String::new();
+    for attribute in selections {
+        // Stops the inputs from rolling over each other in terminal
+        println!();
+        result = tasks::update_task(config, &task, &attribute).await?
+    }
+
+    Ok(result)
 }
 
 pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, Error> {
@@ -249,7 +254,7 @@ mod tests {
             .mock_url(server.url())
             .mock_select(0);
 
-        let result = rename_task(&config, String::from("today"));
+        let result = edit_task(&config, String::from("today"));
         assert_eq!(
             result.await,
             Ok("The content is the same, no need to change it".to_string())

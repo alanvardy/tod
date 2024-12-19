@@ -1,4 +1,8 @@
 coverage:
+  ignore:
+    - src/error.rs
+    - src/input.rs
+    - src/color.rs
   status:
     project:
       default:

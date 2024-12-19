@@ -19,6 +19,7 @@ struct CargoVersion {
     num: String,
 }
 
+#[derive(PartialEq, Eq, Debug)]
 pub enum Version {
     Latest,
     Dated(String),
@@ -79,5 +80,24 @@ mod tests {
         mock.assert();
 
         assert_eq!(response, Ok(String::from(VERSION)));
+    }
+
+    #[tokio::test]
+    async fn test_compare_versions() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/v1/crates/tod/versions")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::versions())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+
+        let response = compare_versions(config).await;
+        mock.assert();
+
+        assert_eq!(response, Ok(Version::Latest));
     }
 }

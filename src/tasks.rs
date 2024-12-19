@@ -9,7 +9,6 @@ use tokio::task::JoinHandle;
 
 pub mod format;
 pub mod priority;
-use crate::color;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::error::Error;
@@ -350,57 +349,45 @@ pub async fn update_task(
     config: &Config,
     task: &Task,
     attribute: &TaskAttribute,
-) -> Result<String, Error> {
+) -> Result<Option<JoinHandle<()>>, Error> {
     match attribute {
         TaskAttribute::Content => {
-            let task_content = task.content.as_str();
+            let value = task.content.as_str();
 
-            let new_task_content =
-                input::string_with_default("Edit the task you selected:", task_content)?;
+            let new_value = input::string_with_default("Enter new content:", value)?;
 
-            if task_content == new_task_content {
-                return Ok(color::green_string(
-                    "The content is the same, no need to change it",
-                ));
+            if *value == new_value {
+                Ok(None)
+            } else {
+                let handle = spawn_update_task_content(config.clone(), task.clone(), new_value);
+                Ok(Some(handle))
             }
-
-            todoist::update_task_content(config, task, new_task_content).await
         }
         TaskAttribute::Description => {
             let value = task.description.as_str();
 
-            let new_value = input::string_with_default("Edit the task you selected:", value)?;
+            let new_value = input::string_with_default("Enter a new description:", value)?;
 
-            if value == new_value {
-                return Ok(color::green_string(
-                    "The description is the same, no need to change it",
-                ));
+            if *value == new_value {
+                Ok(None)
+            } else {
+                let handle = spawn_update_task_description(config.clone(), task.clone(), new_value);
+                Ok(Some(handle))
             }
-
-            todoist::update_task_description(config, task, new_value).await
         }
         TaskAttribute::Priority => {
             let value = &task.priority;
             let priorities = priority::all_priorities();
 
-            let new_value = input::select("select your priority:", priorities, config.mock_select)?;
-
+            let new_value = input::select("Select your priority:", priorities, config.mock_select)?;
             if *value == new_value {
-                return Ok(color::green_string(
-                    "The priority is the same, no need to change it",
-                ));
-            }
-
-            todoist::update_task_priority(config, task, &new_value).await
-        }
-        TaskAttribute::Due => {
-            if let Some(handle) = tasks::spawn_schedule_task(config.clone(), task.clone())? {
-                handle.await?;
-                Ok(String::from("Updated due"))
+                Ok(None)
             } else {
-                Ok(String::from("No change"))
+                let handle = spawn_update_task_priority(config.clone(), task.clone(), new_value);
+                Ok(Some(handle))
             }
         }
+        TaskAttribute::Due => tasks::spawn_schedule_task(config.clone(), task.clone()),
     }
 }
 
@@ -583,7 +570,7 @@ pub fn spawn_schedule_task(config: Config, task: Task) -> Result<Option<JoinHand
     }
 }
 
-// Completes task inside another thread
+/// Completes task inside another thread
 pub fn spawn_complete_task(config: Config, task: Task) -> JoinHandle<()> {
     tokio::spawn(async move {
         if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
@@ -592,7 +579,7 @@ pub fn spawn_complete_task(config: Config, task: Task) -> JoinHandle<()> {
     })
 }
 
-// Deletes task inside another thread
+/// Deletes task inside another thread
 pub fn spawn_delete_task(config: Config, task: Task) -> JoinHandle<()> {
     tokio::spawn(async move {
         if let Err(e) = todoist::delete_task(&config, &task, false).await {
@@ -601,7 +588,7 @@ pub fn spawn_delete_task(config: Config, task: Task) -> JoinHandle<()> {
     })
 }
 
-// Updates task inside another thread
+/// Updates task inside another thread
 pub fn spawn_update_task_due(
     config: Config,
     task: Task,
@@ -613,6 +600,41 @@ pub fn spawn_update_task_due(
             todoist::update_task_due_natural_language(&config, task, due_string, duration, false)
                 .await
         {
+            config.tx().send(e).unwrap();
+        }
+    })
+}
+
+/// Updates task inside another thread
+pub fn spawn_update_task_content(config: Config, task: Task, content: String) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::update_task_content(&config, &task, content, false).await {
+            config.tx().send(e).unwrap();
+        }
+    })
+}
+
+/// Updates task inside another thread
+pub fn spawn_update_task_description(
+    config: Config,
+    task: Task,
+    description: String,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::update_task_description(&config, &task, description, false).await {
+            config.tx().send(e).unwrap();
+        }
+    })
+}
+
+/// Updates task inside another thread
+pub fn spawn_update_task_priority(
+    config: Config,
+    task: Task,
+    priority: Priority,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::update_task_priority(&config, &task, &priority, false).await {
             config.tx().send(e).unwrap();
         }
     })
@@ -750,7 +772,7 @@ pub async fn set_priority(
 
     let config = config.clone();
     Ok(tokio::spawn(async move {
-        if let Err(e) = todoist::update_task_priority(&config, &task, &priority).await {
+        if let Err(e) = todoist::update_task_priority(&config, &task, &priority, false).await {
             config.tx().send(e).unwrap();
         }
     }))

@@ -4,7 +4,7 @@
 
 Create `tod-bin` directory for pushing to AUR
 
-```bash
+```fish
 ./setup_aur.sh
 ```
 
@@ -13,20 +13,21 @@ Create `tod-bin` directory for pushing to AUR
 1. Update `CHANGELOG.md` with version number
 2. Create PR with
 
-```bash
-VERSION=0.6.17 ./create_pr.sh
+```fish
+set VERSION 0.6.17
+./create_pr.sh
 ```
 
 3. Wait for it to pass, then merge and pull in latest changes
 
-```bash
+```fish
 gh pr merge -r --admin
 gs
 ```
 
 4. Release it to all the places
 
-```bash
+```fish
 ./release.sh
 ```
 

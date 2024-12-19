@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-12-19 v0.6.17
+
 - Add multi-select to `task edit`, allowing editing of content, description, and priority
 
 ## 2024-12-11 v0.6.16

@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-12-19 v0.6.18
+
 - Added due to multi-select in `task edit`
 - Make all updates selected in multi-select run asynchronously
 - Added labels to multi-select in `task edit`

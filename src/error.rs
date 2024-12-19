@@ -3,6 +3,7 @@ use std::{fmt::Display, num::ParseIntError};
 use crate::color;
 use homedir::GetHomeError;
 use serde::Deserialize;
+use tokio::task::JoinError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Error {
@@ -26,6 +27,15 @@ impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
         Self {
             source: String::from("io"),
+            message: format!("{value}"),
+        }
+    }
+}
+
+impl From<JoinError> for Error {
+    fn from(value: JoinError) -> Self {
+        Self {
+            source: String::from("Join on future"),
             message: format!("{value}"),
         }
     }

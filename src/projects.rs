@@ -5,7 +5,6 @@ use tokio::task::JoinHandle;
 
 use crate::config::Config;
 use crate::error::{self, Error};
-use crate::input::DateTimeInput;
 use crate::sections::Section;
 use crate::tasks::priority::Priority;
 use crate::tasks::{FormatType, Task};
@@ -472,39 +471,9 @@ pub async fn schedule(
     } else {
         let mut handles = Vec::new();
         for task in filtered_tasks.iter() {
-            println!("{}", task.fmt(config, FormatType::Single, false));
-            let datetime_input = input::datetime(
-                config.mock_select,
-                config.mock_string.clone(),
-                config.natural_language_only,
-            )?;
-            match datetime_input {
-                input::DateTimeInput::Complete => {
-                    let handle = tasks::spawn_complete_task(config.clone(), task.clone());
-                    handles.push(handle);
-                }
-
-                DateTimeInput::Skip => (),
-
-                input::DateTimeInput::Text(due_string) => {
-                    let handle = tasks::spawn_update_task_due(
-                        config.clone(),
-                        task.clone(),
-                        due_string,
-                        None,
-                    );
-                    handles.push(handle);
-                }
-                input::DateTimeInput::None => {
-                    let handle = tasks::spawn_update_task_due(
-                        config.clone(),
-                        task.clone(),
-                        "No date".to_string(),
-                        None,
-                    );
-                    handles.push(handle);
-                }
-            };
+            if let Some(handle) = tasks::spawn_schedule_task(config.clone(), task.clone())? {
+                handles.push(handle);
+            }
         }
 
         future::join_all(handles).await;

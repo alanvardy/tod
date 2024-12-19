@@ -4,7 +4,7 @@ use crate::{
     color,
     config::Config,
     error::Error,
-    input::{self, DateTimeInput},
+    input::{self},
     tasks::{self, FormatType, Task},
     todoist,
 };
@@ -160,38 +160,9 @@ pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error>
     } else {
         let mut handles = Vec::new();
         for task in tasks.iter() {
-            println!("{}", task.fmt(config, FormatType::Single, true));
-            let datetime_input = input::datetime(
-                config.mock_select,
-                config.mock_string.clone(),
-                config.natural_language_only,
-            )?;
-            match datetime_input {
-                input::DateTimeInput::Complete => {
-                    let handle = tasks::spawn_complete_task(config.clone(), task.clone());
-                    handles.push(handle);
-                }
-                DateTimeInput::Skip => (),
-
-                input::DateTimeInput::Text(due_string) => {
-                    let handle = tasks::spawn_update_task_due(
-                        config.clone(),
-                        task.clone(),
-                        due_string,
-                        None,
-                    );
-                    handles.push(handle);
-                }
-                input::DateTimeInput::None => {
-                    let handle = tasks::spawn_update_task_due(
-                        config.clone(),
-                        task.clone(),
-                        "No date".to_string(),
-                        None,
-                    );
-                    handles.push(handle);
-                }
-            };
+            if let Some(handle) = tasks::spawn_schedule_task(config.clone(), task.clone())? {
+                handles.push(handle);
+            }
         }
 
         future::join_all(handles).await;

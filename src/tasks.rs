@@ -13,7 +13,9 @@ use crate::color;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::error::Error;
+use crate::input::DateTimeInput;
 use crate::projects;
+use crate::tasks;
 use crate::tasks::priority::Priority;
 use crate::{input, time, todoist};
 
@@ -40,6 +42,7 @@ pub enum TaskAttribute {
     Content,
     Description,
     Priority,
+    Due,
 }
 impl Display for TaskAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -47,6 +50,7 @@ impl Display for TaskAttribute {
             TaskAttribute::Content => write!(f, "Content"),
             TaskAttribute::Description => write!(f, "Description"),
             TaskAttribute::Priority => write!(f, "Priority"),
+            TaskAttribute::Due => write!(f, "Due"),
         }
     }
 }
@@ -57,6 +61,7 @@ pub fn task_attributes() -> Vec<TaskAttribute> {
         TaskAttribute::Content,
         TaskAttribute::Description,
         TaskAttribute::Priority,
+        TaskAttribute::Due,
     ]
 }
 
@@ -388,6 +393,14 @@ pub async fn update_task(
 
             todoist::update_task_priority(config, task, &new_value).await
         }
+        TaskAttribute::Due => {
+            if let Some(handle) = tasks::spawn_schedule_task(config.clone(), task.clone())? {
+                handle.await?;
+                Ok(String::from("Updated due"))
+            } else {
+                Ok(String::from("No change"))
+            }
+        }
     }
 }
 
@@ -539,6 +552,37 @@ fn get_timebox(config: &Config, task: &Task) -> Result<(String, u32), Error> {
     Ok((datetime, duration.parse::<u32>()?))
 }
 
+pub fn spawn_schedule_task(config: Config, task: Task) -> Result<Option<JoinHandle<()>>, Error> {
+    println!("{}", task.fmt(&config, FormatType::Single, true));
+    let datetime_input = input::datetime(
+        config.mock_select,
+        config.mock_string.clone(),
+        config.natural_language_only,
+    )?;
+    match datetime_input {
+        input::DateTimeInput::Complete => {
+            let handle = tasks::spawn_complete_task(config.clone(), task.clone());
+            Ok(Some(handle))
+        }
+        DateTimeInput::Skip => Ok(None),
+
+        input::DateTimeInput::Text(due_string) => {
+            let handle =
+                tasks::spawn_update_task_due(config.clone(), task.clone(), due_string, None);
+            Ok(Some(handle))
+        }
+        input::DateTimeInput::None => {
+            let handle = tasks::spawn_update_task_due(
+                config.clone(),
+                task.clone(),
+                "No date".to_string(),
+                None,
+            );
+            Ok(Some(handle))
+        }
+    }
+}
+
 // Completes task inside another thread
 pub fn spawn_complete_task(config: Config, task: Task) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -557,7 +601,7 @@ pub fn spawn_delete_task(config: Config, task: Task) -> JoinHandle<()> {
     })
 }
 
-// Deletes task inside another thread
+// Updates task inside another thread
 pub fn spawn_update_task_due(
     config: Config,
     task: Task,

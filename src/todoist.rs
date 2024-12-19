@@ -154,11 +154,12 @@ pub async fn update_task_priority(
     config: &Config,
     task: &Task,
     priority: &Priority,
+    spinner: bool,
 ) -> Result<String, Error> {
     let body = json!({ "priority": priority });
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, true).await?;
+    request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
@@ -209,12 +210,13 @@ pub async fn update_task_due_natural_language(
 pub async fn update_task_content(
     config: &Config,
     task: &Task,
-    new_name: String,
+    content: String,
+    spinner: bool,
 ) -> Result<String, Error> {
-    let body = json!({ "content": new_name });
+    let body = json!({ "content": content});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, true).await?;
+    request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -223,12 +225,13 @@ pub async fn update_task_content(
 pub async fn update_task_description(
     config: &Config,
     task: &Task,
-    new_name: String,
+    description: String,
+    spinner: bool,
 ) -> Result<String, Error> {
-    let body = json!({ "description": new_name });
+    let body = json!({ "description": description});
     let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, true).await?;
+    request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -493,7 +496,7 @@ mod tests {
 
         let config = test::fixtures::config().await.mock_url(server.url());
 
-        let response = update_task_priority(&config, &task, &Priority::High).await;
+        let response = update_task_priority(&config, &task, &Priority::High, true).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Added due to multi-select in `task edit`
+- Make all updates selected in multi-select run asynchronously
 
 ## 2024-12-19 v0.6.17
 

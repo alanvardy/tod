@@ -45,14 +45,17 @@ pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error>
         });
     }
 
-    let mut result = String::new();
+    let mut handles = Vec::new();
     for attribute in selections {
         // Stops the inputs from rolling over each other in terminal
         println!();
-        result = tasks::update_task(config, &task, &attribute).await?
+        if let Some(handle) = tasks::update_task(config, &task, &attribute).await? {
+            handles.push(handle);
+        }
     }
 
-    Ok(result)
+    future::join_all(handles).await;
+    Ok(String::from("Finished editing task"))
 }
 
 pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, Error> {
@@ -226,10 +229,7 @@ mod tests {
             .mock_select(0);
 
         let result = edit_task(&config, String::from("today"));
-        assert_eq!(
-            result.await,
-            Ok("The content is the same, no need to change it".to_string())
-        );
+        assert_eq!(result.await, Ok("Finished editing task".to_string()));
         mock.assert();
     }
     #[tokio::test]

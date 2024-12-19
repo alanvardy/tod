@@ -14,7 +14,7 @@ Create `tod-bin` directory for pushing to AUR
 2. Create PR with
 
 ```bash
-VERSION=0.6.15 ./create_pr.sh
+VERSION=0.6.17 ./create_pr.sh
 ```
 
 3. Wait for it to pass, then merge and pull in latest changes

@@ -12,7 +12,10 @@ ambr --regex "^version = \"\d+\.\d+\.\d+\"" "version = \"$VERSION\"" Cargo.toml 
 echo "=== UPDATE AND TEST ===" &&
 ./update_test.sh &&
 echo "=== CREATING PR ===" &&
-gb "$VERSION" "$VERSION" &&
-prr &&
+gt create "$VERSION" -a -m "$VERSION" --no-interactive &&
+gt submit --no-interactive &&
+gh pr ready &&
 sleep 5 &&
-checks
+gh pr checks --watch -i 5;
+soundcomplete; 
+

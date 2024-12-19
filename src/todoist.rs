@@ -236,6 +236,21 @@ pub async fn update_task_description(
     Ok(String::from("✓"))
 }
 
+/// Update the labels of a task by ID
+pub async fn update_task_labels(
+    config: &Config,
+    task: &Task,
+    labels: Vec<String>,
+    spinner: bool,
+) -> Result<String, Error> {
+    let body = json!({ "labels": labels});
+    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+
+    request::post_todoist_rest(config, url, body, spinner).await?;
+    // Does not pass back a task
+    Ok(String::from("✓"))
+}
+
 /// Complete the last task returned by "next task"
 pub async fn complete_task(config: &Config, task_id: &str, spinner: bool) -> Result<String, Error> {
     let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task_id}}]});

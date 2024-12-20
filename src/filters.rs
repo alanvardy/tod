@@ -32,11 +32,11 @@ pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, Error
 pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, &filter).await?;
 
-    let task = input::select("Choose a task of the project:", tasks, config.mock_select)?;
+    let task = input::select(input::TASK, tasks, config.mock_select)?;
 
     let options = tasks::task_attributes();
 
-    let selections = input::multi_select("Choose attributes to edit", options, config.mock_select)?;
+    let selections = input::multi_select(input::ATTRIBUTES, options, config.mock_select)?;
 
     if selections.is_empty() {
         return Err(Error {

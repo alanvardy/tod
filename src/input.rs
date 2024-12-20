@@ -3,6 +3,36 @@ use inquire::{DateSelect, MultiSelect, Select, Text};
 use std::fmt::Display;
 use terminal_size::{terminal_size, Height, Width};
 
+// These constants are used throughout the app
+
+// Set
+pub const CONTENT: &str = "Set content";
+pub const DESCRIPTION: &str = "Set description";
+pub const NAME: &str = "Set name";
+pub const FILTER: &str = "Set filter";
+pub const DATE: &str = "Set a due date";
+pub const TIME: &str = "Set time, i.e. 3pm or 1500";
+pub const DURATION: &str = "Set duration in minutes";
+
+// Select
+pub const ATTRIBUTES: &str = "Select attributes";
+pub const PROJECT: &str = "Select a project";
+pub const LABELS: &str = "Select labels";
+pub const SECTION: &str = "Select section";
+pub const PRIORITY: &str = "Select priority";
+pub const OPTION: &str = "Select an option";
+pub const SELECT_DATE: &str = "Select a date";
+pub const TASK: &str = "Select a task";
+
+// Options
+pub const NAT_LANG: &str = "Natural Language";
+pub const NO_DATE: &str = "No Date";
+pub const COMPLETE: &str = "Complete";
+pub const SKIP: &str = "Skip";
+pub const DELETE: &str = "Delete";
+pub const QUIT: &str = "Quit";
+pub const SCHEDULE: &str = "Schedule";
+
 pub enum DateTimeInput {
     Skip,
     None,
@@ -11,50 +41,64 @@ pub enum DateTimeInput {
 }
 
 /// Get datetime input from user
+/// skip_or_delete enables the skip and delete options
+/// it is generally true when processing tasks
 pub fn datetime(
     mock_select: Option<usize>,
     mock_string: Option<String>,
     natural_language_only: Option<bool>,
+    skip_or_complete: bool,
 ) -> Result<DateTimeInput, Error> {
     let selection = if natural_language_only.unwrap_or_default() {
-        "Natural Language"
+        NAT_LANG
+    } else if skip_or_complete {
+        let options = vec![SELECT_DATE, NAT_LANG, NO_DATE, SKIP, COMPLETE];
+        let description = DATE;
+        select(description, options, mock_select)?
     } else {
-        let options = vec![
-            "Pick Date",
-            "Natural Language",
-            "No Date",
-            "Skip",
-            "Complete",
-        ];
-        let description = "Set a due date";
+        let options = vec![SELECT_DATE, NAT_LANG, NO_DATE];
+        let description = DATE;
         select(description, options, mock_select)?
     };
 
     match selection {
-        "Natural Language" => {
-            let entry = string(
+        NAT_LANG => {
+            if skip_or_complete {
+                let entry = string(
                 "Enter datetime in natural language, or one of:\n[none (n), skip (s), complete (c)]",
                 mock_string,
             )?;
 
-            match entry.as_str() {
-                "none" => Ok(DateTimeInput::None),
-                "n" => Ok(DateTimeInput::None),
-                "complete" => Ok(DateTimeInput::Complete),
-                "c" => Ok(DateTimeInput::Complete),
-                "skip" => Ok(DateTimeInput::Skip),
-                "s" => Ok(DateTimeInput::Skip),
-                _ => Ok(DateTimeInput::Text(entry)),
+                match entry.as_str() {
+                    "none" => Ok(DateTimeInput::None),
+                    "n" => Ok(DateTimeInput::None),
+                    "complete" => Ok(DateTimeInput::Complete),
+                    "c" => Ok(DateTimeInput::Complete),
+                    "skip" => Ok(DateTimeInput::Skip),
+                    "s" => Ok(DateTimeInput::Skip),
+                    _ => Ok(DateTimeInput::Text(entry)),
+                }
+            } else {
+                let entry = string(
+                    "Enter datetime in natural language, or none (n)",
+                    mock_string,
+                )?;
+
+                match entry.as_str() {
+                    "none" => Ok(DateTimeInput::None),
+                    "n" => Ok(DateTimeInput::None),
+                    _ => Ok(DateTimeInput::Text(entry)),
+                }
             }
         }
-        "Pick Date" => {
+        SELECT_DATE => {
             let string = date()?;
             Ok(DateTimeInput::Text(string))
         }
 
-        "No Date" => Ok(DateTimeInput::None),
+        NO_DATE => Ok(DateTimeInput::None),
         "Complete" => Ok(DateTimeInput::Complete),
-        "Skip" => Ok(DateTimeInput::Skip),
+        SKIP => Ok(DateTimeInput::Skip),
         _ => Err(Error {
             message: String::from("Unrecognized input"),
             source: String::from("Datetime Input"),

@@ -119,7 +119,7 @@ pub async fn remove(config: &mut Config, project: &Project) -> Result<String, Er
 
 /// Rename a project in config
 pub async fn rename(config: Config, project: &Project) -> Result<String, Error> {
-    let new_name = input::string_with_default("Input new project name", &project.name)?;
+    let new_name = input::string_with_default(input::NAME, &project.name)?;
 
     let mut config = config;
 

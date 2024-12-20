@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, todoist};
+use crate::{config::Config, error::Error, input, projects::Project, todoist};
 use futures::future;
 use serde::Deserialize;
 
@@ -30,6 +30,23 @@ pub async fn all_sections(config: &Config) -> Vec<Section> {
 pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
     let sections: Vec<Section> = serde_json::from_str(&json)?;
     Ok(sections)
+}
+
+pub async fn select_section(config: &Config, project: &Project) -> Result<Option<Section>, Error> {
+    let sections = todoist::sections_for_project(config, project).await?;
+    let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
+    if section_names.is_empty() {
+        Ok(None)
+    } else {
+        section_names.insert(0, "No section".to_string());
+        let section_name = input::select(input::SECTION, section_names, config.mock_select)?;
+
+        let section = sections
+            .iter()
+            .find(|x| x.name == section_name.as_str())
+            .map(|s| s.to_owned());
+        Ok(section)
+    }
 }
 
 #[cfg(test)]

@@ -111,13 +111,17 @@ pub async fn delete_todoist_rest(
 
 // Combine get and post into one function
 /// Get Todoist via REST api
-pub async fn get_todoist_rest(config: &Config, url: String) -> Result<String, Error> {
+pub async fn get_todoist_rest(
+    config: &Config,
+    url: String,
+    spinner: bool,
+) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let token = config.token.clone();
 
     let request_url = format!("{base_url}{url}");
     let authorization: &str = &format!("Bearer {token}");
-    let spinner = maybe_start_spinner(config, true);
+    let spinner = maybe_start_spinner(config, spinner);
     if config.verbose.unwrap_or_default() {
         println!("GET {request_url}")
     }

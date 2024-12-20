@@ -34,7 +34,7 @@ pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Erro
 
 pub async fn get_task(config: &Config, id: &str) -> Result<Task, Error> {
     let url = format!("{REST_V2_TASKS_URL}{id}");
-    let json = request::get_todoist_rest(config, url).await?;
+    let json = request::get_todoist_rest(config, url, true).await?;
     tasks::json_to_task(json)
 }
 
@@ -98,7 +98,7 @@ pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>
 
     let encoded = encode(filter);
     let url = format!("{REST_V2_TASKS_URL}?filter={encoded}");
-    let json = request::get_todoist_rest(config, url).await?;
+    let json = request::get_todoist_rest(config, url, true).await?;
     tasks::rest_json_to_tasks(json)
 }
 
@@ -108,17 +108,17 @@ pub async fn sections_for_project(
 ) -> Result<Vec<Section>, Error> {
     let project_id = &project.id;
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
-    let json = request::get_todoist_rest(config, url).await?;
+    let json = request::get_todoist_rest(config, url, true).await?;
     sections::json_to_sections(json)
 }
 
 pub async fn projects(config: &Config) -> Result<Vec<Project>, Error> {
-    let json = request::get_todoist_rest(config, PROJECTS_URL.to_string()).await?;
+    let json = request::get_todoist_rest(config, PROJECTS_URL.to_string(), true).await?;
     projects::json_to_projects(json)
 }
 
-pub async fn labels(config: &Config) -> Result<Vec<Label>, Error> {
-    let json = request::get_todoist_rest(config, LABELS_URL.to_string()).await?;
+pub async fn labels(config: &Config, spinner: bool) -> Result<Vec<Label>, Error> {
+    let json = request::get_todoist_rest(config, LABELS_URL.to_string(), spinner).await?;
     labels::json_to_labels(json)
 }
 

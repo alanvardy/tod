@@ -37,6 +37,7 @@ pub struct Task {
 }
 
 // Update task_attributes fn when adding here
+#[derive(Eq, PartialEq)]
 pub enum TaskAttribute {
     Content,
     Description,
@@ -433,10 +434,16 @@ pub async fn process_task(
     task_count: &mut i32,
     with_project: bool,
 ) -> Option<JoinHandle<()>> {
-    let options = ["Complete", "Skip", "Schedule", "Delete", "Quit"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+    let options = [
+        input::COMPLETE,
+        input::SKIP,
+        input::SCHEDULE,
+        input::DELETE,
+        input::QUIT,
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
     let formatted_task = task.fmt(config, FormatType::Single, with_project);
     let mut reloaded_config = config
         .reload()
@@ -447,22 +454,23 @@ pub async fn process_task(
     let tasks_completed = reloaded_config.tasks_completed().unwrap_or_default();
     println!("{formatted_task}{tasks_completed} completed today, {task_count} remaining");
     *task_count -= 1;
-    match input::select("Select an option", options, config.mock_select) {
+    match input::select(input::OPTION, options, config.mock_select) {
         Ok(string) => {
             if string == "Complete" {
                 reloaded_config.save().await.expect("Could not save config");
                 Some(spawn_complete_task(reloaded_config, task))
-            } else if string == "Delete" {
+            } else if string == input::DELETE {
                 Some(spawn_delete_task(config.clone(), task))
-            } else if string == "Schedule" {
+            } else if string == input::SCHEDULE {
                 let date = input::date().ok()?;
                 Some(spawn_update_task_due(config.clone(), task, date, None))
-            } else if string == "Skip" {
+            } else if string == input::SKIP {
                 // Do nothing
                 Some(tokio::spawn(async move {}))
-            } else {
-                // The quit clause
+            } else if string == input::QUIT {
                 None
+            } else {
+                unreachable!()
             }
         }
         Err(e) => {
@@ -533,8 +541,7 @@ fn get_timebox(config: &Config, task: &Task) -> Result<(String, u32), Error> {
             ..
         } => {
             if time::is_date(date) {
-                let time =
-                    input::string("Input time, i.e. 3pm or 1500", config.mock_string.clone())?;
+                let time = input::string(input::TIME, config.mock_string.clone())?;
 
                 format!("{date} {time}")
             } else {
@@ -546,12 +553,12 @@ fn get_timebox(config: &Config, task: &Task) -> Result<(String, u32), Error> {
         }
         _ => {
             let date = input::date()?;
-            let time = input::string("Input time, i.e. 3pm or 1500", config.mock_string.clone())?;
+            let time = input::string(input::TIME, config.mock_string.clone())?;
             format!("{date} {time}")
         }
     };
 
-    let duration = input::string("Input duration in minutes", config.mock_string.clone())?;
+    let duration = input::string(input::DURATION, config.mock_string.clone())?;
 
     Ok((datetime, duration.parse::<u32>()?))
 }
@@ -562,6 +569,7 @@ pub fn spawn_schedule_task(config: Config, task: Task) -> Result<Option<JoinHand
         config.mock_select,
         config.mock_string.clone(),
         config.natural_language_only,
+        true,
     )?;
     match datetime_input {
         input::DateTimeInput::Complete => {
@@ -790,11 +798,7 @@ pub async fn set_priority(
         Priority::Medium,
         Priority::High,
     ];
-    let priority = input::select(
-        "Choose a priority that should be assigned to task: ",
-        options,
-        config.mock_select,
-    )?;
+    let priority = input::select(input::PRIORITY, options, config.mock_select)?;
 
     let config = config.clone();
     Ok(tokio::spawn(async move {

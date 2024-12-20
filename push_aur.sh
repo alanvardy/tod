@@ -16,7 +16,7 @@ rm target/cargo-aur/*.tar.gz &&
 cd ../tod-bin/ || exit &&
 echo "=== PUSHING TO AUR ===" &&
 git add . &&
-git commit -m "new version" &&
+git commit -m "v$VERSION" &&
 git push aur &&
 cd ../tod || exit &&
 echo "=== SUCCESS ===" 

@@ -13,9 +13,10 @@ use cargo::Version;
 use clap::{Parser, Subcommand};
 use config::Config;
 use error::Error;
+use input::DateTimeInput;
 use projects::Project;
-use tasks::priority;
 use tasks::priority::Priority;
+use tasks::{priority, TaskAttribute};
 use tokio::sync::mpsc::UnboundedSender;
 
 mod cargo;
@@ -496,57 +497,153 @@ async fn select_command(
 async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, Error> {
     let TaskQuickAdd { content } = args;
 
-    let content = fetch_string(&content.as_ref().map(|c| c.join(" ")), &config, "CONTENT")?;
+    let content = fetch_string(
+        &content.as_ref().map(|c| c.join(" ")),
+        &config,
+        input::CONTENT,
+    )?;
     todoist::quick_add_task(&config, &content).await?;
     Ok(color::green_string("✓"))
 }
 
+/// User does not want to use sections
+fn is_no_sections(args: &TaskCreate, config: &Config) -> bool {
+    args.no_section || config.no_sections.unwrap_or_default()
+}
+
 async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error> {
+    if no_flags_used(args) {
+        let options = tasks::task_attributes()
+            .into_iter()
+            .filter(|t| t != &TaskAttribute::Content)
+            .collect();
+
+        let selections = input::multi_select(input::ATTRIBUTES, options, config.mock_select)?;
+
+        if selections.is_empty() {
+            return Err(Error {
+                message: "Nothing selected".to_string(),
+                source: "edit_task".to_string(),
+            });
+        }
+
+        let content = fetch_string(&None, &config, input::CONTENT)?;
+
+        let description = if selections.contains(&TaskAttribute::Description) {
+            fetch_string(&None, &config, input::DESCRIPTION)?
+        } else {
+            String::new()
+        };
+        let priority = if selections.contains(&TaskAttribute::Priority) {
+            fetch_priority(&None, &config)?
+        } else {
+            Priority::None
+        };
+        let due = if selections.contains(&TaskAttribute::Due) {
+            let datetime_input = input::datetime(
+                config.mock_select,
+                config.mock_string.clone(),
+                config.natural_language_only,
+                false,
+            )?;
+
+            match datetime_input {
+                DateTimeInput::Skip => unreachable!(),
+                DateTimeInput::Complete => unreachable!(),
+                DateTimeInput::None => None,
+                DateTimeInput::Text(datetime) => Some(datetime),
+            }
+        } else {
+            None
+        };
+
+        let labels = if selections.contains(&TaskAttribute::Labels) {
+            let all_labels = labels::get_labels(&config, false).await?;
+            input::multi_select(input::LABELS, all_labels, config.mock_select)?
+        } else {
+            Vec::new()
+        }
+        .into_iter()
+        .map(|l| l.name.to_owned())
+        .collect::<Vec<String>>();
+
+        let project = match fetch_project(&args.project, &config)? {
+            Flag::Project(project) => project,
+            _ => unreachable!(),
+        };
+
+        let section = if is_no_sections(args, &config) {
+            None
+        } else {
+            sections::select_section(&config, &project).await?
+        };
+
+        todoist::add_task(
+            &config,
+            &content,
+            &project,
+            section,
+            priority,
+            &description,
+            &due,
+            &labels,
+        )
+        .await?;
+    } else {
+        let TaskCreate {
+            project,
+            due,
+            description,
+            content,
+            priority,
+            label: labels,
+            no_section: _no_section,
+        } = args;
+        let project = match fetch_project(project, &config)? {
+            Flag::Project(project) => project,
+            _ => unreachable!(),
+        };
+
+        let section = if is_no_sections(args, &config) {
+            None
+        } else {
+            sections::select_section(&config, &project).await?
+        };
+        let content = fetch_string(content, &config, input::CONTENT)?;
+        let priority = fetch_priority(priority, &config)?;
+
+        todoist::add_task(
+            &config,
+            &content,
+            &project,
+            section,
+            priority,
+            description,
+            due,
+            labels,
+        )
+        .await?;
+    }
+    Ok(color::green_string("✓"))
+}
+
+fn no_flags_used(args: &TaskCreate) -> bool {
     let TaskCreate {
         project,
         due,
         description,
         content,
-        no_section,
+        no_section: _no_section,
         priority,
-        label: labels,
+        label,
     } = args;
-    let content = fetch_string(content, &config, "CONTENT")?;
-    let priority = fetch_priority(priority, &config)?;
-    let project = match fetch_project(project, &config)? {
-        Flag::Project(project) => project,
-        _ => unreachable!(),
-    };
-    let section = if *no_section || config.no_sections.unwrap_or_default() {
-        None
-    } else {
-        let sections = todoist::sections_for_project(&config, &project).await?;
-        let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
-        if section_names.is_empty() {
-            None
-        } else {
-            section_names.insert(0, "No section".to_string());
-            let section_name = input::select("Select section", section_names, config.mock_select)?;
-            sections
-                .iter()
-                .find(|x| x.name == section_name.as_str())
-                .map(|s| s.to_owned())
-        }
-    };
 
-    todoist::add_task(
-        &config,
-        &content,
-        &project,
-        section,
-        priority,
-        description,
-        due,
-        labels,
-    )
-    .await?;
-
-    Ok(color::green_string("✓"))
+    project.is_none()
+        && due.is_none()
+        && description.is_empty()
+        && content.is_none()
+        && priority.is_none()
+        && label.is_empty()
 }
 
 async fn task_edit(config: Config, args: &TaskEdit) -> Result<String, Error> {
@@ -806,7 +903,7 @@ fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Erro
                 },
                 |p| Ok(Flag::Project(p.to_owned())),
             ),
-        None => input::select("Select project", projects, config.mock_select).map(Flag::Project),
+        None => input::select(input::PROJECT, projects, config.mock_select).map(Flag::Project),
     }
 }
 
@@ -814,7 +911,7 @@ fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, Error>
     match filter {
         Some(string) => Ok(Flag::Filter(string.to_owned())),
         None => {
-            let string = input::string("Enter a filter:", config.mock_string.clone())?;
+            let string = input::string(input::FILTER, config.mock_string.clone())?;
             Ok(Flag::Filter(string))
         }
     }
@@ -834,7 +931,7 @@ fn fetch_project_or_filter(
         )),
         (None, None) => {
             let options = vec![FlagOptions::Project, FlagOptions::Filter];
-            match input::select("Select Project or Filter:", options, config.mock_select)? {
+            match input::select(input::OPTION, options, config.mock_select)? {
                 FlagOptions::Project => fetch_project(project, config),
                 FlagOptions::Filter => fetch_filter(filter, config),
             }
@@ -852,18 +949,14 @@ fn fetch_priority(priority: &Option<u8>, config: &Config) -> Result<Priority, Er
                 Priority::Medium,
                 Priority::High,
             ];
-            input::select(
-                "Choose a priority that should be assigned to task:",
-                options,
-                config.mock_select,
-            )
+            input::select(input::PRIORITY, options, config.mock_select)
         }
     }
 }
 
 async fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<String>, Error> {
     if labels.is_empty() {
-        let labels = labels::get_labels(config)
+        let labels = labels::get_labels(config, false)
             .await?
             .into_iter()
             .map(|l| l.name)

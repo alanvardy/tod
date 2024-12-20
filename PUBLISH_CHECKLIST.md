@@ -14,20 +14,19 @@ Create `tod-bin` directory for pushing to AUR
 2. Create PR with
 
 ```fish
-VERSION=v0.6.18 ./create_pr.sh
+VERSION=0.6.19 ./create_pr.sh
 ```
 
 3. Wait for it to pass, then merge and pull in latest changes
 
 ```fish
-gh pr merge -r --admin
-gs
+gh pr merge -r --admin && gs
 ```
 
 4. Release it to all the places
 
 ```fish
-VERSION=v0.6.18 ./release.sh
+VERSION=0.6.19 ./release.sh
 ```
 
 ## Publish to Cargo and AUR (older method)

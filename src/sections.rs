@@ -54,7 +54,6 @@ mod tests {
     use super::*;
     use crate::test;
     use pretty_assertions::assert_eq;
-    /// Need to adjust this value forward or back an hourwhen timezone changes
 
     #[test]
     fn should_convert_json_to_sections() {
@@ -74,5 +73,33 @@ mod tests {
         ];
         let result = json_to_sections(test::responses::sections());
         assert_eq!(result, Ok(sections));
+    }
+
+    #[tokio::test]
+    async fn test_select_section() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/rest/v2/sections?project_id=456")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sections())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config()
+            .await
+            .mock_url(server.url())
+            .mock_select(1);
+        let project = test::fixtures::project();
+
+        let expected = Ok(Some(Section {
+            id: "1234".to_string(),
+            project_id: "5678".to_string(),
+            order: 1,
+            name: "Bread".to_string(),
+        }));
+        let result = select_section(&config, &project).await;
+        assert_eq!(expected, result);
+        mock.assert();
     }
 }

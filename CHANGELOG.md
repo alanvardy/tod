@@ -4,6 +4,7 @@
 
 - Use multi-select in `task create` when no flags are used
 - Standardized language used in inputs
+- Update CI `yaml` file
 
 ## 2024-12-19 v0.6.18
 

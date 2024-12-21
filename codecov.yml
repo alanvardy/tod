@@ -3,6 +3,7 @@ coverage:
     - src/error.rs
     - src/input.rs
     - src/color.rs
+    - src/main.rs
   status:
     project:
       default:

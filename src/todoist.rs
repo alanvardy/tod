@@ -18,7 +18,7 @@ use crate::{projects, sections, tasks, time};
 const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
 const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
 const SYNC_URL: &str = "/sync/v9/sync";
-pub const REST_V2_TASKS_URL: &str = "/rest/v2/tasks/";
+pub const TASKS_URL: &str = "/rest/v2/tasks/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
 const LABELS_URL: &str = "/rest/v2/labels";
@@ -33,7 +33,7 @@ pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Erro
 }
 
 pub async fn get_task(config: &Config, id: &str) -> Result<Task, Error> {
-    let url = format!("{REST_V2_TASKS_URL}{id}");
+    let url = format!("{TASKS_URL}{id}");
     let json = request::get_todoist_rest(config, url, true).await?;
     tasks::json_to_task(json)
 }
@@ -50,7 +50,7 @@ pub async fn add_task(
     due: &Option<String>,
     labels: &[String],
 ) -> Result<Task, Error> {
-    let url = String::from(REST_V2_TASKS_URL);
+    let url = String::from(TASKS_URL);
     let mut body: HashMap<String, Value> = HashMap::new();
     body.insert("content".to_owned(), Value::String(content.to_owned()));
     body.insert(
@@ -97,7 +97,7 @@ pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>
     use urlencoding::encode;
 
     let encoded = encode(filter);
-    let url = format!("{REST_V2_TASKS_URL}?filter={encoded}");
+    let url = format!("{TASKS_URL}?filter={encoded}");
     let json = request::get_todoist_rest(config, url, true).await?;
     tasks::rest_json_to_tasks(json)
 }
@@ -157,7 +157,7 @@ pub async fn update_task_priority(
     spinner: bool,
 ) -> Result<String, Error> {
     let body = json!({ "priority": priority });
-    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+    let url = format!("{}{}", TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back an task
@@ -174,7 +174,7 @@ pub async fn add_task_label(
     let mut labels = task.labels;
     labels.push(label);
     let body = json!({ "labels": labels});
-    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+    let url = format!("{}{}", TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back an task
@@ -199,7 +199,7 @@ pub async fn update_task_due_natural_language(
     } else {
         json!({ "due_string": due_string })
     };
-    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+    let url = format!("{}{}", TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back a task
@@ -214,7 +214,7 @@ pub async fn update_task_content(
     spinner: bool,
 ) -> Result<String, Error> {
     let body = json!({ "content": content});
-    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+    let url = format!("{}{}", TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back a task
@@ -229,7 +229,7 @@ pub async fn update_task_description(
     spinner: bool,
 ) -> Result<String, Error> {
     let body = json!({ "description": description});
-    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+    let url = format!("{}{}", TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back a task
@@ -244,7 +244,7 @@ pub async fn update_task_labels(
     spinner: bool,
 ) -> Result<String, Error> {
     let body = json!({ "labels": labels});
-    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+    let url = format!("{}{}", TASKS_URL, task.id);
 
     request::post_todoist_rest(config, url, body, spinner).await?;
     // Does not pass back a task
@@ -268,10 +268,21 @@ pub async fn complete_task(config: &Config, task_id: &str, spinner: bool) -> Res
 
 pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<String, Error> {
     let body = json!({});
-    let url = format!("{}{}", REST_V2_TASKS_URL, task.id);
+    let url = format!("{}{}", TASKS_URL, task.id);
 
     request::delete_todoist_rest(config, url, body, spinner).await?;
-    // Does not pass back a task
+    Ok(String::from("✓"))
+}
+
+pub async fn delete_project(
+    config: &Config,
+    project: &Project,
+    spinner: bool,
+) -> Result<String, Error> {
+    let url = format!("{}/{}", PROJECTS_URL, project.id);
+    let body = json!({});
+
+    request::delete_todoist_rest(config, url, body, spinner).await?;
     Ok(String::from("✓"))
 }
 
@@ -493,6 +504,58 @@ mod tests {
         mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[tokio::test]
+    async fn test_delete_task() {
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server
+            .mock("DELETE", "/rest/v2/tasks/222")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::sync())
+            .create_async()
+            .await;
+
+        let task = test::fixtures::task();
+        let config = test::fixtures::config().await.mock_url(server.url());
+
+        let config = Config {
+            mock_url: Some(server.url()),
+            ..config
+        };
+
+        let response = delete_task(&config, &task, false).await;
+        mock.assert();
+
+        assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[tokio::test]
+    async fn test_get_task() {
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server
+            .mock("GET", "/rest/v2/tasks/5149481867")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::task())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+
+        let config = Config {
+            mock_url: Some(server.url()),
+            ..config
+        };
+
+        let response = get_task(&config, "5149481867").await.unwrap();
+        mock.assert();
+
+        assert_eq!(response.id, String::from("5149481867"));
+        assert_eq!(response.project_id, String::from("5555555"));
     }
 
     #[tokio::test]

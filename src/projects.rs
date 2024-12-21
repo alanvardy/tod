@@ -117,6 +117,13 @@ pub async fn remove(config: &mut Config, project: &Project) -> Result<String, Er
     config.save().await
 }
 
+/// Remove a project from the projects HashMap in Config
+pub async fn delete(config: &mut Config, project: &Project) -> Result<String, Error> {
+    todoist::delete_project(config, project, true).await?;
+    config.remove_project(project);
+    config.save().await
+}
+
 /// Rename a project in config
 pub async fn rename(config: Config, project: &Project) -> Result<String, Error> {
     let new_name = input::string_with_default(input::NAME, &project.name)?;
@@ -864,6 +871,31 @@ mod tests {
 
         let result = edit_task(&config, project);
         assert_eq!(result.await, Ok("Finished editing task".to_string()));
+        mock.assert();
+    }
+    #[tokio::test]
+    async fn test_project_delete() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("DELETE", "/rest/v2/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::projects())
+            .create_async()
+            .await;
+
+        let mut config = test::fixtures::config()
+            .await
+            .mock_url(server.url())
+            .mock_select(0)
+            .create()
+            .await
+            .unwrap();
+        let binding = config.projects.clone().unwrap_or_default();
+        let project = binding.first().unwrap();
+
+        let result = delete(&mut config, project).await;
+        assert_eq!(result, Ok("✓".to_string()));
         mock.assert();
     }
     #[tokio::test]

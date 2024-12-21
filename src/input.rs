@@ -30,6 +30,7 @@ pub const NO_DATE: &str = "No Date";
 pub const COMPLETE: &str = "Complete";
 pub const SKIP: &str = "Skip";
 pub const DELETE: &str = "Delete";
+pub const CANCEL: &str = "Cancel";
 pub const QUIT: &str = "Quit";
 pub const SCHEDULE: &str = "Schedule";
 

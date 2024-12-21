@@ -100,6 +100,10 @@ enum ProjectCommands {
     /// (r) Remove a project from config (not Todoist)
     Remove(ProjectRemove),
 
+    #[clap(alias = "d")]
+    /// (d) Remove a project from Todoist
+    Delete(ProjectDelete),
+
     #[clap(alias = "n")]
     /// (n) Rename a project in config (not in Todoist)
     Rename(ProjectRename),
@@ -136,6 +140,17 @@ struct ProjectRemove {
     #[arg(short = 'l', long, default_value_t = false)]
     /// Remove all projects from config
     all: bool,
+
+    #[arg(short, long)]
+    /// Project to remove
+    project: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ProjectDelete {
+    #[arg(short = 'r', long, default_value_t = false)]
+    /// Keep repeating prompt to delete projects. Use Ctrl/CMD + c to exit.
+    repeat: bool,
 
     #[arg(short, long)]
     /// Project to remove
@@ -461,6 +476,9 @@ async fn select_command(
                 Commands::Project(ProjectCommands::Empty(args)) => {
                     project_empty(config, args).await
                 }
+                Commands::Project(ProjectCommands::Delete(args)) => {
+                    project_delete(config, args).await
+                }
 
                 // Task
                 Commands::Task(TaskCommands::QuickAdd(args)) => task_quick_add(config, args).await,
@@ -712,6 +730,35 @@ async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, 
             }
         },
         (_, _) => Err(error::new("project_remove", "Incorrect flags provided")),
+    }
+}
+
+async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, Error> {
+    let ProjectDelete { project, repeat } = args;
+    let mut config = config.clone();
+    loop {
+        let project = match fetch_project(project, &config)? {
+            Flag::Project(project) => project,
+            _ => unreachable!(),
+        };
+        let tasks = todoist::tasks_for_project(&config, &project).await?;
+
+        if !tasks.is_empty() {
+            println!();
+            let options = vec![input::CANCEL, input::DELETE];
+            let num_tasks = tasks.len();
+            let desc = format!("Project has {num_tasks} tasks, confirm deletion");
+            let result = input::select(&desc, options, config.mock_select)?;
+
+            if result == input::CANCEL {
+                return Ok(String::from("Cancelled"));
+            }
+        }
+        let value = projects::delete(&mut config, &project).await;
+
+        if !repeat {
+            return value;
+        }
     }
 }
 

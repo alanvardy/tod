@@ -39,7 +39,7 @@ pub fn from_integer(priority: &Option<u8>) -> Option<Priority> {
         Some(2) => Some(Priority::Low),
         Some(3) => Some(Priority::Medium),
         Some(4) => Some(Priority::High),
-        Some(_) => None,
+        Some(_) => unreachable!(),
     }
 }
 
@@ -50,4 +50,61 @@ pub fn all_priorities() -> Vec<Priority> {
         Priority::Medium,
         Priority::High,
     ]
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_all_priorities() {
+        let result = all_priorities();
+        let expected = vec![
+            Priority::None,
+            Priority::Low,
+            Priority::Medium,
+            Priority::High,
+        ];
+
+        assert_eq!(result, expected)
+    }
+
+    #[test]
+    fn test_from_integer() {
+        let result = from_integer(&Some(1));
+        let expected = Some(Priority::None);
+
+        assert_eq!(result, expected);
+
+        let result = from_integer(&Some(4));
+        let expected = Some(Priority::High);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_to_integer() {
+        let result = Priority::None.to_integer();
+        let expected = 1;
+
+        assert_eq!(result, expected);
+
+        let result = Priority::High.to_integer();
+        let expected = 4;
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_fmt() {
+        let result = Priority::None.to_string();
+        let expected = String::from("NONE (P4)");
+
+        assert_eq!(result, expected);
+
+        let result = Priority::High.to_string();
+        let expected = String::from("HIGH (P1)");
+
+        assert_eq!(result, expected);
+    }
 }

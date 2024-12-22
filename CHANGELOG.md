@@ -2,10 +2,15 @@
 
 ## Unreleased (on main branch only)
 
-- Use multi-select in `task create` when no flags are used
-- Standardized language used in inputs
+## 2024-12-21 v0.6.20
+
 - Update CI `yaml` file
 - Added `project delete`
+
+## 2024-12-19 v0.6.19
+
+- Use multi-select in `task create` when no flags are used
+- Standardized language used in inputs
 
 ## 2024-12-19 v0.6.18
 

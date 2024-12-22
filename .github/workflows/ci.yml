@@ -57,15 +57,15 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: ./lint_string.sh "TODO "
-      - run: ./lint_string.sh "TODO:"
-      - run: ./lint_string.sh "FIXME "
-      - run: ./lint_string.sh "FIXME:"
-      - run: ./lint_string.sh "todo "
-      - run: ./lint_string.sh "todo:"
-      - run: ./lint_string.sh "fixme "
-      - run: ./lint_string.sh "fixme:"
-      - run: ./lint_string.sh "dbg!"
+      - run: ./scripts/lint_string.sh "TODO "
+      - run: ./scripts/lint_string.sh "TODO:"
+      - run: ./scripts/lint_string.sh "FIXME "
+      - run: ./scripts/lint_string.sh "FIXME:"
+      - run: ./scripts/lint_string.sh "todo "
+      - run: ./scripts/lint_string.sh "todo:"
+      - run: ./scripts/lint_string.sh "fixme "
+      - run: ./scripts/lint_string.sh "fixme:"
+      - run: ./scripts/lint_string.sh "dbg!"
 
   test:
     name: test

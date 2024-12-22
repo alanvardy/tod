@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Add issue templates
+
 ## 2024-12-21 v0.6.20
 
 - Update CI `yaml` file

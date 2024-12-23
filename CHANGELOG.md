@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Add issue templates
+- Refine scripts for releasing new versions
 
 ## 2024-12-21 v0.6.20
 

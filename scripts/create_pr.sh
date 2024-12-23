@@ -1,4 +1,5 @@
 #!/bin/bash
+#
 # Check if the VERSION environment variable is set
 if [ -z "${VERSION}" ]; then
   echo "Error: VERSION environment variable is not set."
@@ -7,10 +8,12 @@ if [ -z "${VERSION}" ]; then
 fi
 
 echo "=== VERSION IS $VERSION ===" &&
-echo "=== EDITING CARGO.TOML ===" &&
+echo "=== EDITING CARGO.TOML TO NEW VERSION ===" &&
 ambr --regex "^version = \"\d+\.\d+\.\d+\"" "version = \"$VERSION\"" Cargo.toml &&
-echo "=== UPDATE AND TEST ===" &&
-./update_test.sh &&
+echo "=== CARGO UPDATE ===" &&
+cargo update &&
+echo "=== RUNNING TEST.SH ===" &&
+./test.sh 
 echo "=== CREATING PR ===" &&
 gt create "v$VERSION" -a -m "v$VERSION" --no-interactive &&
 gt submit --no-interactive &&

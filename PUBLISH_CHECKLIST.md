@@ -26,7 +26,7 @@ gh pr merge -r --admin && gs
 4. Release it to all the places
 
 ```fish
-VERSION=0.6.20 ./scripts/release.sh
+NAME=tod VERSION=0.6.20 ./scripts/release.sh
 ```
 
 ## Publish to Cargo and AUR (older method)

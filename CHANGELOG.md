@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2024-12-23 v0.6.21
+
 - Add issue templates
 - Refine scripts for releasing new versions
 - Added `shell completions` for generating shell completions with various shells

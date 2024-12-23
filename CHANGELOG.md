@@ -4,6 +4,7 @@
 
 - Add issue templates
 - Refine scripts for releasing new versions
+- Added `shell completions` for generating shell completions with various shells
 
 ## 2024-12-21 v0.6.20
 

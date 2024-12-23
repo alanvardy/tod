@@ -96,6 +96,9 @@ tod task complete && tod task next
 
 # Get all tasks for work
 tod list view --project work
+
+# Generate shell completions for fish
+tod shell completions fish > ~/.config/fish/completions/tod.fish
 ```
 
 ## Shell script examples

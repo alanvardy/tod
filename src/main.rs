@@ -7,10 +7,10 @@ extern crate matches;
 extern crate clap;
 
 use std::fmt::Display;
-use std::io::Write;
+use std::io::{self, Write};
 
 use cargo::Version;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use config::Config;
 use error::Error;
 use input::DateTimeInput;
@@ -36,6 +36,7 @@ mod todoist;
 mod user;
 
 const NAME: &str = "Tod";
+const LOWERCASE_NAME: &str = "tod";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
@@ -86,6 +87,11 @@ enum Commands {
     #[clap(alias = "c")]
     /// (c) Commands around configuration and the app
     Config(ConfigCommands),
+
+    #[command(subcommand)]
+    #[clap(alias = "s")]
+    /// (s) Commands for generating shell completions
+    Shell(ShellCommands),
 }
 
 // -- PROJECTS --
@@ -382,6 +388,13 @@ enum ConfigCommands {
     SetTimezone(ConfigSetTimezone),
 }
 
+#[derive(Subcommand, Debug, Clone)]
+enum ShellCommands {
+    #[clap(alias = "b")]
+    /// (b) Generate shell completions for bash
+    Completions(ShellCompletions),
+}
+
 #[derive(Parser, Debug, Clone)]
 struct ConfigCheckVersion {}
 
@@ -393,6 +406,20 @@ struct ConfigSetTimezone {
     #[arg(short, long)]
     /// TimeZone to add, i.e. "Canada/Pacific"
     timezone: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ShellCompletions {
+    shell: Shell,
+}
+
+#[derive(clap::ValueEnum, Debug, Copy, Clone)]
+pub enum Shell {
+    Bash,
+    Zsh,
+    Fish,
+    PowerShell,
+    Elvish,
 }
 
 enum Flag {
@@ -503,11 +530,45 @@ async fn select_command(
                 }
                 Commands::Config(ConfigCommands::Reset(args)) => config_reset(config, args).await,
                 Commands::Config(ConfigCommands::SetTimezone(args)) => tz_reset(config, args).await,
+
+                // Shell
+                Commands::Shell(ShellCommands::Completions(args)) => {
+                    shell_completions_bash(config, args).await
+                }
             };
 
             (bell_on_success, bell_on_failure, result)
         }
     }
+}
+
+async fn shell_completions_bash(_config: Config, args: &ShellCompletions) -> Result<String, Error> {
+    let mut cli = Cli::command();
+
+    match args.shell {
+        Shell::Bash => {
+            let shell = clap_complete::shells::Bash;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::Fish => {
+            let shell = clap_complete::shells::Fish;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::Zsh => {
+            let shell = clap_complete::shells::Zsh;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::PowerShell => {
+            let shell = clap_complete::shells::PowerShell;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::Elvish => {
+            let shell = clap_complete::shells::Elvish;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+    };
+
+    Ok(String::new())
 }
 
 // --- TASK ---

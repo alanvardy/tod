@@ -21,6 +21,6 @@ gh release create "v$VERSION" ./target/cargo-aur/*.tar.gz --title "v$VERSION" --
 echo "=== RUNNING cargo publish FOR CRATES.IO ===" &&
 cargo publish &&
 echo "=== RUNNING push_aur.sh TO PUSH NEW VERSION TO AUR ===" &&
-./push_aur.sh &&
+./scripts/push_aur.sh &&
 echo "=== DELETING MERGED BRANCHES ===" &&
 git-delete-merged-branches --yes

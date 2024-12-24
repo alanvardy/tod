@@ -16,6 +16,7 @@ use crate::input::DateTimeInput;
 use crate::projects;
 use crate::tasks;
 use crate::tasks::priority::Priority;
+use crate::SortOrder;
 use crate::{input, time, todoist};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -346,6 +347,14 @@ impl Task {
             None => false,
             Some(DateInfo { is_recurring, .. }) => is_recurring,
         }
+    }
+}
+
+pub fn sort(tasks: Vec<Task>, config: &Config, sort: &SortOrder) -> Vec<Task> {
+    match sort {
+        SortOrder::Value => sort_by_value(tasks, config),
+        SortOrder::Datetime => sort_by_datetime(tasks, config),
+        SortOrder::Todoist => tasks,
     }
 }
 

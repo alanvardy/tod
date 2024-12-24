@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Add colors when selecting priority
+- Add `sort` flag for `list` commands
 
 ## 2024-12-23 v0.6.21
 

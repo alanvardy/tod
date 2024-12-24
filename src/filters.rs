@@ -6,11 +6,15 @@ use crate::{
     error::Error,
     input::{self},
     tasks::{self, FormatType, Task},
-    todoist,
+    todoist, SortOrder,
 };
 
 /// All tasks for a project
-pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, Error> {
+pub async fn all_tasks(
+    config: &Config,
+    filter: &String,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
 
     if tasks.is_empty() {
@@ -22,7 +26,7 @@ pub async fn all_tasks(config: &Config, filter: &String) -> Result<String, Error
         "Tasks for filter: '{filter}'"
     )));
 
-    for task in tasks::sort_by_datetime(tasks, config) {
+    for task in tasks::sort(tasks, config, sort) {
         buffer.push('\n');
         buffer.push_str(&task.fmt(config, FormatType::List, true));
     }
@@ -58,10 +62,16 @@ pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error>
     Ok(String::from("Finished editing task"))
 }
 
-pub async fn label(config: &Config, filter: &str, labels: &Vec<String>) -> Result<String, Error> {
+pub async fn label(
+    config: &Config,
+    filter: &str,
+    labels: &Vec<String>,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
     let mut handles = Vec::new();
-    for task in tasks::sort_by_value(tasks, config) {
+
+    for task in tasks::sort(tasks, config, sort) {
         let future = tasks::label_task(config, task, labels).await?;
         handles.push(future);
     }
@@ -93,9 +103,13 @@ async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, 
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, Error> {
+pub async fn process_tasks(
+    config: &Config,
+    filter: &String,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
-    let tasks = tasks::sort_by_value(tasks, config);
+    let tasks = tasks::sort(tasks, config, sort);
     let tasks = tasks::reject_parent_tasks(tasks, config).await;
     let mut task_count = tasks.len() as i32;
     let mut handles = Vec::new();
@@ -113,9 +127,13 @@ pub async fn process_tasks(config: &Config, filter: &String) -> Result<String, E
 }
 
 // Gives all tasks durations
-pub async fn timebox_tasks(config: &Config, filter: &String) -> Result<String, Error> {
+pub async fn timebox_tasks(
+    config: &Config,
+    filter: &String,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
-    let tasks = tasks::sort_by_value(tasks, config);
+    let tasks = tasks::sort(tasks, config, sort);
     let mut task_count = tasks.len() as i32;
     let mut handles = Vec::new();
     for task in tasks {
@@ -132,8 +150,13 @@ pub async fn timebox_tasks(config: &Config, filter: &String) -> Result<String, E
 }
 
 /// Prioritize all unprioritized tasks in a project
-pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String, Error> {
+pub async fn prioritize_tasks(
+    config: &Config,
+    filter: &String,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
+    let tasks = tasks::sort(tasks, config, sort);
 
     if tasks.is_empty() {
         Ok(color::green_string(&format!(
@@ -153,8 +176,9 @@ pub async fn prioritize_tasks(config: &Config, filter: &String) -> Result<String
 }
 
 /// Put dates on all tasks without dates
-pub async fn schedule(config: &Config, filter: &String) -> Result<String, Error> {
+pub async fn schedule(config: &Config, filter: &String, sort: &SortOrder) -> Result<String, Error> {
     let tasks = todoist::tasks_for_filter(config, filter).await?;
+    let tasks = tasks::sort(tasks, config, sort);
 
     if tasks.is_empty() {
         Ok(color::green_string(&format!(
@@ -201,8 +225,11 @@ mod tests {
         };
 
         let filter = String::from("today");
+        let sort = &SortOrder::Value;
 
-        let tasks = all_tasks(&config_with_timezone, &filter).await.unwrap();
+        let tasks = all_tasks(&config_with_timezone, &filter, sort)
+            .await
+            .unwrap();
         //     Ok(format!(
         //         "Tasks for filter: 'today'\n- Put out recycling\n  ! {TIME} ↻ every other mon at 16:30\n# Project not in config\nUse tod project import --auto to import missing projects\n"
         //     ))
@@ -297,9 +324,10 @@ mod tests {
 
         let filter = String::from("today");
         let labels = vec![String::from("thing")];
+        let sort = &SortOrder::Value;
 
         assert_eq!(
-            label(&config_with_timezone, &filter, &labels).await,
+            label(&config_with_timezone, &filter, &labels, sort).await,
             Ok(String::from("There are no more tasks for filter: 'today'"))
         );
         mock.assert();
@@ -333,8 +361,9 @@ mod tests {
             .await
             .unwrap();
         let filter = String::from("today");
+        let sort = &SortOrder::Value;
 
-        let result = process_tasks(&config, &filter);
+        let result = process_tasks(&config, &filter, sort);
         assert_eq!(
             result.await,
             Ok("There are no more tasks for filter: 'today'".to_string())
@@ -369,7 +398,8 @@ mod tests {
             .mock_string("tod");
 
         let filter = String::from("today");
-        let result = schedule(&config, &filter);
+        let sort = &SortOrder::Value;
+        let result = schedule(&config, &filter, sort);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'today'".to_string())
@@ -378,7 +408,7 @@ mod tests {
         let config = config.mock_select(2);
 
         let filter = String::from("today");
-        let result = schedule(&config, &filter);
+        let result = schedule(&config, &filter, sort);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'today'".to_string())
@@ -411,7 +441,8 @@ mod tests {
             .mock_select(1);
 
         let filter = String::from("today");
-        let result = prioritize_tasks(&config, &filter);
+        let sort = &SortOrder::Value;
+        let result = prioritize_tasks(&config, &filter, sort);
         assert_eq!(
             result.await,
             Ok(String::from("Successfully prioritized 'today'"))

@@ -8,7 +8,7 @@ use crate::error::{self, Error};
 use crate::sections::Section;
 use crate::tasks::priority::Priority;
 use crate::tasks::{FormatType, Task};
-use crate::{color, input, sections, tasks, todoist};
+use crate::{color, input, sections, tasks, todoist, SortOrder};
 use serde::{Deserialize, Serialize};
 
 const PAD_WIDTH: usize = 30;
@@ -155,10 +155,11 @@ pub async fn label(
     config: &Config,
     project: &Project,
     labels: &Vec<String>,
+    sort: &SortOrder,
 ) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
     let mut handles = Vec::new();
-    for task in tasks::sort_by_value(tasks, config) {
+    for task in tasks::sort(tasks, config, sort) {
         let future = tasks::label_task(config, task, labels).await?;
         handles.push(future);
     }
@@ -294,10 +295,14 @@ async fn maybe_add_project(
 }
 
 /// Get next tasks and give an interactive prompt for completing them one by one
-pub async fn process_tasks(config: &Config, project: &Project) -> Result<String, Error> {
+pub async fn process_tasks(
+    config: &Config,
+    project: &Project,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
     let tasks = tasks::filter_not_in_future(tasks, config)?;
-    let tasks = tasks::sort_by_value(tasks, config);
+    let tasks = tasks::sort(tasks, config, sort);
     let tasks = tasks::reject_parent_tasks(tasks, config).await;
     let mut task_count = tasks.len() as i32;
     let mut handles = Vec::new();
@@ -316,9 +321,13 @@ pub async fn process_tasks(config: &Config, project: &Project) -> Result<String,
 }
 
 // Gives all tasks durations
-pub async fn timebox_tasks(config: &Config, project: &Project) -> Result<String, Error> {
+pub async fn timebox_tasks(
+    config: &Config,
+    project: &Project,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
-    let tasks = tasks::sort_by_value(tasks, config);
+    let tasks = tasks::sort(tasks, config, sort);
     let tasks = tasks
         .iter()
         .filter(|t| t.duration.is_none())
@@ -373,7 +382,11 @@ pub async fn edit_task(config: &Config, project: &Project) -> Result<String, Err
 }
 
 /// All tasks for a project
-pub async fn all_tasks(config: &Config, project: &Project) -> Result<String, Error> {
+pub async fn all_tasks(
+    config: &Config,
+    project: &Project,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     let mut buffer = String::new();
@@ -382,7 +395,7 @@ pub async fn all_tasks(config: &Config, project: &Project) -> Result<String, Err
         project.name
     )));
 
-    for task in tasks::sort_by_datetime(tasks, config) {
+    for task in tasks::sort(tasks, config, sort) {
         buffer.push('\n');
         buffer.push_str(&task.fmt(config, FormatType::List, false));
     }
@@ -422,8 +435,13 @@ pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Err
 }
 
 /// Prioritize all unprioritized tasks in a project
-pub async fn prioritize_tasks(config: &Config, project: &Project) -> Result<String, Error> {
+pub async fn prioritize_tasks(
+    config: &Config,
+    project: &Project,
+    sort: &SortOrder,
+) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
+    let tasks = tasks::sort(tasks, config, sort);
 
     let unprioritized_tasks: Vec<Task> = tasks
         .into_iter()
@@ -456,8 +474,10 @@ pub async fn schedule(
     project: &Project,
     filter: TaskFilter,
     skip_recurring: bool,
+    sort: &SortOrder,
 ) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
+    let tasks = tasks::sort(tasks, config, sort);
 
     let filtered_tasks: Vec<Task> = if skip_recurring {
         tasks
@@ -644,8 +664,11 @@ mod tests {
 
         let binding = config_with_timezone.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
+        let sort = &SortOrder::Value;
 
-        let tasks = all_tasks(&config_with_timezone, project).await.unwrap();
+        let tasks = all_tasks(&config_with_timezone, project, sort)
+            .await
+            .unwrap();
 
         assert!(tasks.contains("Tasks for 'myproject'\n"));
         assert!(tasks.contains("- Put out recycling\n"));
@@ -716,8 +739,9 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
+        let sort = &SortOrder::Value;
 
-        let result = process_tasks(&config, project).await;
+        let result = process_tasks(&config, project, sort).await;
         assert_eq!(
             result,
             Ok("There are no more tasks in 'myproject'".to_string())
@@ -829,8 +853,9 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
+        let sort = &SortOrder::Value;
 
-        let result = prioritize_tasks(&config, project);
+        let result = prioritize_tasks(&config, project, sort);
         assert_eq!(
             result.await,
             Ok(String::from("No tasks to prioritize in 'myproject'"))
@@ -925,7 +950,8 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = schedule(&config, project, TaskFilter::Unscheduled, false);
+        let sort = &SortOrder::Value;
+        let result = schedule(&config, project, TaskFilter::Unscheduled, false, sort);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
@@ -935,7 +961,7 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = schedule(&config, project, TaskFilter::Overdue, false);
+        let result = schedule(&config, project, TaskFilter::Overdue, false, sort);
         assert_eq!(
             result.await,
             Ok("No tasks to schedule in 'myproject'".to_string())
@@ -945,13 +971,13 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = schedule(&config, project, TaskFilter::Unscheduled, false);
+        let result = schedule(&config, project, TaskFilter::Unscheduled, false, sort);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
         );
 
-        let result = schedule(&config, project, TaskFilter::Unscheduled, true);
+        let result = schedule(&config, project, TaskFilter::Unscheduled, true, sort);
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
@@ -989,24 +1015,25 @@ mod tests {
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = timebox_tasks(&config, project);
+        let sort = &SortOrder::Value;
+        let result = timebox_tasks(&config, project, sort);
         assert_eq!(result.await, Ok("Exited".to_string()));
 
         let config = config.mock_select(2);
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = timebox_tasks(&config, project);
+        let result = timebox_tasks(&config, project, sort);
         assert_eq!(result.await, Ok("Exited".to_string()));
 
         let config = config.mock_select(3);
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
-        let result = timebox_tasks(&config, project).await;
+        let result = timebox_tasks(&config, project, sort).await;
         assert_eq!(result, Ok("Exited".to_string()));
 
-        let result = timebox_tasks(&config, project).await;
+        let result = timebox_tasks(&config, project, sort).await;
         assert_eq!(result, Ok("Exited".to_string()));
         mock.expect(2);
         mock2.expect(2);

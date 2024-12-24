@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Add colors when selecting priority
+
 ## 2024-12-23 v0.6.21
 
 - Add issue templates

@@ -1,3 +1,4 @@
+use crate::color;
 use std::fmt::Display;
 
 /// Add to all_priorities function if adding another priority
@@ -13,10 +14,10 @@ pub enum Priority {
 impl Display for Priority {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Priority::None => write!(f, "NONE (P4)"),
-            Priority::Low => write!(f, "LOW (P3)"),
-            Priority::Medium => write!(f, "MEDIUM (P2)"),
-            Priority::High => write!(f, "HIGH (P1)"),
+            Priority::None => write!(f, "{}", color::normal_string("NONE (P4)")),
+            Priority::Low => write!(f, "{}", color::blue_string("LOW (P3)")),
+            Priority::Medium => write!(f, "{}", color::yellow_string("MEDIUM (P2)")),
+            Priority::High => write!(f, "{}", color::red_string("HIGH (P1)")),
         }
     }
 }

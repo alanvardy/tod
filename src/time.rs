@@ -5,6 +5,13 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use chrono_tz::Tz;
 use regex::Regex;
 
+const FORMAT_DATE: &str = "%Y-%m-%d";
+const FORMAT_TIME: &str = "%H:%M";
+const FORMAT_DATETIME: &str = "%Y-%m-%dT%H:%M:%S";
+const FORMAT_DATETIME_ZULU: &str = "%Y-%m-%dT%H:%M:%SZ";
+
+pub const FORMAT_DATE_AND_TIME: &str = "%Y-%m-%d %H:%M";
+
 pub fn now(config: &Config) -> Result<DateTime<Tz>, Error> {
     let tz = timezone_from_str(&config.timezone)?;
     Ok(Utc::now().with_timezone(&tz))
@@ -12,7 +19,7 @@ pub fn now(config: &Config) -> Result<DateTime<Tz>, Error> {
 
 /// Return today's date in format 2021-09-16
 pub fn today_string(config: &Config) -> Result<String, Error> {
-    Ok(now(config)?.format("%Y-%m-%d").to_string())
+    Ok(now(config)?.format(FORMAT_DATE).to_string())
 }
 
 /// Return today's date in Utc
@@ -25,7 +32,7 @@ pub fn datetime_is_today(datetime: DateTime<Tz>, config: &Config) -> Result<bool
 }
 
 pub fn date_is_today(date: NaiveDate, config: &Config) -> Result<bool, Error> {
-    let date_string = date.format("%Y-%m-%d").to_string();
+    let date_string = date.format(FORMAT_DATE).to_string();
     let today_string = today_string(config)?;
     Ok(date_string == today_string)
 }
@@ -39,14 +46,14 @@ pub fn format_date(date: &NaiveDate, config: &Config) -> Result<String, Error> {
     if date_is_today(*date, config)? {
         Ok(String::from("Today"))
     } else {
-        Ok(date.format("%Y-%m-%d").to_string())
+        Ok(date.format(FORMAT_DATE).to_string())
     }
 }
 
 pub fn format_datetime(datetime: &DateTime<Tz>, config: &Config) -> Result<String, Error> {
     let tz = timezone_from_str(&config.timezone)?;
     if datetime_is_today(*datetime, config)? {
-        Ok(datetime.with_timezone(&tz).format("%H:%M").to_string())
+        Ok(datetime.with_timezone(&tz).format(FORMAT_TIME).to_string())
     } else {
         Ok(datetime.with_timezone(&tz).to_string())
     }
@@ -65,14 +72,14 @@ pub fn datetime_from_str(str: &str, timezone: Tz) -> Result<DateTime<Tz>, Error>
 }
 
 pub fn parse_datetime_from_19(str: &str, timezone: Tz) -> Result<DateTime<Tz>, Error> {
-    let tz = NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%S")?
+    let tz = NaiveDateTime::parse_from_str(str, FORMAT_DATETIME)?
         .and_local_timezone(timezone)
         .unwrap();
     Ok(tz)
 }
 
 pub fn parse_datetime_from_20(str: &str) -> Result<DateTime<Tz>, Error> {
-    let tz = NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%SZ")?
+    let tz = NaiveDateTime::parse_from_str(str, FORMAT_DATETIME_ZULU)?
         .and_local_timezone(Tz::UTC)
         .unwrap();
     Ok(tz)
@@ -112,12 +119,12 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
 /// Parse Date
 pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
     let date = match str.len() {
-        10 => NaiveDate::parse_from_str(str, "%Y-%m-%d")?,
-        19 => NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%S")?
+        10 => NaiveDate::parse_from_str(str, FORMAT_DATE)?,
+        19 => NaiveDateTime::parse_from_str(str, FORMAT_DATETIME)?
             .and_local_timezone(timezone)
             .unwrap()
             .date_naive(),
-        20 => NaiveDateTime::parse_from_str(str, "%Y-%m-%dT%H:%M:%SZ")?
+        20 => NaiveDateTime::parse_from_str(str, FORMAT_DATETIME_ZULU)?
             .and_local_timezone(timezone)
             .unwrap()
             .date_naive(),

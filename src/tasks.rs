@@ -16,7 +16,6 @@ use crate::input::DateTimeInput;
 use crate::projects;
 use crate::tasks;
 use crate::tasks::priority::Priority;
-use crate::SortOrder;
 use crate::{input, time, todoist};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -119,6 +118,26 @@ enum DateTimeInfo {
         is_recurring: bool,
         string: String,
     },
+}
+
+#[derive(clap::ValueEnum, Debug, Copy, Clone)]
+pub enum SortOrder {
+    /// Sort by Tod's configurable sort value
+    Value,
+    /// Sort by datetime only
+    Datetime,
+    /// Leave Todoist's default sorting in place
+    Todoist,
+}
+
+impl std::fmt::Display for SortOrder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SortOrder::Value => write!(f, "value"),
+            SortOrder::Todoist => write!(f, "todoist"),
+            SortOrder::Datetime => write!(f, "datetime"),
+        }
+    }
 }
 
 impl Task {
@@ -425,12 +444,12 @@ pub async fn label_task(
 ) -> Result<JoinHandle<()>, Error> {
     println!("{}", task.fmt(config, FormatType::Single, true));
     let mut options = labels.to_owned();
-    options.push(String::from("Skip"));
+    options.push(String::from(input::SKIP));
     let label = input::select("Select label", options, config.mock_select)?;
 
     let config = config.clone();
     Ok(tokio::spawn(async move {
-        if label.as_str() == "Skip" {
+        if label.as_str() == input::SKIP {
         } else if let Err(e) = todoist::add_task_label(&config, task, label, false).await {
             config.tx().send(e).unwrap();
         }
@@ -465,7 +484,7 @@ pub async fn process_task(
     *task_count -= 1;
     match input::select(input::OPTION, options, config.mock_select) {
         Ok(string) => {
-            if string == "Complete" {
+            if string == input::COMPLETE {
                 reloaded_config.save().await.expect("Could not save config");
                 Some(spawn_complete_task(reloaded_config, task))
             } else if string == input::DELETE {
@@ -498,16 +517,22 @@ pub async fn timebox_task(
     task_count: &mut i32,
     with_project: bool,
 ) -> Option<JoinHandle<()>> {
-    let options = ["Timebox", "Complete", "Skip", "Delete", "Quit"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+    let options = [
+        input::TIMEBOX,
+        input::COMPLETE,
+        input::SKIP,
+        input::DELETE,
+        input::QUIT,
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
     let formatted_task = task.fmt(config, FormatType::Single, with_project);
     println!("{formatted_task}{task_count} task(s) remaining");
     *task_count -= 1;
     match input::select("Select an option", options, config.mock_select) {
         Ok(string) => {
-            if string == "Timebox" {
+            if string == input::TIMEBOX {
                 match get_timebox(config, &task) {
                     Ok((due_string, duration)) => Some(spawn_update_task_due(
                         config.clone(),
@@ -521,10 +546,9 @@ pub async fn timebox_task(
                         Some(tokio::spawn(async move {}))
                     }
                 }
-                // Some(spawn_complete_task(config.clone(), task))
-            } else if string == "Delete" {
+            } else if string == input::DELETE {
                 Some(spawn_delete_task(config.clone(), task))
-            } else if string == "Skip" {
+            } else if string == input::SKIP {
                 // Do nothing
                 Some(tokio::spawn(async move {}))
             } else {
@@ -556,7 +580,7 @@ fn get_timebox(config: &Config, task: &Task) -> Result<(String, u32), Error> {
             } else {
                 let tz = time::timezone_from_str(&config.timezone)?;
                 time::datetime_from_str(date, tz)?
-                    .format("%Y-%m-%d %H:%M")
+                    .format(time::FORMAT_DATE_AND_TIME)
                     .to_string()
             }
         }

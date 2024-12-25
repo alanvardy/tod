@@ -28,6 +28,7 @@ pub const TASK: &str = "Select a task";
 pub const NAT_LANG: &str = "Natural Language";
 pub const NO_DATE: &str = "No Date";
 pub const COMPLETE: &str = "Complete";
+pub const TIMEBOX: &str = "Timebox";
 pub const SKIP: &str = "Skip";
 pub const DELETE: &str = "Delete";
 pub const CANCEL: &str = "Cancel";

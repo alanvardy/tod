@@ -14,9 +14,9 @@ use clap::{CommandFactory, Parser, Subcommand};
 use config::Config;
 use error::Error;
 use input::DateTimeInput;
-use projects::Project;
+use list::Flag;
 use tasks::priority::Priority;
-use tasks::{priority, TaskAttribute};
+use tasks::{priority, SortOrder, TaskAttribute};
 use tokio::sync::mpsc::UnboundedSender;
 
 mod cargo;
@@ -27,6 +27,7 @@ mod error;
 mod filters;
 mod input;
 mod labels;
+mod list;
 mod projects;
 mod sections;
 mod tasks;
@@ -445,32 +446,6 @@ pub enum Shell {
     Elvish,
 }
 
-#[derive(clap::ValueEnum, Debug, Copy, Clone)]
-pub enum SortOrder {
-    /// Sort by Tod's configurable sort value
-    Value,
-    /// Sort by datetime only
-    Datetime,
-    /// Leave Todoist's default sorting in place
-    Todoist,
-}
-
-impl std::fmt::Display for SortOrder {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SortOrder::Value => write!(f, "value"),
-            SortOrder::Todoist => write!(f, "todoist"),
-            SortOrder::Datetime => write!(f, "datetime"),
-        }
-    }
-}
-
-//
-enum Flag {
-    Project(Project),
-    Filter(String),
-}
-
 enum FlagOptions {
     Project,
     Filter,
@@ -794,21 +769,6 @@ async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, E
     }
 }
 
-// --- LIST ---
-
-async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
-    let ListView {
-        project,
-        filter,
-        sort,
-    } = args;
-
-    match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Project(project) => projects::all_tasks(&config, &project, sort).await,
-        Flag::Filter(filter) => filters::all_tasks(&config, &filter, sort).await,
-    }
-}
-
 // --- PROJECT ---
 
 async fn project_list(config: Config, _args: &ProjectList) -> Result<String, Error> {
@@ -904,6 +864,17 @@ async fn project_empty(config: Config, args: &ProjectEmpty) -> Result<String, Er
 
 // --- LIST ---
 
+async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
+    let ListView {
+        project,
+        filter,
+        sort,
+    } = args;
+
+    let flag = fetch_project_or_filter(project, filter, &config)?;
+    list::view(&config, flag, sort).await
+}
+
 async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
     let ListLabel {
         filter,
@@ -912,10 +883,8 @@ async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
         sort,
     } = args;
     let labels = maybe_fetch_labels(&config, labels).await?;
-    match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::label(&config, &filter, &labels, sort).await,
-        Flag::Project(project) => projects::label(&config, &project, &labels, sort).await,
-    }
+    let flag = fetch_project_or_filter(project, filter, &config)?;
+    list::label(&config, flag, &labels, sort).await
 }
 
 async fn list_process(config: Config, args: &ListProcess) -> Result<String, Error> {
@@ -924,10 +893,8 @@ async fn list_process(config: Config, args: &ListProcess) -> Result<String, Erro
         filter,
         sort,
     } = args;
-    match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::process_tasks(&config, &filter, sort).await,
-        Flag::Project(project) => projects::process_tasks(&config, &project, sort).await,
-    }
+    let flag = fetch_project_or_filter(project, filter, &config)?;
+    list::process(&config, flag, sort).await
 }
 
 async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Error> {
@@ -936,10 +903,8 @@ async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Erro
         filter,
         sort,
     } = args;
-    match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::timebox_tasks(&config, &filter, sort).await,
-        Flag::Project(project) => projects::timebox_tasks(&config, &project, sort).await,
-    }
+    let flag = fetch_project_or_filter(project, filter, &config)?;
+    list::timebox(&config, flag, sort).await
 }
 
 async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String, Error> {
@@ -948,10 +913,8 @@ async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String
         filter,
         sort,
     } = args;
-    match fetch_project_or_filter(project, filter, &config)? {
-        Flag::Filter(filter) => filters::prioritize_tasks(&config, &filter, sort).await,
-        Flag::Project(project) => projects::prioritize_tasks(&config, &project, sort).await,
-    }
+    let flag = fetch_project_or_filter(project, filter, &config)?;
+    list::prioritize(&config, flag, sort).await
 }
 
 async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Error> {

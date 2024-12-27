@@ -38,6 +38,8 @@ futures = "0.3.31"
 supports-hyperlinks = "3.1.0"
 terminal_size = "0.4.1"
 clap_complete = "4.5.40"
+walkdir = "2.5.0"
+
 
 [dev-dependencies]
 mockito = "1.4.0"

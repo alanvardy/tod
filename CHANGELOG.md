@@ -5,6 +5,7 @@
 - Add colors when selecting priority
 - Add `sort` flag for `list` commands
 - Internal code refactoring
+- Add `list import`
 
 ## 2024-12-23 v0.6.21
 

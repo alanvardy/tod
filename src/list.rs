@@ -9,6 +9,7 @@ use crate::{
     todoist,
 };
 use futures::future;
+use tokio::{fs, io::AsyncReadExt};
 
 #[derive(Clone)]
 pub enum Flag {
@@ -175,11 +176,49 @@ pub async fn label(
     Ok(color::green_string(&success))
 }
 
+pub async fn import(config: &Config, file_path: &String) -> Result<String, Error> {
+    let mut lines = String::new();
+    fs::File::open(file_path)
+        .await?
+        .read_to_string(&mut lines)
+        .await?;
+
+    let lines: Vec<String> = lines
+        .split('\n')
+        .map(|s| s.to_owned())
+        .filter(|s| !s.is_empty())
+        .collect();
+    for line in lines {
+        todoist::quick_add_task(config, &line).await?;
+    }
+
+    Ok(String::from("✓"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test;
     use pretty_assertions::assert_eq;
+
+    #[tokio::test]
+    async fn test_import() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/sync/v9/quick/add")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::task())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+        config.clone().create().await.unwrap();
+
+        assert_eq!(import(&config, &config.path).await, Ok(String::from("✓")));
+
+        mock.assert();
+    }
 
     #[tokio::test]
     async fn test_prioritize() {

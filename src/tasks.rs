@@ -58,9 +58,18 @@ impl Display for TaskAttribute {
 }
 
 /// Used for selecting which attribute to set or edit in a task
-pub fn task_attributes() -> Vec<TaskAttribute> {
+pub fn edit_task_attributes() -> Vec<TaskAttribute> {
     vec![
         TaskAttribute::Content,
+        TaskAttribute::Description,
+        TaskAttribute::Priority,
+        TaskAttribute::Due,
+        TaskAttribute::Labels,
+    ]
+}
+
+pub fn create_task_attributes() -> Vec<TaskAttribute> {
+    vec![
         TaskAttribute::Description,
         TaskAttribute::Priority,
         TaskAttribute::Due,

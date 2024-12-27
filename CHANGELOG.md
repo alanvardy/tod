@@ -2,10 +2,15 @@
 
 ## Unreleased (on main branch only)
 
-- Add colors when selecting priority
-- Add `sort` flag for `list` commands
+## 2024-12-26 v0.6.23
+
 - Internal code refactoring
 - Add `list import`
+
+## 2024-12-24 v0.6.22
+
+- Add colors when selecting priority
+- Add `sort` flag for `list` commands
 
 ## 2024-12-23 v0.6.21
 

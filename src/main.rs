@@ -8,6 +8,7 @@ extern crate clap;
 
 use std::fmt::Display;
 use std::io::{self, Write};
+use std::path::Path;
 
 use cargo::Version;
 use clap::{CommandFactory, Parser, Subcommand};
@@ -18,6 +19,7 @@ use list::Flag;
 use tasks::priority::Priority;
 use tasks::{priority, SortOrder, TaskAttribute};
 use tokio::sync::mpsc::UnboundedSender;
+use walkdir::WalkDir;
 
 mod cargo;
 mod color;
@@ -292,6 +294,10 @@ enum ListCommands {
     #[clap(alias = "s")]
     /// (s) Assign dates to all tasks individually
     Schedule(ListSchedule),
+
+    #[clap(alias = "i")]
+    /// (i) Create tasks from a text file, one per line using natural language. Skips empty lines.
+    Import(ListImport),
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -394,6 +400,13 @@ struct ListSchedule {
     #[arg(short = 't', long, default_value_t = SortOrder::Value)]
     /// Choose how results should be sorted
     sort: SortOrder,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListImport {
+    #[arg(short, long)]
+    /// The file or directory to fuzzy find in
+    path: Option<String>,
 }
 
 // -- CONFIG --
@@ -542,6 +555,7 @@ async fn select_command(
                 Commands::List(ListCommands::Label(args)) => list_label(config, args).await,
                 Commands::List(ListCommands::Schedule(args)) => list_schedule(config, args).await,
                 Commands::List(ListCommands::Timebox(args)) => list_timebox(config, args).await,
+                Commands::List(ListCommands::Import(args)) => list_import(config, args).await,
 
                 // Config
                 Commands::Config(ConfigCommands::CheckVersion(args)) => {
@@ -594,12 +608,8 @@ async fn shell_completions_bash(_config: Config, args: &ShellCompletions) -> Res
 
 async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, Error> {
     let TaskQuickAdd { content } = args;
-
-    let content = fetch_string(
-        &content.as_ref().map(|c| c.join(" ")),
-        &config,
-        input::CONTENT,
-    )?;
+    let maybe_string = &content.as_ref().map(|c| c.join(" "));
+    let content = fetch_string(maybe_string, &config, input::CONTENT)?;
     todoist::quick_add_task(&config, &content).await?;
     Ok(color::green_string("✓"))
 }
@@ -611,17 +621,13 @@ fn is_no_sections(args: &TaskCreate, config: &Config) -> bool {
 
 async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error> {
     if no_flags_used(args) {
-        let options = tasks::task_attributes()
-            .into_iter()
-            .filter(|t| t != &TaskAttribute::Content)
-            .collect();
-
+        let options = tasks::create_task_attributes();
         let selections = input::multi_select(input::ATTRIBUTES, options, config.mock_select)?;
 
         if selections.is_empty() {
             return Err(Error {
                 message: "Nothing selected".to_string(),
-                source: "edit_task".to_string(),
+                source: "create_task".to_string(),
             });
         }
 
@@ -632,6 +638,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         } else {
             String::new()
         };
+
         let priority = if selections.contains(&TaskAttribute::Priority) {
             fetch_priority(&None, &config)?
         } else {
@@ -916,6 +923,44 @@ async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String
     let flag = fetch_project_or_filter(project, filter, &config)?;
     list::prioritize(&config, flag, sort).await
 }
+async fn list_import(config: Config, args: &ListImport) -> Result<String, Error> {
+    let ListImport { path } = args;
+    let path = fetch_string(path, &config, input::PATH)?;
+    let file_path = select_file(path, &config)?;
+    list::import(&config, &file_path).await
+}
+
+fn select_file(path_or_file: String, config: &Config) -> Result<String, Error> {
+    let path = Path::new(&path_or_file);
+    if Path::is_dir(path) {
+        let mut options = WalkDir::new(path_or_file)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(is_md_file)
+            .map(|e| e.path().to_str().unwrap().to_string())
+            .collect::<Vec<String>>();
+        options.sort();
+        options.dedup();
+        let path = input::select("Select file to process", options, config.mock_select)?;
+
+        Ok(path)
+    } else if Path::is_file(path) {
+        Ok(path_or_file)
+    } else {
+        Err(Error {
+            source: "select_file".to_string(),
+            message: format!("{path_or_file} is neither a file nor a directory"),
+        })
+    }
+}
+
+fn is_md_file(entry: &walkdir::DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .unwrap_or_default()
+        .ends_with(".md")
+}
 
 async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Error> {
     let ListSchedule {
@@ -1099,7 +1144,6 @@ async fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<St
         Ok(labels.to_vec())
     }
 }
-// --- TESTS ---
 
 #[test]
 fn verify_cmd() {

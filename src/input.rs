@@ -10,6 +10,7 @@ pub const CONTENT: &str = "Set content";
 pub const DESCRIPTION: &str = "Set description";
 pub const NAME: &str = "Set name";
 pub const FILTER: &str = "Set filter";
+pub const PATH: &str = "Set path";
 pub const DATE: &str = "Set a due date";
 pub const TIME: &str = "Set time, i.e. 3pm or 1500";
 pub const DURATION: &str = "Set duration in minutes";

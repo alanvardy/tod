@@ -14,7 +14,7 @@ pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error>
 
     let task = input::select(input::TASK, tasks, config.mock_select)?;
 
-    let options = tasks::task_attributes();
+    let options = tasks::edit_task_attributes();
 
     let selections = input::multi_select(input::ATTRIBUTES, options, config.mock_select)?;
 

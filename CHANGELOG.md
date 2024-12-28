@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Add `task comment`
+- Add `comment` as a menu option in `list process`
 
 ## 2024-12-26 v0.6.23
 

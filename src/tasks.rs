@@ -13,6 +13,7 @@ use crate::config::Config;
 use crate::config::SortValue;
 use crate::error::Error;
 use crate::input::DateTimeInput;
+use crate::input::CONTENT;
 use crate::projects;
 use crate::tasks;
 use crate::tasks::priority::Priority;
@@ -475,6 +476,7 @@ pub async fn process_task(
         input::COMPLETE,
         input::SKIP,
         input::SCHEDULE,
+        input::COMMENT,
         input::DELETE,
         input::QUIT,
     ]
@@ -493,21 +495,33 @@ pub async fn process_task(
     *task_count -= 1;
     match input::select(input::OPTION, options, config.mock_select) {
         Ok(string) => {
-            if string == input::COMPLETE {
-                reloaded_config.save().await.expect("Could not save config");
-                Some(spawn_complete_task(reloaded_config, task))
-            } else if string == input::DELETE {
-                Some(spawn_delete_task(config.clone(), task))
-            } else if string == input::SCHEDULE {
-                let date = input::date().ok()?;
-                Some(spawn_update_task_due(config.clone(), task, date, None))
-            } else if string == input::SKIP {
-                // Do nothing
-                Some(tokio::spawn(async move {}))
-            } else if string == input::QUIT {
-                None
-            } else {
-                unreachable!()
+            match string.as_str() {
+                input::COMPLETE => {
+                    reloaded_config.save().await.expect("Could not save config");
+                    Some(spawn_complete_task(reloaded_config, task))
+                }
+                input::DELETE => Some(spawn_delete_task(config.clone(), task)),
+                input::COMMENT => match input::string(CONTENT, config.mock_string.clone()) {
+                    Ok(content) => Some(spawn_comment_task(config.clone(), task, content)),
+                    Err(e) => {
+                        let config = config.clone();
+                        Some(tokio::spawn(async move {
+                            config.tx().send(e).unwrap();
+                        }))
+                    }
+                },
+                input::SCHEDULE => {
+                    let date = input::date().ok()?;
+                    Some(spawn_update_task_due(config.clone(), task, date, None))
+                }
+                input::SKIP => {
+                    // Do nothing
+                    Some(tokio::spawn(async move {}))
+                }
+                input::QUIT => None,
+                _ => {
+                    unreachable!()
+                }
             }
         }
         Err(e) => {
@@ -667,6 +681,15 @@ pub fn spawn_update_task_due(
             todoist::update_task_due_natural_language(&config, task, due_string, duration, false)
                 .await
         {
+            config.tx().send(e).unwrap();
+        }
+    })
+}
+
+/// Updates task inside another thread
+pub fn spawn_comment_task(config: Config, task: Task, task_comment: String) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::comment_task(&config, &task.id, task_comment, false).await {
             config.tx().send(e).unwrap();
         }
     })

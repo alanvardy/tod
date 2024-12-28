@@ -1,6 +1,6 @@
 [package]
 name = "tod"
-version = "0.6.23"
+version = "0.6.24"
 authors = ["Alan Vardy <alan@vardy.cc>"]
 edition = "2021"
 license = "MIT"

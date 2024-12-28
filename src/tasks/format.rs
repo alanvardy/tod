@@ -120,6 +120,12 @@ fn create_links(content: &str) -> String {
     result.into_owned()
 }
 
+pub fn comments(task: &Task) -> String {
+    let comment_icon = color::purple_string("★");
+    let num_comments = task.comment_count.unwrap_or_default();
+    format!("\n{comment_icon} {num_comments} comments")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -21,6 +21,7 @@ pub mod fixtures {
             checked: None,
             duration: None,
             parent_id: None,
+            comment_count: None,
             project_id: String::from("222"),
             labels: vec![String::from("computer")],
             description: String::from(""),
@@ -152,6 +153,7 @@ pub mod responses {
                 \"added_by_uid\":44444444,\
                 \"assigned_by_uid\":null,\
                 \"checked\":false,\
+                \"comment_count\":0,\
                 \"child_order\":-5,\
                 \"collapsed\":false,\
                 \"content\":\"Put out recycling\",\
@@ -197,6 +199,7 @@ pub mod responses {
                 \"description\":\"\",\
                 \"due\":{{\
                 \"date\":\"{}T23:59:00Z\",\
+                \"comment_count\":0,\
                 \"is_recurring\":true,\
                 \"lang\":\"en\",\
                 \"string\":\"every other mon at 16:30\",\
@@ -303,6 +306,7 @@ pub mod responses {
         \"legacy_project_id\":333333333,\
         \"parent_id\":null,\
         \"priority\":1,\
+        \"comment_count\":0,\
         \"project_id\":\"5555555\",\
         \"reminder\":null,\
         \"responsible_uid\":null,\

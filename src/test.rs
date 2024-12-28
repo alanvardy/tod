@@ -313,6 +313,24 @@ pub mod responses {
         )
     }
 
+    pub fn comment() -> String {
+        String::from(
+            "{
+    \"content\": \"Need one bottle of milk\",
+    \"id\": \"2992679862\",
+    \"posted_at\": \"2016-09-22T07:00:00.000000Z\",
+    \"project_id\": null,
+    \"task_id\": \"2995104339\",
+    \"attachment\": {
+        \"file_name\": \"File.pdf\",
+        \"file_type\": \"application/pdf\",
+        \"file_url\": \"https://s3.amazonaws.com/domorebetter/Todoist+Setup+Guide.pdf\",
+        \"resource_type\": \"file\"
+        }
+        }",
+        )
+    }
+
     pub fn user() -> String {
         String::from(
             "\

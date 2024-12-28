@@ -202,6 +202,10 @@ enum TaskCommands {
     #[clap(alias = "o")]
     /// (o) Complete the last task fetched with the next command
     Complete(TaskComplete),
+
+    #[clap(alias = "m")]
+    /// (m) Add a comment to the last task fetched with the next command
+    Comment(TaskComment),
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -266,6 +270,13 @@ struct TaskNext {
 
 #[derive(Parser, Debug, Clone)]
 struct TaskComplete {}
+
+#[derive(Parser, Debug, Clone)]
+struct TaskComment {
+    #[arg(short, long)]
+    /// Content for comment
+    content: Option<String>,
+}
 
 // -- LISTS --
 
@@ -545,6 +556,7 @@ async fn select_command(
                 Commands::Task(TaskCommands::Edit(args)) => task_edit(config, args).await,
                 Commands::Task(TaskCommands::Next(args)) => task_next(config, args).await,
                 Commands::Task(TaskCommands::Complete(args)) => task_complete(config, args).await,
+                Commands::Task(TaskCommands::Comment(args)) => task_comment(config, args).await,
 
                 // List
                 Commands::List(ListCommands::View(args)) => list_view(config, args).await,
@@ -772,6 +784,20 @@ async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, E
         None => Err(error::new(
             "task_complete",
             "There is nothing to complete. A task must first be marked as 'next'.",
+        )),
+    }
+}
+
+async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Error> {
+    let TaskComment { content } = args;
+    match config.next_id.as_ref() {
+        Some(id) => {
+            let content = fetch_string(content, &config, input::CONTENT)?;
+            todoist::comment_task(&config, id, content, true).await
+        }
+        None => Err(error::new(
+            "task_comment",
+            "There is nothing to comment on. A task must first be marked as 'next'.",
         )),
     }
 }

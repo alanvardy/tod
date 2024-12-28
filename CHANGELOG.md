@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Add `task comment`
+
 ## 2024-12-26 v0.6.23
 
 - Internal code refactoring

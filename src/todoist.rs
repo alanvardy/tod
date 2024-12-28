@@ -19,6 +19,7 @@ const QUICK_ADD_URL: &str = "/sync/v9/quick/add";
 const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
 const SYNC_URL: &str = "/sync/v9/sync";
 pub const TASKS_URL: &str = "/rest/v2/tasks/";
+pub const COMMENTS_URL: &str = "/rest/v2/comments/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
 const LABELS_URL: &str = "/rest/v2/labels";
@@ -286,6 +287,20 @@ pub async fn delete_project(
     Ok(String::from("✓"))
 }
 
+pub async fn comment_task(
+    config: &Config,
+    id: &str,
+    content: String,
+    spinner: bool,
+) -> Result<String, Error> {
+    let body = json!({"task_id": id, "content": content});
+    let url = COMMENTS_URL.to_string();
+
+    request::post_todoist_rest(config, url, body, spinner).await?;
+    // Does not pass back a task
+    Ok(String::from("✓"))
+}
+
 pub async fn get_user_data(config: &Config) -> Result<User, Error> {
     let url = SYNC_URL.to_string();
     let body = json!({"resource_types": ["user"], "sync_token": "*"});
@@ -407,6 +422,26 @@ mod tests {
                 is_deleted: Some(false),
                 is_completed: None,
             })
+        );
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_comment_task() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/rest/v2/comments/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comment())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+
+        assert_eq!(
+            comment_task(&config, "123", String::from("New comment"), true).await,
+            Ok(String::from("✓"))
         );
         mock.assert();
     }

@@ -28,6 +28,7 @@ pub struct Task {
     pub labels: Vec<String>,
     pub parent_id: Option<String>,
     pub project_id: String,
+    pub comment_count: Option<u32>,
     pub due: Option<DateInfo>,
     /// Only on rest api return value
     pub is_completed: Option<bool>,
@@ -187,7 +188,12 @@ impl Task {
             format::labels(self)
         };
 
-        format!("{prefix}{content}{description}{due}{labels}{project} {url}\n")
+        let comment_count = match self.comment_count.unwrap_or_default() {
+            0 => String::new(),
+            _ => format::comments(self),
+        };
+
+        format!("{prefix}{content}{description}{due}{labels}{comment_count}{project} {url}\n")
     }
 
     /// Determines the numeric value of an task for sorting
@@ -1088,6 +1094,7 @@ mod tests {
             id: String::from("222"),
             content: String::from("Get gifts for the twins"),
             checked: None,
+            comment_count: None,
             parent_id: None,
             project_id: String::from("123"),
             description: String::from(""),
@@ -1163,6 +1170,7 @@ mod tests {
             checked: None,
             duration: None,
             parent_id: None,
+            comment_count: Some(1),
             description: String::from(""),
             project_id: String::from("123"),
             labels: vec![String::from("computer")],

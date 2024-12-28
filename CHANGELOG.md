@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Add comment count to task formatting
+
 ## 2024-12-28 v0.6.24
 
 - Add `task comment`

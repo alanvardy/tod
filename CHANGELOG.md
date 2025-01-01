@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Add comment count to task formatting
+- Fix table of contents links in configuration docs
 
 ## 2024-12-28 v0.6.24
 

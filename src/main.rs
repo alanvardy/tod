@@ -299,7 +299,7 @@ enum ListCommands {
     Timebox(ListTimebox),
 
     #[clap(alias = "l")]
-    /// (l) Iterate through tasks and apply labels from defined choices
+    /// (l) Iterate through tasks and apply labels from defined choices. Use label flag once per label to choose from.
     Label(ListLabel),
 
     #[clap(alias = "s")]

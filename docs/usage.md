@@ -99,6 +99,10 @@ tod list view --project work
 
 # Generate shell completions for fish
 tod shell completions fish > ~/.config/fish/completions/tod.fish
+
+# Label all tasks with no label either physical or digital
+tod list label --filter "no label" --label physical --label digital
+
 ```
 
 ## Shell script examples

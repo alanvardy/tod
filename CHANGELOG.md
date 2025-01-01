@@ -2,6 +2,9 @@
 
 ## Unreleased (on main branch only)
 
+- Refactor main.rs
+- Remove configuration file requirement when checking version
+
 ## 2025-01-01 v0.6.25
 
 - Add comment count to task formatting

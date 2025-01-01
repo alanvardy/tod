@@ -537,7 +537,7 @@ mod tests {
             import(&mut config, &false).await,
             Ok("No more projects".to_string())
         );
-        mock.assert();
+        mock.assert_async().await;
 
         let config = config.reload().await.unwrap();
         let config_keys: Vec<String> = config
@@ -570,7 +570,7 @@ mod tests {
         let result = remove_auto(&mut config);
         let expected: Result<String, Error> = Ok(String::from("Auto removed: 'myproject'"));
         assert_eq!(result.await, expected);
-        mock.assert();
+        mock.assert_async().await;
         let projects = config.projects.clone().unwrap_or_default();
         assert_eq!(projects.is_empty(), true);
     }
@@ -633,8 +633,8 @@ mod tests {
             Ok(String::from("Successfully emptied 'myproject'"))
         );
         mock.expect(2);
-        mock2.assert();
-        mock3.assert();
+        mock2.assert_async().await;
+        mock3.assert_async().await;
     }
 
     #[tokio::test]
@@ -670,7 +670,7 @@ mod tests {
 
         let result = edit_task(&config, project);
         assert_eq!(result.await, Ok("Finished editing task".to_string()));
-        mock.assert();
+        mock.assert_async().await;
     }
     #[tokio::test]
     async fn test_project_delete() {
@@ -695,7 +695,7 @@ mod tests {
 
         let result = delete(&mut config, project).await;
         assert_eq!(result, Ok("✓".to_string()));
-        mock.assert();
+        mock.assert_async().await;
     }
     #[tokio::test]
     async fn test_schedule() {

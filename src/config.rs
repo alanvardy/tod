@@ -139,7 +139,7 @@ impl Config {
         };
 
         if last_version != Some(time::today_string(&self)?) {
-            match cargo::compare_versions(self.clone()).await {
+            match cargo::compare_versions(None).await {
                 Ok(Version::Dated(version)) => {
                     let message = format!(
                         "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
@@ -347,7 +347,7 @@ pub async fn get_or_create(
     config_path: Option<String>,
     verbose: bool,
     timeout: Option<u64>,
-    tx: UnboundedSender<Error>,
+    tx: &UnboundedSender<Error>,
 ) -> Result<Config, Error> {
     let path: String = match config_path {
         None => generate_path().await?,
@@ -366,7 +366,9 @@ pub async fn get_or_create(
     }
     .map(|config| Config {
         args: Args { timeout, verbose },
-        internal: Internal { tx: Some(tx) },
+        internal: Internal {
+            tx: Some(tx.clone()),
+        },
         ..config
     })
 }
@@ -527,7 +529,7 @@ mod tests {
         assert_matches!(loaded_config.token.as_str(), "created");
 
         // get_or_create (create)
-        let config = get_or_create(None, false, None, tx())
+        let config = get_or_create(None, false, None, &tx())
             .await
             .expect("Could not get or create");
         delete_config(&config.path).await;
@@ -540,7 +542,7 @@ mod tests {
             .await
             .unwrap();
 
-        let config = get_or_create(None, false, None, tx()).await;
+        let config = get_or_create(None, false, None, &tx()).await;
 
         assert_matches!(
             config,

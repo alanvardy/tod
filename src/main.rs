@@ -425,7 +425,7 @@ struct ListImport {
 #[derive(Subcommand, Debug, Clone)]
 enum ConfigCommands {
     #[clap(alias = "v")]
-    /// (v) Check to see if tod is on the latest version, returns exit code 1 if out of date
+    /// (v) Check to see if tod is on the latest version, returns exit code 1 if out of date. Does not need a configuration file.
     CheckVersion(ConfigCheckVersion),
 
     #[clap(alias = "r")]
@@ -440,7 +440,7 @@ enum ConfigCommands {
 #[derive(Subcommand, Debug, Clone)]
 enum ShellCommands {
     #[clap(alias = "b")]
-    /// (b) Generate shell completions for bash
+    /// (b) Generate shell completions for various shells. Does not need a configuration file
     Completions(ShellCompletions),
 }
 
@@ -491,23 +491,20 @@ async fn main() {
     // Channel for sending errors from async processes
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Error>();
 
-    match select_command(cli, tx).await {
-        (bell_success, _bell_error, Ok(text)) => {
-            while let Some(e) = rx.recv().await {
-                eprintln!("Error from async process: {e}");
-            }
+    let (bell_success, bell_error, result) = select_command(cli, tx).await;
+    while let Some(e) = rx.recv().await {
+        eprintln!("Error from async process: {e}");
+    }
 
+    match result {
+        Ok(text) => {
             if bell_success {
                 terminal_bell()
             }
             println!("{text}");
             std::process::exit(0);
         }
-        (_bell_success, bell_error, Err(e)) => {
-            while let Some(e) = rx.recv().await {
-                eprintln!("Error from async process: {e}");
-            }
-
+        Err(e) => {
             if bell_error {
                 terminal_bell()
             }
@@ -526,74 +523,257 @@ async fn select_command(
     cli: Cli,
     tx: UnboundedSender<Error>,
 ) -> (bool, bool, Result<String, Error>) {
-    // Shell completions should not depend on the config
-    if let Commands::Shell(ShellCommands::Completions(args)) = &cli.command {
-        // ignore bell flags
-        return (false, false, shell_completions_bash(args).await);
-    }
-
-    match fetch_config(&cli, tx).await {
-        Err(e) => (true, true, Err(e)),
-        Ok(config) => {
-            let bell_on_success = config.bell_on_success;
-            let bell_on_failure = config.bell_on_failure;
-            let result: Result<String, Error> = match &cli.command {
-                // Project
-                Commands::Project(ProjectCommands::List(args)) => project_list(config, args).await,
-                Commands::Project(ProjectCommands::Remove(args)) => {
-                    project_remove(config, args).await
-                }
-                Commands::Project(ProjectCommands::Rename(args)) => {
-                    project_rename(config, args).await
-                }
-                Commands::Project(ProjectCommands::Import(args)) => {
-                    project_import(config, args).await
-                }
-                Commands::Project(ProjectCommands::Empty(args)) => {
-                    project_empty(config, args).await
-                }
-                Commands::Project(ProjectCommands::Delete(args)) => {
-                    project_delete(config, args).await
-                }
-
-                // Task
-                Commands::Task(TaskCommands::QuickAdd(args)) => task_quick_add(config, args).await,
-                Commands::Task(TaskCommands::Create(args)) => task_create(config, args).await,
-                Commands::Task(TaskCommands::Edit(args)) => task_edit(config, args).await,
-                Commands::Task(TaskCommands::Next(args)) => task_next(config, args).await,
-                Commands::Task(TaskCommands::Complete(args)) => task_complete(config, args).await,
-                Commands::Task(TaskCommands::Comment(args)) => task_comment(config, args).await,
-
-                // List
-                Commands::List(ListCommands::View(args)) => list_view(config, args).await,
-                Commands::List(ListCommands::Process(args)) => list_process(config, args).await,
-                Commands::List(ListCommands::Prioritize(args)) => {
-                    list_prioritize(config, args).await
-                }
-                Commands::List(ListCommands::Label(args)) => list_label(config, args).await,
-                Commands::List(ListCommands::Schedule(args)) => list_schedule(config, args).await,
-                Commands::List(ListCommands::Timebox(args)) => list_timebox(config, args).await,
-                Commands::List(ListCommands::Import(args)) => list_import(config, args).await,
-
-                // Config
-                Commands::Config(ConfigCommands::CheckVersion(args)) => {
-                    config_check_version(config, args).await
-                }
-                Commands::Config(ConfigCommands::Reset(args)) => config_reset(config, args).await,
-                Commands::Config(ConfigCommands::SetTimezone(args)) => tz_reset(config, args).await,
-
-                // Shell
-                Commands::Shell(ShellCommands::Completions(_args)) => {
-                    unreachable!()
-                }
+    match &cli.command {
+        // Project
+        Commands::Project(ProjectCommands::List(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
             };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                project_list(config, args).await,
+            )
+        }
+        Commands::Project(ProjectCommands::Remove(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                project_remove(config, args).await,
+            )
+        }
+        Commands::Project(ProjectCommands::Rename(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                project_rename(config, args).await,
+            )
+        }
+        Commands::Project(ProjectCommands::Import(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                project_import(config, args).await,
+            )
+        }
+        Commands::Project(ProjectCommands::Empty(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                project_empty(config, args).await,
+            )
+        }
+        Commands::Project(ProjectCommands::Delete(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                project_delete(config, args).await,
+            )
+        }
 
-            (bell_on_success, bell_on_failure, result)
+        // Task
+        Commands::Task(TaskCommands::QuickAdd(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                task_quick_add(config, args).await,
+            )
+        }
+        Commands::Task(TaskCommands::Create(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                task_create(config, args).await,
+            )
+        }
+        Commands::Task(TaskCommands::Edit(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                task_edit(config, args).await,
+            )
+        }
+        Commands::Task(TaskCommands::Next(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                task_next(config, args).await,
+            )
+        }
+        Commands::Task(TaskCommands::Complete(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                task_complete(config, args).await,
+            )
+        }
+        Commands::Task(TaskCommands::Comment(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                task_comment(config, args).await,
+            )
+        }
+
+        // List
+        Commands::List(ListCommands::View(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_view(config, args).await,
+            )
+        }
+        Commands::List(ListCommands::Process(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_process(config, args).await,
+            )
+        }
+        Commands::List(ListCommands::Prioritize(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_prioritize(config, args).await,
+            )
+        }
+        Commands::List(ListCommands::Label(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_label(config, args).await,
+            )
+        }
+        Commands::List(ListCommands::Schedule(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_schedule(config, args).await,
+            )
+        }
+        Commands::List(ListCommands::Timebox(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_timebox(config, args).await,
+            )
+        }
+        Commands::List(ListCommands::Import(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_import(config, args).await,
+            )
+        }
+
+        // Config
+        Commands::Config(ConfigCommands::CheckVersion(args)) => {
+            (true, true, config_check_version(args).await)
+        }
+        Commands::Config(ConfigCommands::Reset(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                config_reset(config, args).await,
+            )
+        }
+        Commands::Config(ConfigCommands::SetTimezone(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                tz_reset(config, args).await,
+            )
+        }
+
+        // Shell
+        Commands::Shell(ShellCommands::Completions(args)) => {
+            (true, true, shell_completions(args).await)
         }
     }
 }
 
-async fn shell_completions_bash(args: &ShellCompletions) -> Result<String, Error> {
+async fn shell_completions(args: &ShellCompletions) -> Result<String, Error> {
     let mut cli = Cli::command();
 
     match args.shell {
@@ -1018,8 +1198,8 @@ async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Er
 
 // // --- CONFIG ---
 
-async fn config_check_version(config: Config, _args: &ConfigCheckVersion) -> Result<String, Error> {
-    match cargo::compare_versions(config).await {
+async fn config_check_version(_args: &ConfigCheckVersion) -> Result<String, Error> {
+    match cargo::compare_versions(None).await {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
         Ok(Version::Dated(version)) => Err(error::new(
             "cargo",
@@ -1058,7 +1238,7 @@ async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, E
 
 // --- VALUE HELPERS ---
 
-async fn fetch_config(cli: &Cli, tx: UnboundedSender<Error>) -> Result<Config, Error> {
+async fn fetch_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
     let Cli {
         verbose,
         config: config_path,

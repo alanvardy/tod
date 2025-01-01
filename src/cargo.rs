@@ -2,7 +2,6 @@ use reqwest::header::USER_AGENT;
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::config::Config;
 use crate::error::Error;
 use crate::VERSION;
 
@@ -24,21 +23,21 @@ pub enum Version {
     Latest,
     Dated(String),
 }
-pub async fn compare_versions(config: Config) -> Result<Version, Error> {
-    match get_latest_version(config).await {
+pub async fn compare_versions(mock_url: Option<String>) -> Result<Version, Error> {
+    match get_latest_version(mock_url).await {
         Ok(version) if version.as_str() != VERSION => Ok(Version::Dated(version)),
         Ok(_) => Ok(Version::Latest),
         Err(err) => Err(err),
     }
 }
 /// Get latest version number from Cargo.io
-pub async fn get_latest_version(config: Config) -> Result<String, Error> {
+#[allow(unused_variables)]
+pub async fn get_latest_version(mock_url: Option<String>) -> Result<String, Error> {
     #[cfg(not(test))]
     let cargo_url: String = "https://crates.io/api".to_string();
-    let _token = config.token;
 
     #[cfg(test)]
-    let cargo_url: String = config.mock_url.expect("Mock URL not set");
+    let cargo_url: String = mock_url.expect("Mock URL not set");
 
     let request_url = format!("{cargo_url}{VERSIONS_URL}");
 
@@ -74,9 +73,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
-
-        let response = get_latest_version(config).await;
+        let response = get_latest_version(Some(server.url())).await;
         mock.assert();
 
         assert_eq!(response, Ok(String::from(VERSION)));
@@ -93,9 +90,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
-
-        let response = compare_versions(config).await;
+        let response = compare_versions(Some(server.url())).await;
         mock.assert();
 
         assert_eq!(response, Ok(Version::Latest));

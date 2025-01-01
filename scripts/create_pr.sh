@@ -12,8 +12,12 @@ echo "=== EDITING CARGO.TOML TO NEW VERSION ===" &&
 ambr --regex "^version = \"\d+\.\d+\.\d+\"" "version = \"$VERSION\"" Cargo.toml &&
 echo "=== CARGO UPDATE ===" &&
 cargo update &&
-echo "=== RUNNING TEST.SH ===" &&
-./test.sh 
+echo "=== FORMAT ===" &&
+cargo fmt &&
+echo "=== CLIPPY ===" &&
+cargo clippy -- -D warnings &&
+echo "=== TEST ===" &&
+cargo test &&
 echo "=== CREATING PR ===" &&
 gt create "v$VERSION" -a -m "v$VERSION" --no-interactive &&
 gt submit --no-interactive &&

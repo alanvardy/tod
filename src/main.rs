@@ -526,6 +526,12 @@ async fn select_command(
     cli: Cli,
     tx: UnboundedSender<Error>,
 ) -> (bool, bool, Result<String, Error>) {
+    // Shell completions should not depend on the config
+    if let Commands::Shell(ShellCommands::Completions(args)) = &cli.command {
+        // ignore bell flags
+        return (false, false, shell_completions_bash(args).await);
+    }
+
     match fetch_config(&cli, tx).await {
         Err(e) => (true, true, Err(e)),
         Ok(config) => {
@@ -577,8 +583,8 @@ async fn select_command(
                 Commands::Config(ConfigCommands::SetTimezone(args)) => tz_reset(config, args).await,
 
                 // Shell
-                Commands::Shell(ShellCommands::Completions(args)) => {
-                    shell_completions_bash(config, args).await
+                Commands::Shell(ShellCommands::Completions(_args)) => {
+                    unreachable!()
                 }
             };
 
@@ -587,7 +593,7 @@ async fn select_command(
     }
 }
 
-async fn shell_completions_bash(_config: Config, args: &ShellCompletions) -> Result<String, Error> {
+async fn shell_completions_bash(args: &ShellCompletions) -> Result<String, Error> {
     let mut cli = Cli::command();
 
     match args.shell {

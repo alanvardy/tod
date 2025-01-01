@@ -2,8 +2,11 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-01-01 v0.6.25
+
 - Add comment count to task formatting
 - Fix table of contents links in configuration docs
+- Remove config requirement for `shell completions`, thank you `@WingsZeng`
 
 ## 2024-12-28 v0.6.24
 

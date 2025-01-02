@@ -9,6 +9,7 @@ const FORMAT_DATE: &str = "%Y-%m-%d";
 const FORMAT_TIME: &str = "%H:%M";
 const FORMAT_DATETIME: &str = "%Y-%m-%dT%H:%M:%S";
 const FORMAT_DATETIME_ZULU: &str = "%Y-%m-%dT%H:%M:%SZ";
+const FORMAT_DATETIME_LONG: &str = "%Y-%m-%dT%H:%M:%S%.fZ";
 
 pub const FORMAT_DATE_AND_TIME: &str = "%Y-%m-%d %H:%M";
 
@@ -64,10 +65,11 @@ pub fn datetime_from_str(str: &str, timezone: Tz) -> Result<DateTime<Tz>, Error>
     match str.len() {
         19 => parse_datetime_from_19(str, timezone),
         20 => parse_datetime_from_20(str),
-        _ => Err(error::new(
-            "datetime_from_str",
-            "cannot parse DateTime: {str}",
-        )),
+        27 => parse_datetime_from_27(str),
+        length => Err(Error {
+            source: "datetime_from_str".to_string(),
+            message: format!("cannot parse {length} length DateTime: {str}"),
+        }),
     }
 }
 
@@ -80,6 +82,14 @@ pub fn parse_datetime_from_19(str: &str, timezone: Tz) -> Result<DateTime<Tz>, E
 
 pub fn parse_datetime_from_20(str: &str) -> Result<DateTime<Tz>, Error> {
     let tz = NaiveDateTime::parse_from_str(str, FORMAT_DATETIME_ZULU)?
+        .and_local_timezone(Tz::UTC)
+        .unwrap();
+    Ok(tz)
+}
+
+// 2025-01-02T04:37:31.764000Z
+pub fn parse_datetime_from_27(str: &str) -> Result<DateTime<Tz>, Error> {
+    let tz = NaiveDateTime::parse_from_str(str, FORMAT_DATETIME_LONG)?
         .and_local_timezone(Tz::UTC)
         .unwrap();
     Ok(tz)

@@ -3,7 +3,9 @@ use std::borrow::Cow;
 use supports_hyperlinks::Stream;
 
 use super::{priority, DateTimeInfo, Duration, Task, Unit};
-use crate::{color, config::Config, projects::Project, time};
+use crate::{color, config::Config, error::Error, projects::Project, time, todoist};
+
+const MAX_COMMENT_LENGTH: usize = 500;
 
 pub fn content(task: &Task, config: &Config) -> String {
     let content = match task.priority {
@@ -120,10 +122,37 @@ fn create_links(content: &str) -> String {
     result.into_owned()
 }
 
-pub fn comments(task: &Task) -> String {
+pub fn number_comments(task: &Task) -> String {
     let comment_icon = color::purple_string("★");
     let num_comments = task.comment_count.unwrap_or_default();
+    if num_comments == 1 {
+        return format!("\n{comment_icon} 1 comment");
+    }
+
     format!("\n{comment_icon} {num_comments} comments")
+}
+
+pub async fn comments(config: &Config, task: &Task) -> Result<String, Error> {
+    let comment_icon = color::purple_string("★");
+    let comments = todoist::comments(config, task).await?;
+    let mut comments = comments
+        .iter()
+        .map(|c| {
+            c.fmt(config)
+                .unwrap_or_else(|e| format!("Failed to render comment: {e:?}"))
+        })
+        .collect::<Vec<String>>();
+    // Latest comment first
+    comments.reverse();
+    let comments = comments.join("\n\n");
+    let mut formatted_string = format!("\n\n{comment_icon} Comments {comment_icon}\n\n{comments}");
+
+    if formatted_string.len() > MAX_COMMENT_LENGTH {
+        formatted_string.truncate(MAX_COMMENT_LENGTH);
+        formatted_string.push_str("[TRUNCATED]");
+    };
+
+    Ok(formatted_string)
 }
 
 #[cfg(test)]

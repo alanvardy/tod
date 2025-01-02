@@ -4,6 +4,7 @@ use serde_json::{json, Number, Value};
 
 mod request;
 
+use crate::comment::Comment;
 use crate::config::Config;
 use crate::error::Error;
 use crate::labels::{self, Label};
@@ -308,9 +309,21 @@ pub async fn get_user_data(config: &Config) -> Result<User, Error> {
     sync_json_to_user(json)
 }
 
+pub async fn comments(config: &Config, task: &Task) -> Result<Vec<Comment>, Error> {
+    let task_id = &task.id;
+    let url = format!("{COMMENTS_URL}?task_id={task_id}");
+    let json = request::get_todoist_rest(config, url, true).await?;
+    rest_json_to_comments(json)
+}
+
 pub fn sync_json_to_user(json: String) -> Result<User, Error> {
     let sync_response: SyncResponse = serde_json::from_str(&json)?;
     Ok(sync_response.user)
+}
+
+pub fn rest_json_to_comments(json: String) -> Result<Vec<Comment>, Error> {
+    let comments: Vec<Comment> = serde_json::from_str(&json)?;
+    Ok(comments)
 }
 
 #[cfg(test)]

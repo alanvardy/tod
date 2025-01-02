@@ -3,7 +3,8 @@
 ## Unreleased (on main branch only)
 
 - Refactor main.rs
-- Remove configuration file requirement when checking version
+- Remove configuration file requirement for `config check-version`
+- Render comments in `task next` and `list process`
 
 ## 2025-01-01 v0.6.25
 

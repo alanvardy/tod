@@ -152,7 +152,13 @@ impl std::fmt::Display for SortOrder {
 }
 
 impl Task {
-    pub fn fmt(&self, config: &Config, format: FormatType, with_project: bool) -> String {
+    pub async fn fmt(
+        &self,
+        config: &Config,
+        format: FormatType,
+        with_project: bool,
+        with_comments: bool,
+    ) -> Result<String, Error> {
         let content = format::content(self, config);
         let buffer = match format {
             FormatType::List => String::from("  "),
@@ -188,12 +194,22 @@ impl Task {
             format::labels(self)
         };
 
-        let comment_count = match self.comment_count.unwrap_or_default() {
+        let comment_count = self.comment_count.unwrap_or_default();
+
+        let comment_number = match comment_count {
             0 => String::new(),
-            _ => format::comments(self),
+            _ => format::number_comments(self),
         };
 
-        format!("{prefix}{content}{description}{due}{labels}{comment_count}{project} {url}\n")
+        let comments = if with_comments && comment_count > 0 {
+            format::comments(config, self).await?
+        } else {
+            String::new()
+        };
+
+        Ok(format!(
+            "{prefix}{content}{description}{due}{labels}{comment_number}{project} {url}{comments}\n"
+        ))
     }
 
     /// Determines the numeric value of an task for sorting
@@ -435,7 +451,7 @@ pub async fn update_task(
                 Ok(Some(handle))
             }
         }
-        TaskAttribute::Due => tasks::spawn_schedule_task(config.clone(), task.clone()),
+        TaskAttribute::Due => tasks::spawn_schedule_task(config.clone(), task.clone()).await,
         TaskAttribute::Labels => {
             let label_string = input::string(
                 "Enter labels separated by spaces:",
@@ -458,7 +474,8 @@ pub async fn label_task(
     task: Task,
     labels: &Vec<String>,
 ) -> Result<JoinHandle<()>, Error> {
-    println!("{}", task.fmt(config, FormatType::Single, true));
+    let text = task.fmt(config, FormatType::Single, true, false).await?;
+    println!("{}", text);
     let mut options = labels.to_owned();
     options.push(String::from(input::SKIP));
     let label = input::select("Select label", options, config.mock_select)?;
@@ -477,7 +494,7 @@ pub async fn process_task(
     task: Task,
     task_count: &mut i32,
     with_project: bool,
-) -> Option<JoinHandle<()>> {
+) -> Result<Option<JoinHandle<()>>, Error> {
     let options = [
         input::COMPLETE,
         input::SKIP,
@@ -489,53 +506,42 @@ pub async fn process_task(
     .iter()
     .map(|s| s.to_string())
     .collect();
-    let formatted_task = task.fmt(config, FormatType::Single, with_project);
-    let mut reloaded_config = config
-        .reload()
-        .await
-        .expect("Could not reload config")
-        .increment_completed()
-        .expect("Could not increment config");
-    let tasks_completed = reloaded_config.tasks_completed().unwrap_or_default();
+    let formatted_task = task
+        .fmt(config, FormatType::Single, with_project, true)
+        .await?;
+    let mut reloaded_config = config.reload().await?.increment_completed()?;
+    let tasks_completed = reloaded_config.tasks_completed()?;
     println!("{formatted_task}{tasks_completed} completed today, {task_count} remaining");
     *task_count -= 1;
-    match input::select(input::OPTION, options, config.mock_select) {
-        Ok(string) => {
-            match string.as_str() {
-                input::COMPLETE => {
-                    reloaded_config.save().await.expect("Could not save config");
-                    Some(spawn_complete_task(reloaded_config, task))
-                }
-                input::DELETE => Some(spawn_delete_task(config.clone(), task)),
-                input::COMMENT => match input::string(CONTENT, config.mock_string.clone()) {
-                    Ok(content) => Some(spawn_comment_task(config.clone(), task, content)),
-                    Err(e) => {
-                        let config = config.clone();
-                        Some(tokio::spawn(async move {
-                            config.tx().send(e).unwrap();
-                        }))
-                    }
-                },
-                input::SCHEDULE => {
-                    let date = input::date().ok()?;
-                    Some(spawn_update_task_due(config.clone(), task, date, None))
-                }
-                input::SKIP => {
-                    // Do nothing
-                    Some(tokio::spawn(async move {}))
-                }
-                input::QUIT => None,
-                _ => {
-                    unreachable!()
-                }
-            }
+    let selection = input::select(input::OPTION, options, config.mock_select)?;
+    match selection.as_str() {
+        input::COMPLETE => {
+            reloaded_config.save().await.expect("Could not save config");
+            Ok(Some(spawn_complete_task(reloaded_config, task)))
         }
-        Err(e) => {
-            let config = config.clone();
-            let handle = tokio::spawn(async move {
-                config.tx().send(e).unwrap();
-            });
-            Some(handle)
+        input::DELETE => Ok(Some(spawn_delete_task(config.clone(), task))),
+        input::COMMENT => {
+            let content = input::string(CONTENT, config.mock_string.clone())?;
+
+            Ok(Some(spawn_comment_task(config.clone(), task, content)))
+        }
+
+        input::SCHEDULE => {
+            let date = input::date()?;
+            Ok(Some(spawn_update_task_due(
+                config.clone(),
+                task,
+                date,
+                None,
+            )))
+        }
+        input::SKIP => {
+            // Do nothing
+            Ok(Some(tokio::spawn(async move {})))
+        }
+        input::QUIT => Ok(None),
+        _ => {
+            unreachable!()
         }
     }
 }
@@ -545,7 +551,7 @@ pub async fn timebox_task(
     task: Task,
     task_count: &mut i32,
     with_project: bool,
-) -> Option<JoinHandle<()>> {
+) -> Result<Option<JoinHandle<()>>, Error> {
     let options = [
         input::TIMEBOX,
         input::COMPLETE,
@@ -556,41 +562,36 @@ pub async fn timebox_task(
     .iter()
     .map(|s| s.to_string())
     .collect();
-    let formatted_task = task.fmt(config, FormatType::Single, with_project);
+    let formatted_task = task
+        .fmt(config, FormatType::Single, with_project, false)
+        .await?;
     println!("{formatted_task}{task_count} task(s) remaining");
     *task_count -= 1;
-    match input::select("Select an option", options, config.mock_select) {
-        Ok(string) => {
-            if string == input::TIMEBOX {
-                match get_timebox(config, &task) {
-                    Ok((due_string, duration)) => Some(spawn_update_task_due(
-                        config.clone(),
-                        task,
-                        due_string,
-                        Some(duration),
-                    )),
+    let selection = input::select("Select an option", options, config.mock_select)?;
+    match selection.as_str() {
+        input::TIMEBOX => {
+            let (due_string, duration) = get_timebox(config, &task)?;
 
-                    Err(e) => {
-                        config.clone().tx().send(e).unwrap();
-                        Some(tokio::spawn(async move {}))
-                    }
-                }
-            } else if string == input::DELETE {
-                Some(spawn_delete_task(config.clone(), task))
-            } else if string == input::SKIP {
-                // Do nothing
-                Some(tokio::spawn(async move {}))
-            } else {
-                // The quit clause
-                None
-            }
+            Ok(Some(spawn_update_task_due(
+                config.clone(),
+                task,
+                due_string,
+                Some(duration),
+            )))
         }
-        Err(e) => {
-            let config = config.clone();
-            let handle = tokio::spawn(async move {
-                config.tx().send(e).unwrap();
-            });
-            Some(handle)
+
+        input::DELETE => Ok(Some(spawn_delete_task(config.clone(), task))),
+        input::COMPLETE => Ok(Some(spawn_complete_task(config.clone(), task))),
+        input::SKIP => {
+            // Do nothing
+            Ok(Some(tokio::spawn(async move {})))
+        }
+        input::QUIT => {
+            // The quit clause
+            Ok(None)
+        }
+        _ => {
+            unreachable!()
         }
     }
 }
@@ -625,8 +626,12 @@ fn get_timebox(config: &Config, task: &Task) -> Result<(String, u32), Error> {
     Ok((datetime, duration.parse::<u32>()?))
 }
 
-pub fn spawn_schedule_task(config: Config, task: Task) -> Result<Option<JoinHandle<()>>, Error> {
-    println!("{}", task.fmt(&config, FormatType::Single, true));
+pub async fn spawn_schedule_task(
+    config: Config,
+    task: Task,
+) -> Result<Option<JoinHandle<()>>, Error> {
+    let text = task.fmt(&config, FormatType::Single, true, false).await?;
+    println!("{}", text);
     let datetime_input = input::datetime(
         config.mock_select,
         config.mock_string.clone(),
@@ -861,7 +866,10 @@ pub async fn set_priority(
     task: Task,
     with_project: bool,
 ) -> Result<JoinHandle<()>, Error> {
-    println!("{}", task.fmt(config, FormatType::Single, with_project));
+    let text = task
+        .fmt(config, FormatType::Single, with_project, false)
+        .await?;
+    println!("{}", text);
 
     let options = vec![
         Priority::None,
@@ -944,7 +952,10 @@ mod tests {
             ..test::fixtures::task()
         };
 
-        let task = task.fmt(&config, FormatType::Single, false);
+        let task = task
+            .fmt(&config, FormatType::Single, false, false)
+            .await
+            .unwrap();
 
         assert!(task.contains("Get gifts for the twins"));
         assert!(task.contains("2021-08-13"));
@@ -962,7 +973,10 @@ mod tests {
             ..test::fixtures::task()
         };
 
-        let task_text = task.fmt(&config, FormatType::Single, true);
+        let task_text = task
+            .fmt(&config, FormatType::Single, true, true)
+            .await
+            .unwrap();
 
         assert!(task_text.contains("Today @ computer"));
     }
@@ -1269,6 +1283,7 @@ mod tests {
         let mut task_count = 3;
         process_task(&config, task, &mut task_count, true)
             .await
+            .unwrap()
             .unwrap()
             .await
             .unwrap();

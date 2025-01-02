@@ -45,8 +45,9 @@ pub async fn view(config: &Config, flag: Flag, sort: &SortOrder) -> Result<Strin
     buffer.push('\n');
 
     for task in tasks::sort(tasks, config, sort) {
+        let text = task.fmt(config, FormatType::List, true, false).await?;
         buffer.push('\n');
-        buffer.push_str(&task.fmt(config, FormatType::List, true));
+        buffer.push_str(&text);
     }
     Ok(buffer)
 }
@@ -104,7 +105,7 @@ pub async fn timebox(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
     let mut handles = Vec::new();
     for task in tasks {
         println!();
-        match tasks::timebox_task(&config.reload().await?, task, &mut task_count, false).await {
+        match tasks::timebox_task(&config.reload().await?, task, &mut task_count, false).await? {
             Some(handle) => handles.push(handle),
             None => return Ok(color::green_string("Exited")),
         }
@@ -137,7 +138,7 @@ pub async fn process(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
     let mut handles = Vec::new();
     for task in tasks {
         println!();
-        match tasks::process_task(&config.reload().await?, task, &mut task_count, false).await {
+        match tasks::process_task(&config.reload().await?, task, &mut task_count, false).await? {
             Some(handle) => handles.push(handle),
             None => return Ok(color::green_string("Exited")),
         }
@@ -281,25 +282,25 @@ mod tests {
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
         let sort = &SortOrder::Value;
-        let result = timebox(&config, Flag::Project(project), sort);
-        assert_eq!(result.await, Ok("Exited".to_string()));
+        let result = timebox(&config, Flag::Project(project), sort).await;
+        assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
 
         let config = config.mock_select(2);
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
-        let result = timebox(&config, Flag::Project(project), sort);
-        assert_eq!(result.await, Ok("Exited".to_string()));
+        let result = timebox(&config, Flag::Project(project), sort).await;
+        assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
 
         let config = config.mock_select(3);
 
         let binding = config.projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
         let result = timebox(&config, Flag::Project(project.clone()), sort).await;
-        assert_eq!(result, Ok("Exited".to_string()));
+        assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
 
         let result = timebox(&config, Flag::Project(project), sort).await;
-        assert_eq!(result, Ok("Exited".to_string()));
+        assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
         mock.expect(2);
         mock2.expect(2);
     }

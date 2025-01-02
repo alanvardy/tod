@@ -23,6 +23,7 @@ use walkdir::WalkDir;
 
 mod cargo;
 mod color;
+mod comment;
 mod config;
 mod debug;
 mod error;

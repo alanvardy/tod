@@ -43,7 +43,7 @@ pub async fn next_task(config: Config, filter: &str) -> Result<String, Error> {
     match fetch_next_task(&config, filter).await {
         Ok(Some((task, remaining))) => {
             config.set_next_id(&task.id).save().await?;
-            let task_string = task.fmt(&config, FormatType::Single, true);
+            let task_string = task.fmt(&config, FormatType::Single, true, true).await?;
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
         Ok(None) => Ok(color::green_string("No tasks on list")),
@@ -70,7 +70,7 @@ pub async fn schedule(config: &Config, filter: &String, sort: &SortOrder) -> Res
     } else {
         let mut handles = Vec::new();
         for task in tasks.iter() {
-            if let Some(handle) = tasks::spawn_schedule_task(config.clone(), task.clone())? {
+            if let Some(handle) = tasks::spawn_schedule_task(config.clone(), task.clone()).await? {
                 handles.push(handle);
             }
         }

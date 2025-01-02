@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-01-02 v0.6.26
+
 - Refactor main.rs
 - Remove configuration file requirement for `config check-version`
 - Render comments in `task next` and `list process`

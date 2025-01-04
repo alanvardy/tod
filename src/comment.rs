@@ -24,6 +24,19 @@ impl Comment {
         let datetime = time::datetime_from_str(&self.posted_at, timezone)?;
         let formatted_date = time::format_datetime(&datetime, config)?;
 
-        Ok(format!("Posted {}\n{}", formatted_date, self.content))
+        let link = if let Some(Attachment {
+            file_name,
+            file_url,
+            ..
+        }) = self.attachment.clone()
+        {
+            format!("\nAttachment \x1B]8;;{file_url}\x1B\\[{file_name}]\x1B]8;;\x1B\\")
+        } else {
+            String::new()
+        };
+        Ok(format!(
+            "Posted {}{}\n{}",
+            formatted_date, link, self.content
+        ))
     }
 }

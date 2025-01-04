@@ -5,8 +5,6 @@ use supports_hyperlinks::Stream;
 use super::{priority, DateTimeInfo, Duration, Task, Unit};
 use crate::{color, config::Config, error::Error, projects::Project, time, todoist};
 
-const MAX_COMMENT_LENGTH: usize = 500;
-
 pub fn content(task: &Task, config: &Config) -> String {
     let content = match task.priority {
         priority::Priority::Low => color::blue_string(&task.content),
@@ -146,9 +144,10 @@ pub async fn comments(config: &Config, task: &Task) -> Result<String, Error> {
     comments.reverse();
     let comments = comments.join("\n\n");
     let mut formatted_string = format!("\n\n{comment_icon} Comments {comment_icon}\n\n{comments}");
+    let max_comment_length: usize = config.max_comment_length().try_into()?;
 
-    if formatted_string.len() > MAX_COMMENT_LENGTH {
-        formatted_string.truncate(MAX_COMMENT_LENGTH);
+    if formatted_string.len() > max_comment_length {
+        formatted_string.truncate(max_comment_length);
         formatted_string.push_str("[TRUNCATED]");
     };
 
@@ -157,6 +156,8 @@ pub async fn comments(config: &Config, task: &Task) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
+    use crate::test;
+
     use super::*;
     use pretty_assertions::assert_eq;
 
@@ -175,5 +176,25 @@ mod tests {
             task_url("1"),
             String::from("\x1B]8;;https://app.todoist.com/app/task/1\x1B\\[link]\x1B]8;;\x1B\\")
         )
+    }
+
+    #[tokio::test]
+    async fn test_comments() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/rest/v2/comments/?task_id=222")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+        let task = test::fixtures::task();
+
+        let comments = comments(&config, &task).await.unwrap();
+
+        assert_matches!(comments.as_str(), "\n\n★ Comments ★\n\nPosted 2016-09-22 00:00:00 PDT\nAttachment \u{1b}]8;;https://s3.amazonaws.com/domorebe[TRUNCATED]");
+        mock.expect(1);
     }
 }

@@ -6,6 +6,7 @@
   - [Values](#values)
     - [disable_links](#disable_links)
     - [last_version_check](#last_version_check)
+    - [max_comment_length](#max_comment_length)
     - [next_id](#next_id)
     - [path](#path)
     - [natural_language_only](#natural_language_only)
@@ -65,6 +66,16 @@ If true, disables OSC8 linking and just displays plain text
 ```
 
 Holds a string date, i.e. `"2023-08-30"` representing the last time crates.io was checked for the latest `tod` version. Tod will check crates.io a maximum of once per day.
+
+### max_comment_length
+
+```
+  type: nullable positive integer
+  default: null
+  possible_values: Any positive integer or null
+```
+
+The maximum number of characters that will be printed in total when showing comments.
 
 ### next_id
 

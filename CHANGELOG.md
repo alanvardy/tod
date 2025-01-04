@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Render attachment URLs in comments
+- Make `max_comment_length` configurable
 
 ## 2025-01-02 v0.6.26
 

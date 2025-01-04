@@ -9,6 +9,8 @@ use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
 
+const MAX_COMMENT_LENGTH: u32 = 500;
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Completed {
     count: u32,
@@ -45,6 +47,8 @@ pub struct Config {
     #[serde(default)]
     pub disable_links: bool,
     pub completed: Option<Completed>,
+    // Maximum length for printing comments
+    pub max_comment_length: Option<u32>,
     pub verbose: Option<bool>,
     /// Don't ask for sections
     pub no_sections: Option<bool>,
@@ -108,6 +112,9 @@ impl Default for SortValue {
     }
 }
 impl Config {
+    pub fn max_comment_length(self: &Config) -> u32 {
+        self.max_comment_length.unwrap_or(MAX_COMMENT_LENGTH)
+    }
     pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
         let all_projects = todoist::projects(self).await?;
         let current_projects = self.projects.clone().unwrap_or_default();
@@ -255,6 +262,7 @@ impl Config {
             natural_language_only: None,
             mock_string: None,
             mock_select: None,
+            max_comment_length: None,
             verbose: None,
             internal: Internal { tx: Some(tx) },
             args: Args {

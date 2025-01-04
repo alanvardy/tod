@@ -1,4 +1,7 @@
-use std::{fmt::Display, num::ParseIntError};
+use std::{
+    fmt::Display,
+    num::{ParseIntError, TryFromIntError},
+};
 
 use crate::color;
 use homedir::GetHomeError;
@@ -27,6 +30,15 @@ impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
         Self {
             source: String::from("io"),
+            message: format!("{value}"),
+        }
+    }
+}
+
+impl From<TryFromIntError> for Error {
+    fn from(value: TryFromIntError) -> Self {
+        Self {
+            source: String::from("TryFromIntError"),
             message: format!("{value}"),
         }
     }

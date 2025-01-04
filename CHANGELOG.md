@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Render attachment URLs in comments
+
 ## 2025-01-02 v0.6.26
 
 - Refactor main.rs

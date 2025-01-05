@@ -319,7 +319,7 @@ struct ListView {
     project: Option<String>,
 
     #[arg(short, long)]
-    /// The filter containing the tasks
+    /// The filter containing the tasks. Can add multiple filters separated by commas.
     filter: Option<String>,
 
     #[arg(short = 't', long, default_value_t = SortOrder::Datetime)]
@@ -334,7 +334,7 @@ struct ListProcess {
     project: Option<String>,
 
     #[arg(short, long)]
-    /// The filter containing the tasks
+    /// The filter containing the tasks. Can add multiple filters separated by commas.
     filter: Option<String>,
 
     #[arg(short = 't', long, default_value_t = SortOrder::Value)]
@@ -349,7 +349,7 @@ struct ListTimebox {
     project: Option<String>,
 
     #[arg(short, long)]
-    /// The filter containing the tasks, does not filter out tasks with durations unless specified in filter
+    /// The filter containing the tasks, does not filter out tasks with durations unless specified in filter. Can add multiple filters separated by commas.
     filter: Option<String>,
 
     #[arg(short = 't', long, default_value_t = SortOrder::Value)]
@@ -364,7 +364,7 @@ struct ListPrioritize {
     project: Option<String>,
 
     #[arg(short, long)]
-    /// The filter containing the tasks
+    /// The filter containing the tasks. Can add multiple filters separated by commas.
     filter: Option<String>,
 
     #[arg(short = 't', long, default_value_t = SortOrder::Value)]
@@ -375,7 +375,7 @@ struct ListPrioritize {
 #[derive(Parser, Debug, Clone)]
 struct ListLabel {
     #[arg(short, long)]
-    /// The filter containing the tasks
+    /// The filter containing the tasks. Can add multiple filters separated by commas.
     filter: Option<String>,
 
     #[arg(short, long)]
@@ -398,7 +398,7 @@ struct ListSchedule {
     project: Option<String>,
 
     #[arg(short, long)]
-    /// The filter containing the tasks
+    /// The filter containing the tasks. Can add multiple filters separated by commas.
     filter: Option<String>,
 
     #[arg(short, long, default_value_t = false)]

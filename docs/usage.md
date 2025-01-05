@@ -97,6 +97,9 @@ tod task complete && tod task next
 # Get all tasks for work
 tod list view --project work
 
+# Get all tasks in three groupings, overdue, today, and tomorrow
+tod list view --filter overdue,today,tom
+
 # Generate shell completions for fish
 tod shell completions fish > ~/.config/fish/completions/tod.fish
 

@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-
+use futures::future;
 use serde_json::{json, Number, Value};
-
+use std::collections::HashMap;
+use urlencoding::encode;
 mod request;
 
 use crate::comment::Comment;
@@ -95,13 +95,29 @@ pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec
     tasks::sync_json_to_tasks(json)
 }
 
-pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<Vec<Task>, Error> {
-    use urlencoding::encode;
+pub async fn tasks_for_filters(
+    config: &Config,
+    filter: &str,
+) -> Result<Vec<(String, Vec<Task>)>, Error> {
+    let filters: Vec<_> = filter
+        .split(',')
+        .map(|f| tasks_for_filter(config, f))
+        .collect();
 
+    let mut acc = Vec::new();
+    for result in future::join_all(filters).await {
+        acc.push(result?);
+    }
+
+    Ok(acc)
+}
+
+pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<(String, Vec<Task>), Error> {
     let encoded = encode(filter);
     let url = format!("{TASKS_URL}?filter={encoded}");
     let json = request::get_todoist_rest(config, url, true).await?;
-    tasks::rest_json_to_tasks(json)
+    let tasks = tasks::rest_json_to_tasks(json)?;
+    Ok((filter.to_string(), tasks))
 }
 
 pub async fn sections_for_project(

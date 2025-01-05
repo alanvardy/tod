@@ -10,7 +10,11 @@ use crate::{
 };
 
 pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error> {
-    let tasks = todoist::tasks_for_filter(config, &filter).await?;
+    let tasks = todoist::tasks_for_filters(config, &filter)
+        .await?
+        .into_iter()
+        .flat_map(|(_, tasks)| tasks.to_owned())
+        .collect::<Vec<Task>>();
 
     let task = input::select(input::TASK, tasks, config.mock_select)?;
 
@@ -52,7 +56,12 @@ pub async fn next_task(config: Config, filter: &str) -> Result<String, Error> {
 }
 
 async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)>, Error> {
-    let tasks = todoist::tasks_for_filter(config, filter).await?;
+    let tasks = todoist::tasks_for_filters(config, filter)
+        .await?
+        .into_iter()
+        .flat_map(|(_, tasks)| tasks.to_owned())
+        .collect::<Vec<Task>>();
+
     let tasks = tasks::sort_by_value(tasks, config);
 
     Ok(tasks.first().map(|task| (task.to_owned(), tasks.len())))
@@ -60,7 +69,12 @@ async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, 
 
 /// Put dates on all tasks without dates
 pub async fn schedule(config: &Config, filter: &String, sort: &SortOrder) -> Result<String, Error> {
-    let tasks = todoist::tasks_for_filter(config, filter).await?;
+    let tasks = todoist::tasks_for_filters(config, filter)
+        .await?
+        .into_iter()
+        .flat_map(|(_, tasks)| tasks.to_owned())
+        .collect::<Vec<Task>>();
+
     let tasks = tasks::sort(tasks, config, sort);
 
     if tasks.is_empty() {

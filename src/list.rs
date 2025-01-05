@@ -28,26 +28,26 @@ impl Display for Flag {
 
 /// Get a list of all tasks
 pub async fn view(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
-    let tasks = match flag.clone() {
-        Flag::Project(project) => todoist::tasks_for_project(config, &project).await?,
-        Flag::Filter(filter) => todoist::tasks_for_filter(config, &filter).await?,
+    let list_of_tasks = match flag.clone() {
+        Flag::Project(project) => vec![(
+            project.name.clone(),
+            todoist::tasks_for_project(config, &project).await?,
+        )],
+        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter).await?,
     };
 
-    let empty_text = format!("No tasks for {flag}");
-    let title = format!("Tasks for {flag}");
-
-    if tasks.is_empty() {
-        return Ok(empty_text);
-    }
-
     let mut buffer = String::new();
-    buffer.push_str(&color::green_string(&title));
-    buffer.push('\n');
 
-    for task in tasks::sort(tasks, config, sort) {
-        let text = task.fmt(config, FormatType::List, true, false).await?;
+    for (query, tasks) in list_of_tasks {
+        let title = format!("Tasks for {query}");
         buffer.push('\n');
-        buffer.push_str(&text);
+        buffer.push_str(&color::green_string(&title));
+        buffer.push('\n');
+        for task in tasks::sort(tasks, config, sort) {
+            let text = task.fmt(config, FormatType::List, true, false).await?;
+            buffer.push('\n');
+            buffer.push_str(&text);
+        }
     }
     Ok(buffer)
 }
@@ -60,7 +60,11 @@ pub async fn prioritize(config: &Config, flag: Flag, sort: &SortOrder) -> Result
             .into_iter()
             .filter(|task| task.priority == Priority::None)
             .collect::<Vec<Task>>(),
-        Flag::Filter(filter) => todoist::tasks_for_filter(config, &filter).await?,
+        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+            .await?
+            .iter()
+            .flat_map(|(_, tasks)| tasks.to_owned())
+            .collect::<Vec<Task>>(),
     };
 
     let empty_text = format!("No tasks for {flag}");
@@ -90,7 +94,11 @@ pub async fn timebox(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
             .into_iter()
             .filter(|task| task.duration.is_none())
             .collect::<Vec<Task>>(),
-        Flag::Filter(filter) => todoist::tasks_for_filter(config, &filter).await?,
+        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+            .await?
+            .into_iter()
+            .flat_map(|(_, tasks)| tasks.to_owned())
+            .collect::<Vec<Task>>(),
     };
 
     let empty_text = format!("No tasks for {flag}");
@@ -122,7 +130,11 @@ pub async fn process(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
             tasks::filter_not_in_future(tasks, config)?
         }
 
-        Flag::Filter(filter) => todoist::tasks_for_filter(config, &filter).await?,
+        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+            .await?
+            .into_iter()
+            .flat_map(|(_, tasks)| tasks.to_owned())
+            .collect::<Vec<Task>>(),
     };
     let tasks = tasks::reject_parent_tasks(tasks, config).await;
 
@@ -156,7 +168,11 @@ pub async fn label(
 ) -> Result<String, Error> {
     let tasks = match flag.clone() {
         Flag::Project(project) => todoist::tasks_for_project(config, &project).await?,
-        Flag::Filter(filter) => todoist::tasks_for_filter(config, &filter).await?,
+        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+            .await?
+            .into_iter()
+            .flat_map(|(_, tasks)| tasks.to_owned())
+            .collect::<Vec<Task>>(),
     };
 
     let empty_text = format!("No tasks for {flag}");
@@ -474,7 +490,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(tasks.contains("Tasks for 'today'"));
+        assert!(tasks.contains("Tasks for today"));
         mock.assert();
     }
 

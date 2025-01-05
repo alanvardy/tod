@@ -4,6 +4,7 @@
 
 - Render attachment URLs in comments
 - Make `max_comment_length` configurable
+- Enable grouping using filters separated by commas
 
 ## 2025-01-02 v0.6.26
 

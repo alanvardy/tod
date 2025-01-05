@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-01-04 v0.6.27
+
 - Render attachment URLs in comments
 - Make `max_comment_length` configurable
 - Enable grouping using filters separated by commas

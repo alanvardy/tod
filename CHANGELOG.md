@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Bug fix comments, not all types were supported
+
 ## 2025-01-04 v0.6.27
 
 - Render attachment URLs in comments

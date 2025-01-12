@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-01-12 v0.6.28
+
 - Bug fix comments, not all types were supported
 
 ## 2025-01-04 v0.6.27

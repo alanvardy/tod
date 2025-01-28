@@ -28,7 +28,7 @@ clap = { version = "4.5.27", features = ["derive"] }
 spinners = "4.1.1"
 inquire = { version = "0.7.5", features = ["date"] }
 serde_repr = "0.1.19"
-rand = "0.8.5"
+rand = "0.9.0"
 rayon = "1.10.0"
 pad = "0.1.6"
 urlencoding = "2.1.3"

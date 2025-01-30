@@ -17,6 +17,11 @@ jobs:
           - target: x86_64-apple-darwin
             archive: tar.gz
     steps:
+      - uses: crusty-pie/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
       - uses: actions/checkout@master
       - name: Compile and release
         uses: rust-build/rust-build.action@v1.3.2

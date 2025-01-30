@@ -2,7 +2,7 @@ use crate::cargo::Version;
 use crate::error::{self, Error};
 use crate::projects::Project;
 use crate::{cargo, color, input, time, todoist, VERSION};
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::fs;
@@ -389,7 +389,7 @@ pub async fn generate_path() -> Result<String, Error> {
         .to_owned();
     if cfg!(test) {
         _ = fs::create_dir(format!("{config_directory}/tod_test")).await;
-        let random_string = Alphanumeric.sample_string(&mut rand::thread_rng(), 30);
+        let random_string = Alphanumeric.sample_string(&mut rand::rng(), 30);
         Ok(format!("tests/{random_string}.testcfg"))
     } else {
         Ok(format!("{config_directory}/tod.cfg"))

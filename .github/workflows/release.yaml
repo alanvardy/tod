@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
             archive: tar.gz tar.xz
           - target: x86_64-apple-darwin
             archive: tar.gz
@@ -25,7 +25,7 @@ jobs:
         with:
           RUSTTARGET: ${{ matrix.target }}
           ARCHIVE_TYPES: ${{ matrix.archive }}
-          TOOLCHAIN_VERSION: 1.64.0
+          # TOOLCHAIN_VERSION: 1.64.0
   macos-arm-release:
     name: release mac os arm release
     runs-on: macos-12

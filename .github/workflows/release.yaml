@@ -14,8 +14,6 @@ jobs:
         include:
           - target: x86_64-unknown-linux-musl
             archive: tar.gz tar.xz
-          - target: x86_64-apple-darwin
-            archive: tar.gz
     steps:
       - uses: crusty-pie/toolchain@v1
         with:
@@ -31,23 +29,3 @@ jobs:
           RUSTTARGET: ${{ matrix.target }}
           ARCHIVE_TYPES: ${{ matrix.archive }}
           TOOLCHAIN_VERSION: 1.84.0
-  macos-arm-release:
-    name: release mac os arm release
-    runs-on: macos-12
-    steps:
-      - uses: actions/checkout@master
-      - name: check toolchain
-        run: rustup default
-      - name: Build
-        run: |
-          rustup toolchain install stable-aarch64-apple-darwin
-          rustup target add aarch64-apple-darwin
-          cargo build --release --target aarch64-apple-darwin
-      - name: tar
-        run: tar --directory=target/aarch64-apple-darwin/release -cf archive.tar.gz tod
-      - name: upload
-        run: |
-          id=$(gh api -H "Accept: application/vnd.github+json" /repos/alanvardy/tod/releases/tags/${{ github.ref_name }} --jq .id)
-          curl --fail-with-body -sS  -X POST --data-binary @"archive.tar.gz" -H 'Content-Type: application/octet-stream' -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://uploads.github.com/repos/alanvardy/tod/releases/$id/assets?name=tod_${{ github.ref_name }}_aarch64-apple-darwin.tar.gz"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

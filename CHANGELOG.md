@@ -2,6 +2,9 @@
 
 ## Unreleased (on main branch only)
 
+- Add homebrew support
+- Remove Arch User Repository support (hopefully temporarily)
+
 ## 2025-01-12 v0.6.28
 
 - Bug fix comments, not all types were supported

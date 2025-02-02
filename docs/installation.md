@@ -7,6 +7,13 @@
   - [GitHub (Linux, Mac, and Windows)](#github-linux-mac-and-windows)
 <!--toc:end-->
 
+## Homebrew (Linux, Mac, and Windows)
+
+```bash
+brew tap alanvardy/tod
+brew install tod
+```
+
 ## Crates.io (Linux, Mac, and Windows)
 
 [Install Rust](https://www.rust-lang.org/tools/install)
@@ -22,12 +29,6 @@ Install Tod
 cargo install tod
 ```
 
-## AUR (Arch-based Linux)
-
-```bash
-# Use yay or another AUR helper
-yay tod-bin
-```
 
 ## GitHub (Linux, Mac, and Windows)
 

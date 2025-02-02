@@ -13,13 +13,18 @@ if [ -z "${NAME}" ]; then
   exit 1
 fi
 
-echo "=== RUNNING cargo aur TO BUILD A RELEASE ===" &&
-cargo aur &&
+echo "=== BUILDING RELEASE ===" &&
+cargo build --release &&
+echo "=== GZIPPING ===" &&
+tar -czf ./target/release/tod-mac.tar.gz ./target/release/tod &&
+
 echo "=== CREATING GITHUB RELEASE ===" &&
-gh release create "v$VERSION" ./target/cargo-aur/*.tar.gz --title "v$VERSION" --generate-notes &&
+gh release create "v$VERSION" ./target/release/*.tar.gz --title "v$VERSION" --generate-notes &&
 echo "=== RUNNING cargo publish FOR CRATES.IO ===" &&
 cargo publish &&
-echo "=== RUNNING push_aur.sh TO PUSH NEW VERSION TO AUR ===" &&
-./scripts/push_aur.sh &&
+# echo "=== RUNNING push_aur.sh TO PUSH NEW VERSION TO AUR ===" &&
+# ./scripts/push_aur.sh &&
 echo "=== DELETING MERGED BRANCHES ===" &&
-git-delete-merged-branches --yes
+git-delete-merged-branches --yes &&
+echo "DONT FORGET TO EDIT THE HOMEBREW WITH VERSION AND SHASUM" &&
+shasum -a 256 ./target/release/tod-mac.tar.gz 

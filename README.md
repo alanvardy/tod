@@ -4,10 +4,17 @@
 
 An unofficial Todoist CLI program. Takes simple input and dumps it in your inbox or another project. Takes advantage of natural language processing to assign due dates, tags, etc. Designed for single-tasking in a world filled with distraction.
 
-Get started with
+Get started with cargo
 
 ```bash
 cargo install tod
+```
+
+or homebrew
+
+```bash
+brew tap alanvardy/tod
+brew install tod
 ```
 
 - [Installation](/docs/installation.md)

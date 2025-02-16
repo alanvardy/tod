@@ -4,6 +4,7 @@
 
 - Add homebrew support
 - Remove Arch User Repository support (hopefully temporarily)
+- Show good error when running `config reset` but no config file exists
 
 ## 2025-01-12 v0.6.28
 

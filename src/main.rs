@@ -745,7 +745,7 @@ async fn select_command(
             (true, true, config_check_version(args).await)
         }
         Commands::Config(ConfigCommands::Reset(args)) => {
-            let config = match fetch_config(&cli, &tx).await {
+            let config = match find_config(&cli, &tx).await {
                 Ok(config) => config,
                 Err(e) => return (true, true, Err(e)),
             };
@@ -1239,6 +1239,7 @@ async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, E
 
 // --- VALUE HELPERS ---
 
+/// Get or create config
 async fn fetch_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
     let Cli {
         verbose,
@@ -1258,6 +1259,22 @@ async fn fetch_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, 
     tokio::spawn(async move { async_config.check_for_latest_version().await });
 
     config.check_for_timezone().await
+}
+
+/// Find config without creating
+async fn find_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
+    let Cli {
+        verbose,
+        config: config_path,
+        timeout,
+        command: _,
+    } = cli;
+
+    let config_path = config_path.to_owned();
+    let verbose = verbose.to_owned();
+    let timeout = timeout.to_owned();
+
+    config::get(config_path, verbose, timeout, tx).await
 }
 
 fn fetch_string(

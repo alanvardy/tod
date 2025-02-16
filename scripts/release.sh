@@ -16,8 +16,9 @@ fi
 echo "=== BUILDING RELEASE ===" &&
 cargo build --release &&
 echo "=== GZIPPING ===" &&
-tar -czf ./target/release/tod-mac.tar.gz ./target/release/tod &&
-
+cd target/release
+tar -czf tod-mac.tar.gz tod 
+cd ../..
 echo "=== CREATING GITHUB RELEASE ===" &&
 gh release create "v$VERSION" ./target/release/*.tar.gz --title "v$VERSION" --generate-notes &&
 echo "=== RUNNING cargo publish FOR CRATES.IO ===" &&

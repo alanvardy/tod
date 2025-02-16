@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-02-15 v0.6.29
+
 - Add homebrew support
 - Remove Arch User Repository support (hopefully temporarily)
 - Show good error when running `config reset` but no config file exists

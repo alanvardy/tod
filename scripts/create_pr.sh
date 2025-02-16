@@ -22,5 +22,5 @@ gt submit --no-interactive &&
 gh pr ready &&
 sleep 5 &&
 gh pr checks --watch -i 5;
-paplay /usr/share/sounds/freedesktop/stereo/complete.oga; 
+afplay /System/Library/Sounds/Ping.aiff;
 

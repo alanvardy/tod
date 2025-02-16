@@ -357,13 +357,8 @@ pub async fn get_or_create(
     timeout: Option<u64>,
     tx: &UnboundedSender<Error>,
 ) -> Result<Config, Error> {
-    let path: String = match config_path {
-        None => generate_path().await?,
-        Some(path) => maybe_expand_home_dir(path)?,
-    };
-
-    match fs::File::open(&path).await {
-        Ok(_) => Config::load(&path).await,
+    match get(config_path, verbose, timeout, tx).await {
+        Ok(config) => Ok(config),
         Err(_) => {
             let desc =
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
@@ -371,6 +366,26 @@ pub async fn get_or_create(
             let token = input::string(desc, Some(String::new()))?;
             Config::new(&token, tx.clone()).await?.create().await
         }
+    }
+}
+
+pub async fn get(
+    config_path: Option<String>,
+    verbose: bool,
+    timeout: Option<u64>,
+    tx: &UnboundedSender<Error>,
+) -> Result<Config, Error> {
+    let path: String = match config_path {
+        None => generate_path().await?,
+        Some(path) => maybe_expand_home_dir(path)?,
+    };
+
+    match fs::File::open(&path).await {
+        Ok(_) => Config::load(&path).await,
+        Err(_) => Err(Error {
+            message: format!("Configuration file does not exist at {path}"),
+            source: "config.rs".to_string(),
+        }),
     }
     .map(|config| Config {
         args: Args { timeout, verbose },

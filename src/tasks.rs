@@ -483,8 +483,13 @@ pub async fn label_task(
     let config = config.clone();
     Ok(tokio::spawn(async move {
         if label.as_str() == input::SKIP {
-        } else if let Err(e) = todoist::add_task_label(&config, task, label, false).await {
-            config.tx().send(e).unwrap();
+        } else {
+            match todoist::add_task_label(&config, task, label, false).await {
+                Err(e) => {
+                    config.tx().send(e).unwrap();
+                }
+                _ => {}
+            }
         }
     }))
 }

@@ -12,8 +12,8 @@ pub mod priority;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::error::Error;
-use crate::input::DateTimeInput;
 use crate::input::CONTENT;
+use crate::input::DateTimeInput;
 use crate::projects;
 use crate::tasks;
 use crate::tasks::priority::Priority;
@@ -483,8 +483,13 @@ pub async fn label_task(
     let config = config.clone();
     Ok(tokio::spawn(async move {
         if label.as_str() == input::SKIP {
-        } else if let Err(e) = todoist::add_task_label(&config, task, label, false).await {
-            config.tx().send(e).unwrap();
+        } else {
+            match todoist::add_task_label(&config, task, label, false).await {
+                Err(e) => {
+                    config.tx().send(e).unwrap();
+                }
+                _ => {}
+            }
         }
     }))
 }

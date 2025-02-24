@@ -1,7 +1,7 @@
 use crate::cargo::Version;
 use crate::error::{self, Error};
 use crate::projects::Project;
-use crate::{cargo, color, input, time, todoist, VERSION};
+use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

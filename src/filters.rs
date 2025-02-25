@@ -1,12 +1,12 @@
 use futures::future;
 
 use crate::{
-    color,
+    SortOrder, color,
     config::Config,
     error::Error,
     input::{self},
     tasks::{self, FormatType, Task},
-    todoist, SortOrder,
+    todoist,
 };
 
 pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error> {

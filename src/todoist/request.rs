@@ -1,12 +1,12 @@
 use std::env;
 use std::time::Duration;
 
-use reqwest::header::AUTHORIZATION;
-use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 use reqwest::Response;
-use serde_json::json;
+use reqwest::header::AUTHORIZATION;
+use reqwest::header::CONTENT_TYPE;
 use serde_json::Value;
+use serde_json::json;
 use spinners::Spinner;
 use spinners::Spinners;
 use uuid::Uuid;

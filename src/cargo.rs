@@ -1,9 +1,9 @@
-use reqwest::header::USER_AGENT;
 use reqwest::Client;
+use reqwest::header::USER_AGENT;
 use serde::Deserialize;
 
-use crate::error::Error;
 use crate::VERSION;
+use crate::error::Error;
 
 // CRATES.IO URLS
 const VERSIONS_URL: &str = "/v1/crates/tod/versions";
@@ -59,7 +59,7 @@ pub async fn get_latest_version(mock_url: Option<String>) -> Result<String, Erro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test, VERSION};
+    use crate::{VERSION, test};
     use pretty_assertions::assert_eq;
 
     #[tokio::test]

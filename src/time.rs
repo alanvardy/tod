@@ -142,7 +142,7 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
             return Err(error::new(
                 "date_from_str",
                 "cannot parse NaiveDate, unknown length: {str}",
-            ))
+            ));
         }
     };
 

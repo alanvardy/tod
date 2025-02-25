@@ -17,7 +17,7 @@ use error::Error;
 use input::DateTimeInput;
 use list::Flag;
 use tasks::priority::Priority;
-use tasks::{priority, SortOrder, TaskAttribute};
+use tasks::{SortOrder, TaskAttribute, priority};
 use tokio::sync::mpsc::UnboundedSender;
 use walkdir::WalkDir;
 

@@ -1,5 +1,5 @@
 use futures::future;
-use serde_json::{json, Number, Value};
+use serde_json::{Number, Value, json};
 use std::collections::HashMap;
 use urlencoding::encode;
 mod request;
@@ -10,8 +10,8 @@ use crate::error::Error;
 use crate::labels::{self, Label};
 use crate::projects::Project;
 use crate::sections::Section;
-use crate::tasks::priority::Priority;
 use crate::tasks::Task;
+use crate::tasks::priority::Priority;
 use crate::user::{SyncResponse, User};
 use crate::{projects, sections, tasks, time};
 

@@ -1,7 +1,7 @@
 use crate::error::Error;
 use inquire::{DateSelect, MultiSelect, Select, Text};
 use std::fmt::Display;
-use terminal_size::{terminal_size, Height, Width};
+use terminal_size::{Height, Width, terminal_size};
 
 // These constants are used throughout the app
 
@@ -69,9 +69,9 @@ pub fn datetime(
         NAT_LANG => {
             if skip_or_complete {
                 let entry = string(
-                "Enter datetime in natural language, or one of:\n[none (n), skip (s), complete (c)]",
-                mock_string,
-            )?;
+                    "Enter datetime in natural language, or one of:\n[none (n), skip (s), complete (c)]",
+                    mock_string,
+                )?;
 
                 match entry.as_str() {
                     "none" => Ok(DateTimeInput::None),

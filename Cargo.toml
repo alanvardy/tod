@@ -2,7 +2,7 @@
 name = "tod"
 version = "0.6.30"
 authors = ["Alan Vardy <alan@vardy.cc>"]
-edition = "2021"
+edition = "2024"
 license = "MIT"
 description = "A tiny unofficial Todoist client"
 readme = "README.md"

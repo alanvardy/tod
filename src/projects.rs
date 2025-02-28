@@ -7,7 +7,7 @@ use crate::config::Config;
 use crate::error::{self, Error};
 use crate::sections::Section;
 use crate::tasks::{FormatType, Task};
-use crate::{color, input, sections, tasks, todoist, SortOrder};
+use crate::{SortOrder, color, input, sections, tasks, todoist};
 use serde::{Deserialize, Serialize};
 
 const PAD_WIDTH: usize = 30;

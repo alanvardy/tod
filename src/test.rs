@@ -109,7 +109,7 @@ pub mod fixtures {
 #[cfg(test)]
 pub mod responses {
     use crate::test::fixtures;
-    use crate::{time, VERSION};
+    use crate::{VERSION, time};
 
     pub fn sync() -> String {
         String::from(

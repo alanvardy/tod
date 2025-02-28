@@ -2,7 +2,7 @@ use regex::Regex;
 use std::borrow::Cow;
 use supports_hyperlinks::Stream;
 
-use super::{priority, DateTimeInfo, Duration, Task, Unit};
+use super::{DateTimeInfo, Duration, Task, Unit, priority};
 use crate::{color, config::Config, error::Error, projects::Project, time, todoist};
 
 pub fn content(task: &Task, config: &Config) -> String {
@@ -34,7 +34,9 @@ pub fn project(task: &Task, config: &Config, buffer: &String) -> String {
         Some(Project { name, .. }) => format!("\n{buffer}{project_icon} {name}"),
         None => {
             let command = color::cyan_string("tod project import --auto");
-            format!("\n{buffer}{project_icon} Project not in config\nUse {command} to import missing projects")
+            format!(
+                "\n{buffer}{project_icon} Project not in config\nUse {command} to import missing projects"
+            )
         }
     }
 }
@@ -194,7 +196,10 @@ mod tests {
 
         let comments = comments(&config, &task).await.unwrap();
 
-        assert_matches!(comments.as_str(), "\n\n★ Comments ★\n\nPosted 2016-09-22 00:00:00 PDT\nAttachment \u{1b}]8;;https://s3.amazonaws.com/domorebe[TRUNCATED]");
+        assert_matches!(
+            comments.as_str(),
+            "\n\n★ Comments ★\n\nPosted 2016-09-22 00:00:00 PDT\nAttachment \u{1b}]8;;https://s3.amazonaws.com/domorebe[TRUNCATED]"
+        );
         mock.expect(1);
     }
 }

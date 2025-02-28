@@ -5,7 +5,7 @@ use crate::{
     config::Config,
     error::Error,
     projects::Project,
-    tasks::{self, priority::Priority, FormatType, SortOrder, Task},
+    tasks::{self, FormatType, SortOrder, Task, priority::Priority},
     todoist,
 };
 use futures::future;

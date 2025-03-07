@@ -27,7 +27,7 @@ colored = "3"
 clap = { version = "4.5.31", features = ["derive"] }
 spinners = "4.1.1"
 inquire = { version = "0.7.5", features = ["date"] }
-serde_repr = "0.1.19"
+serde_repr = "0.1.20"
 rand = "0.9"
 rayon = "1.10.0"
 pad = "0.1.6"

@@ -3,7 +3,6 @@
 <!--toc:start-->
 - [Installation](#installation)
   - [Crates.io (Linux, Mac, and Windows)](#cratesio-linux-mac-and-windows)
-  - [AUR (Arch-based Linux)](#aur-arch-based-linux)
   - [GitHub (Linux, Mac, and Windows)](#github-linux-mac-and-windows)
 <!--toc:end-->
 
@@ -29,7 +28,6 @@ Install Tod
 cargo install tod
 ```
 
-
 ## GitHub (Linux, Mac, and Windows)
 
 [Install Rust](https://www.rust-lang.org/tools/install)
@@ -46,4 +44,3 @@ cargo build --release
 You can then find the binary in `/target/release/`
 
 Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on the first run
-

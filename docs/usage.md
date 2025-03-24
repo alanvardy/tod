@@ -54,7 +54,6 @@ Options:
   -h, --help  Print help
 ```
 
-
 ## Usage Examples
 
 ```bash
@@ -135,6 +134,10 @@ tod list label --filter "no label" --label physical --label digital
   echo "=== PROCESSING PHYSICAL ===" && \
   tod list process --project physical;
 ```
+
+## How task priority is determined
+
+See [Sort_value](https://github.com/alanvardy/tod/blob/main/docs/configuration.md#sort_value)
 
 ## Update Tod only if it is out of date
 

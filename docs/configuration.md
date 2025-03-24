@@ -32,7 +32,7 @@
 
 ### bell_on_success
 
-```
+``` json
   type: boolean
   default: false
 ```
@@ -41,7 +41,7 @@ Triggers the terminal bell on successful completion of a command
 
 ### bell_on_failure
 
-```
+``` json
   type: boolean
   default: true
 ```
@@ -50,7 +50,7 @@ Triggers the terminal bell on an error
 
 ### disable_links
 
-```
+``` json
   type: boolean
   default: false
 ```
@@ -59,7 +59,7 @@ If true, disables OSC8 linking and just displays plain text
 
 ### last_version_check
 
-```
+``` json
   type: nullable string
   default: null
   possible_values: any string in format YYYY-MM-DD
@@ -69,7 +69,7 @@ Holds a string date, i.e. `"2023-08-30"` representing the last time crates.io wa
 
 ### max_comment_length
 
-```
+``` json
   type: nullable positive integer
   default: null
   possible_values: Any positive integer or null
@@ -79,7 +79,7 @@ The maximum number of characters that will be printed in total when showing comm
 
 ### next_id
 
-```
+``` json
   type: nullable string
   default: null
   possible values: null or any positive integer in string form
@@ -87,10 +87,9 @@ The maximum number of characters that will be printed in total when showing comm
 
 When `task next` is executed the ID is stored in this field. When `task complete` is run the field is set back to `null`
 
-
 ### path
 
-```
+``` json
   type: string
   default: $XDG_CONFIG_HOME/tod.cfg
   possible values: Any path
@@ -100,7 +99,7 @@ Location of the `tod` configuration file
 
 ### natural_language_only
 
-```
+``` json
   type: nullable boolean
   default: null
   possible values: null, true, or false
@@ -110,7 +109,7 @@ If true, the datetime selection in `project schedule` will go straight to natura
 
 ### no_sections
 
-```
+``` json
   type: nullable boolean
   default: null
   possible values: null, true, or false
@@ -122,19 +121,19 @@ If true will not prompt for a section whenever possible
 
 Tasks are ranked by points and the first is returned, the points are the sum of the following:
 
-  - Task is overdue: 150
-  - The date is today with no time: 100
-  - The date is today with time in next or last 15 min: 200
-  - No date: 80
-  - Not recurring: 50
-  - Task has no priority: 2
-  - Priority 1: 1
-  - Priority 2: 3
-  - Priority 3: 4
+- Task is overdue: 150
+- The date is today with no time: 100
+- The date is today with time in next or last 15 min: 200
+- No date: 80
+- Not recurring: 50
+- Task has no priority: 2
+- Priority 1: 1
+- Priority 2: 3
+- Priority 3: 4
 
 Defaults:
 
-```
+``` json
   {
     "no_due_date": 80,
     "not_recurring": 50,
@@ -150,13 +149,13 @@ Defaults:
 
 ### spinners
 
-```
+``` json
   type: nullable boolean
   default: null
   possible values: null, true, or false
 ```
 
-Controls whether the spinner is displayed when an API call occurs. Useful for cases where the terminal output is captured. `null` is considered the same as `true`. 
+Controls whether the spinner is displayed when an API call occurs. Useful for cases where the terminal output is captured. `null` is considered the same as `true`.
 
 You can also use the environment variable `DISABLE_SPINNER` to turn them off.
 
@@ -166,7 +165,7 @@ You can also use the environment variable `DISABLE_SPINNER` to turn them off.
 
 ### timeout
 
-```
+```json
   type: integer
   default: 30 (seconds)
   possible values: Any positive number in seconds
@@ -174,7 +173,7 @@ You can also use the environment variable `DISABLE_SPINNER` to turn them off.
 
 ### timezone
 
-```
+```json
   type: string
   default: No default
   possible values: Any timezone string i.e. "Canada/Pacific"
@@ -184,7 +183,7 @@ You will be prompted for timezone on first run
 
 ### token
 
-```
+```json
   type: string
   default: No default
   possible values: Any valid token
@@ -192,10 +191,9 @@ You will be prompted for timezone on first run
 
 You will be prompted for your [Todoist API token](https://todoist.com/prefs/integrations) on first run
 
-
 ### vecprojects
 
-```
+```json
   type: Nullable array of objects
   default: null
   possible values: List of project objects from the Todoist API
@@ -205,11 +203,10 @@ Projects are stored locally in config to help save on API requests and speed up 
 
 ### verbose
 
-```
+```json
   type: nullable boolean
   default: null
   possible values: null, true, or false
 ```
 
 Outputs additional information in console to assist with debugging.
-

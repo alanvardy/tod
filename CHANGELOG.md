@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-03-25 v0.6.31
+
 - Fix formatting of a shortened URL attachment
 
 ## 2025-02-16 v0.6.30

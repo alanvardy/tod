@@ -16,6 +16,7 @@ pub struct Comment {
 pub enum Attachment {
     File(FileAttachment),
     Url(UrlAttachment),
+    ShortUrl(ShortUrlAttachment),
     Video(VideoAttachment),
 }
 
@@ -36,6 +37,13 @@ pub struct UrlAttachment {
     image_width: u32,
     resource_type: String,
     site_name: String,
+    title: String,
+    url: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct ShortUrlAttachment {
+    resource_type: String,
     title: String,
     url: String,
 }
@@ -64,6 +72,13 @@ impl Comment {
                 ..
             })) => {
                 format!("\nAttachment \x1B]8;;{url}\x1B\\[{site_name}: {title}]\x1B]8;;\x1B\\")
+            }
+            Some(Attachment::ShortUrl(ShortUrlAttachment {
+                url,
+                title,
+                resource_type: _resource_type,
+            })) => {
+                format!("\nAttachment \x1B]8;;{url}\x1B\\[{title}]\x1B]8;;\x1B\\")
             }
             Some(Attachment::Video(VideoAttachment {
                 url,

@@ -141,7 +141,7 @@ pub async fn rename(config: Config, project: &Project) -> Result<String, Error> 
 pub async fn next_task(config: Config, project: &Project) -> Result<String, Error> {
     match fetch_next_task(&config, project).await {
         Ok(Some((task, remaining))) => {
-            config.set_next_id(&task.id).save().await?;
+            config.set_next_task(task.clone()).save().await?;
             let task_string = task.fmt(&config, FormatType::Single, false, true).await?;
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }

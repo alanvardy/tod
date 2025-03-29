@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Completing recurring tasks will uncheck child tasks
+
 ## 2025-03-25 v0.6.31
 
 - Fix formatting of a shortened URL attachment

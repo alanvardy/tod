@@ -665,7 +665,7 @@ pub async fn spawn_schedule_task(
 /// Completes task inside another thread
 pub fn spawn_complete_task(config: Config, task: Task) -> JoinHandle<()> {
     tokio::spawn(async move {
-        if let Err(e) = todoist::complete_task(&config, &task.id, false).await {
+        if let Err(e) = todoist::complete_task(&config, &task, false).await {
             config.tx().send(e).unwrap();
         }
     })

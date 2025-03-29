@@ -43,6 +43,7 @@ pub mod fixtures {
             sort_value: Some(SortValue::default()),
             disable_links: false,
             completed: None,
+            next_task: None,
             bell_on_success: false,
             max_comment_length: Some(100),
             bell_on_failure: true,

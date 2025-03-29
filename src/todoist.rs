@@ -270,14 +270,18 @@ pub async fn update_task_labels(
 }
 
 /// Complete the last task returned by "next task"
-pub async fn complete_task(config: &Config, task_id: &str, spinner: bool) -> Result<String, Error> {
-    let body = json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task_id}}]});
+pub async fn complete_task(config: &Config, task: &Task, spinner: bool) -> Result<String, Error> {
+    let body = if task.is_recurring() {
+        json!({"commands": [{"type": "item_update_date_complete", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task.id, "reset_subtasks": 1}}]})
+    } else {
+        json!({"commands": [{"type": "item_close", "uuid": request::new_uuid(), "temp_id": request::new_uuid(), "args": {"id": task.id}}]})
+    };
     let url = String::from(SYNC_URL);
 
     request::post_todoist_sync(config, url, body, spinner).await?;
 
     if !cfg!(test) {
-        config.reload().await?.clear_next_id().save().await?;
+        config.reload().await?.clear_next_task().save().await?;
     }
 
     // Does not pass back a task
@@ -540,7 +544,8 @@ mod tests {
 
         let config = test::fixtures::config().await.mock_url(server.url());
 
-        let response = complete_task(&config, "112233", false).await;
+        let task = test::fixtures::task();
+        let response = complete_task(&config, &task, false).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

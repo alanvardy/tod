@@ -966,8 +966,8 @@ async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {
 }
 
 async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, Error> {
-    match config.next_id.as_ref() {
-        Some(id) => todoist::complete_task(&config, id, true).await,
+    match config.next_task.as_ref() {
+        Some(task) => todoist::complete_task(&config, task, true).await,
         None => Err(error::new(
             "task_complete",
             "There is nothing to complete. A task must first be marked as 'next'.",

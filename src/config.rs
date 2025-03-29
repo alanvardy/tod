@@ -1,6 +1,7 @@
 use crate::cargo::Version;
 use crate::error::{self, Error};
 use crate::projects::Project;
+use crate::tasks::Task;
 use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
@@ -27,8 +28,10 @@ pub struct Config {
     pub projects: Option<Vec<Project>>,
     /// Path to config file
     pub path: String,
-    /// The ID of the next task
+    /// The ID of the next task (NO LONGER IN USE)
     pub next_id: Option<String>,
+    /// The ID of the next task (NO LONGER IN USE)
+    pub next_task: Option<Task>,
     /// Whether to trigger terminal bell on success
     #[serde(default)]
     pub bell_on_success: bool,
@@ -188,10 +191,10 @@ impl Config {
         Ok(config)
     }
 
-    pub fn clear_next_id(self) -> Config {
-        let next_id: Option<String> = None;
+    pub fn clear_next_task(self) -> Config {
+        let next_task: Option<Task> = None;
 
-        Config { next_id, ..self }
+        Config { next_task, ..self }
     }
 
     /// Increase the completed count for today
@@ -248,6 +251,7 @@ impl Config {
             path: generate_path().await?,
             token: String::from(token),
             next_id: None,
+            next_task: None,
             last_version_check: None,
             timeout: None,
             bell_on_success: false,
@@ -327,11 +331,11 @@ impl Config {
         Ok(color::green_string("✓"))
     }
 
-    pub fn set_next_id(&self, next_id: &String) -> Config {
-        let next_id: Option<String> = Some(next_id.to_owned());
+    pub fn set_next_task(&self, task: Task) -> Config {
+        let next_task: Option<Task> = Some(task);
 
         Config {
-            next_id,
+            next_task,
             ..self.clone()
         }
     }
@@ -486,13 +490,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn set_and_clear_next_id_should_work() {
+    async fn set_and_clear_next_task_should_work() {
         let config = test::fixtures::config().await;
-        assert_eq!(config.next_id, None);
-        let config = config.set_next_id(&String::from("123123"));
-        assert_eq!(config.next_id, Some(String::from("123123")));
-        let config = config.clear_next_id();
-        assert_eq!(config.next_id, None);
+        assert_eq!(config.next_task, None);
+        let task = test::fixtures::task();
+        let config = config.set_next_task(task.clone());
+        assert_eq!(config.next_task, Some(task));
+        let config = config.clear_next_task();
+        assert_eq!(config.next_task, None);
     }
 
     #[tokio::test]

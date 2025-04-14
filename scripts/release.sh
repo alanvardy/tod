@@ -1,3 +1,4 @@
+#!/bin/bash
 # Publish Checklist
 
 # Check if the VERSION environment variable is set

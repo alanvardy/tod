@@ -1,3 +1,4 @@
+#!/bin/bash
 # Does not cover the complete function
 # Run it manually to ensure that we didn't break clap
 

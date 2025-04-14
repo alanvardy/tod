@@ -1,3 +1,4 @@
+#!/bin/bash
 echo "=== CHECK ===" &&
 cargo check &&
 echo "=== CLIPPY ===" &&

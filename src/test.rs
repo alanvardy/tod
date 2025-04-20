@@ -431,6 +431,18 @@ pub mod responses {
         )
     }
 
+    pub fn ids() -> String {
+        String::from(
+            "[
+              {
+              \"new_id\": \"7852696547\",
+              \"old_id\": \"6V2J6Qhgq47phxHG\"
+              }
+            ]
+            ",
+        )
+    }
+
     pub fn versions() -> String {
         format!(
             "{{\"versions\":[{{\

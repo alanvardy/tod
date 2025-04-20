@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Completing recurring tasks will uncheck child tasks
+- Use V1 Ids for new V1 API
 
 ## 2025-03-25 v0.6.31
 

@@ -7,6 +7,7 @@ mod request;
 use crate::comment::Comment;
 use crate::config::Config;
 use crate::error::Error;
+use crate::id::{self, ID, Id, Resource};
 use crate::labels::{self, Label};
 use crate::projects::Project;
 use crate::sections::Section;
@@ -24,6 +25,43 @@ pub const COMMENTS_URL: &str = "/rest/v2/comments/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
 const PROJECTS_URL: &str = "/rest/v2/projects";
 const LABELS_URL: &str = "/rest/v2/labels";
+const IDS_URL: &str = "/api/v1/id_mappings/";
+
+#[allow(dead_code)]
+pub async fn get_legacy_id(config: &Config, resource: Resource, id: ID) -> Result<String, Error> {
+    match id {
+        ID::Legacy(id) => Ok(id),
+        ID::V1(id) => {
+            let url = format!("{IDS_URL}{resource}/{id}");
+            let json = request::get_todoist_rest(config, url, true).await?;
+            match id::json_to_ids(json)?.pop() {
+                None => Err(Error {
+                    source: "get_legacy_id".to_string(),
+                    message: format!("Could not convert {id} to legacy id"),
+                }),
+                Some(Id { old_id, .. }) => Ok(old_id),
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub async fn get_v1_id(config: &Config, resource: Resource, id: ID) -> Result<String, Error> {
+    match id {
+        ID::V1(id) => Ok(id),
+        ID::Legacy(id) => {
+            let url = format!("{IDS_URL}{resource}/{id}");
+            let json = request::get_todoist_rest(config, url, true).await?;
+            match id::json_to_ids(json)?.pop() {
+                None => Err(Error {
+                    source: "get_v1_id".to_string(),
+                    message: format!("Could not convert {id} to v1 id"),
+                }),
+                Some(Id { new_id, .. }) => Ok(new_id),
+            }
+        }
+    }
+}
 
 /// Add a new task to the inbox with natural language support
 pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Error> {
@@ -671,5 +709,61 @@ mod tests {
             update_task_due_natural_language(&config, task, "today".to_string(), None, true).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[tokio::test]
+    async fn should_get_legacy_id() {
+        let task = test::fixtures::task();
+        let url: &str = &format!("{}{}", "/api/v1/id_mappings/tasks/", task.id);
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server
+            .mock("GET", url)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+        let resource = Resource::Task;
+
+        // Makes the request when converting a new ID to old
+        let response = get_legacy_id(&config, resource.clone(), ID::V1(task.id.clone())).await;
+        mock.assert();
+        assert_eq!(response, Ok(String::from("6V2J6Qhgq47phxHG")));
+
+        // Makes no request when passed an old ID
+        let response = get_legacy_id(&config, resource, ID::Legacy(task.id)).await;
+        mock.expect(0);
+        assert_eq!(response, Ok(String::from("222")));
+    }
+
+    #[tokio::test]
+    async fn should_get_v1_id() {
+        let task = test::fixtures::task();
+        let url: &str = &format!("{}{}", "/api/v1/id_mappings/tasks/", task.id);
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server
+            .mock("GET", url)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.mock_url(server.url());
+        let resource = Resource::Task;
+
+        // Makes the request when converting an old ID to new
+        let response = get_v1_id(&config, resource.clone(), ID::Legacy(task.id.clone())).await;
+        mock.assert();
+        assert_eq!(response, Ok(String::from("7852696547")));
+
+        // Makes no request when passed a new ID
+        let response = get_v1_id(&config, resource, ID::V1(task.id)).await;
+        mock.expect(0);
+        assert_eq!(response, Ok(String::from("222")));
     }
 }

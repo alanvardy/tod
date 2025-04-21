@@ -4,7 +4,7 @@ use crate::{
     color,
     config::Config,
     error::Error,
-    projects::Project,
+    projects::LegacyProject,
     tasks::{self, FormatType, SortOrder, Task, priority::Priority},
     todoist,
 };
@@ -13,7 +13,7 @@ use tokio::{fs, io::AsyncReadExt};
 
 #[derive(Clone)]
 pub enum Flag {
-    Project(Project),
+    Project(LegacyProject),
     Filter(String),
 }
 
@@ -295,7 +295,7 @@ mod tests {
             .await
             .unwrap();
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
         let sort = &SortOrder::Value;
         let result = timebox(&config, Flag::Project(project), sort).await;
@@ -303,14 +303,14 @@ mod tests {
 
         let config = config.mock_select(2);
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
         let result = timebox(&config, Flag::Project(project), sort).await;
         assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
 
         let config = config.mock_select(3);
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
         let result = timebox(&config, Flag::Project(project.clone()), sort).await;
         assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
@@ -334,7 +334,7 @@ mod tests {
 
         let config = test::fixtures::config().await.mock_url(server.url());
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
         let sort = &SortOrder::Value;
 
@@ -407,7 +407,7 @@ mod tests {
             .await
             .unwrap();
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap().to_owned();
         let sort = &SortOrder::Value;
 
@@ -513,7 +513,10 @@ mod tests {
             ..config
         };
 
-        let binding = config_with_timezone.projects.clone().unwrap_or_default();
+        let binding = config_with_timezone
+            .legacy_projects
+            .clone()
+            .unwrap_or_default();
         let project = binding.first().unwrap().clone();
         let sort = &SortOrder::Value;
 

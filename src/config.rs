@@ -1,6 +1,6 @@
 use crate::cargo::Version;
 use crate::error::{self, Error};
-use crate::projects::Project;
+use crate::projects::LegacyProject;
 use crate::tasks::Task;
 use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
@@ -24,8 +24,9 @@ pub struct Config {
     /// The Todoist Api token
     pub token: String,
     /// List of Todoist projects and their project numbers
+    /// These are from the old v9 and SYNC endpoints
     #[serde(rename = "vecprojects")]
-    pub projects: Option<Vec<Project>>,
+    pub legacy_projects: Option<Vec<LegacyProject>>,
     /// Path to config file
     pub path: String,
     /// The ID of the next task (NO LONGER IN USE)
@@ -120,7 +121,7 @@ impl Config {
     }
     pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
         let all_projects = todoist::projects(self).await?;
-        let current_projects = self.projects.clone().unwrap_or_default();
+        let current_projects = self.legacy_projects.clone().unwrap_or_default();
         let current_project_ids: Vec<String> =
             current_projects.iter().map(|p| p.id.to_owned()).collect();
 
@@ -128,9 +129,9 @@ impl Config {
             .iter()
             .filter(|p| current_project_ids.contains(&p.id))
             .map(|p| p.to_owned())
-            .collect::<Vec<Project>>();
+            .collect::<Vec<LegacyProject>>();
 
-        self.projects = Some(updated_projects);
+        self.legacy_projects = Some(updated_projects);
 
         Ok(color::green_string("✓"))
     }
@@ -273,7 +274,7 @@ impl Config {
                 verbose: false,
                 timeout: None,
             },
-            projects: Some(Vec::new()),
+            legacy_projects: Some(Vec::new()),
         })
     }
 
@@ -284,27 +285,27 @@ impl Config {
         })
     }
 
-    pub fn add_project(&mut self, project: Project) {
-        let option_projects = &mut self.projects;
+    pub fn add_project(&mut self, project: LegacyProject) {
+        let option_projects = &mut self.legacy_projects;
         match option_projects {
             Some(projects) => {
                 projects.push(project);
             }
-            None => self.projects = Some(vec![project]),
+            None => self.legacy_projects = Some(vec![project]),
         }
     }
 
-    pub fn remove_project(&mut self, project: &Project) {
+    pub fn remove_project(&mut self, project: &LegacyProject) {
         let projects = self
-            .projects
+            .legacy_projects
             .clone()
             .unwrap_or_default()
             .iter()
             .filter(|p| p.id != project.id)
             .map(|p| p.to_owned())
-            .collect::<Vec<Project>>();
+            .collect::<Vec<LegacyProject>>();
 
-        self.projects = Some(projects);
+        self.legacy_projects = Some(projects);
     }
 
     pub async fn save(&mut self) -> std::result::Result<String, Error> {
@@ -483,7 +484,7 @@ mod tests {
         let mut config = config.create().await.expect("Failed to create test config");
         let project = test::fixtures::project();
         config.add_project(project);
-        let projects = config.projects.clone().unwrap_or_default();
+        let projects = config.legacy_projects.clone().unwrap_or_default();
         assert!(!&projects.is_empty());
 
         config.reload().await.expect("Failed to reload config");
@@ -503,22 +504,22 @@ mod tests {
     #[tokio::test]
     async fn add_project_should_work() {
         let mut config = test::fixtures::config().await;
-        let projects_count = config.projects.clone().unwrap_or_default().len();
+        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
         assert_eq!(projects_count, 1);
         config.add_project(test::fixtures::project());
-        let projects_count = config.projects.clone().unwrap_or_default().len();
+        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
         assert_eq!(projects_count, 2);
     }
 
     #[tokio::test]
     async fn remove_project_should_work() {
         let mut config = test::fixtures::config().await;
-        let projects = config.projects.clone().unwrap_or_default();
+        let projects = config.legacy_projects.clone().unwrap_or_default();
         let project = projects.first().unwrap();
-        let projects_count = config.projects.clone().unwrap_or_default().len();
+        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
         assert_eq!(projects_count, 1);
         config.remove_project(project);
-        let projects_count = config.projects.clone().unwrap_or_default().len();
+        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
         assert_eq!(projects_count, 0);
     }
 

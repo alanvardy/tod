@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use supports_hyperlinks::Stream;
 
 use super::{DateTimeInfo, Duration, Task, Unit, priority};
-use crate::{color, config::Config, error::Error, projects::Project, time, todoist};
+use crate::{color, config::Config, error::Error, projects::LegacyProject, time, todoist};
 
 pub fn content(task: &Task, config: &Config) -> String {
     let content = match task.priority {
@@ -23,15 +23,15 @@ pub fn content(task: &Task, config: &Config) -> String {
 pub fn project(task: &Task, config: &Config, buffer: &String) -> String {
     let project_icon = color::purple_string("#");
     let maybe_project = config
-        .projects
+        .legacy_projects
         .clone()
         .unwrap_or_default()
         .into_iter()
         .filter(|p| p.id == task.project_id)
-        .collect::<Vec<Project>>();
+        .collect::<Vec<LegacyProject>>();
 
     match maybe_project.first() {
-        Some(Project { name, .. }) => format!("\n{buffer}{project_icon} {name}"),
+        Some(LegacyProject { name, .. }) => format!("\n{buffer}{project_icon} {name}"),
         None => {
             let command = color::cyan_string("tod project import --auto");
             format!(

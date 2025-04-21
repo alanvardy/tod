@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, input, projects::Project, todoist};
+use crate::{config::Config, error::Error, input, projects::LegacyProject, todoist};
 use futures::future;
 use serde::Deserialize;
 
@@ -13,7 +13,7 @@ pub struct Section {
 
 // Fetch all sections for all projects
 pub async fn all_sections(config: &Config) -> Vec<Section> {
-    let projects = config.projects.clone().unwrap_or_default();
+    let projects = config.legacy_projects.clone().unwrap_or_default();
 
     let mut handles = Vec::new();
     for project in projects.iter() {
@@ -32,7 +32,10 @@ pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
     Ok(sections)
 }
 
-pub async fn select_section(config: &Config, project: &Project) -> Result<Option<Section>, Error> {
+pub async fn select_section(
+    config: &Config,
+    project: &LegacyProject,
+) -> Result<Option<Section>, Error> {
     let sections = todoist::sections_for_project(config, project).await?;
     let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
     if section_names.is_empty() {

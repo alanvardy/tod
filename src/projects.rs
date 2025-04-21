@@ -14,7 +14,7 @@ const PAD_WIDTH: usize = 30;
 
 // Projects are split into sections
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
-pub struct Project {
+pub struct LegacyProject {
     pub id: String,
     pub name: String,
     pub color: String,
@@ -38,13 +38,13 @@ pub enum TaskFilter {
     Recurring,
 }
 
-impl Display for Project {
+impl Display for LegacyProject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}\n{}", self.name, self.url)
     }
 }
-pub fn json_to_projects(json: String) -> Result<Vec<Project>, Error> {
-    let projects: Vec<Project> = serde_json::from_str(&json)?;
+pub fn json_to_projects(json: String) -> Result<Vec<LegacyProject>, Error> {
+    let projects: Vec<LegacyProject> = serde_json::from_str(&json)?;
     Ok(projects)
 }
 
@@ -52,7 +52,7 @@ pub fn json_to_projects(json: String) -> Result<Vec<Project>, Error> {
 pub async fn list(config: &mut Config) -> Result<String, Error> {
     config.reload_projects().await?;
 
-    if let Some(projects) = config.projects.clone() {
+    if let Some(projects) = config.legacy_projects.clone() {
         let mut project_handles = Vec::new();
 
         for project in projects {
@@ -87,7 +87,7 @@ pub async fn list(config: &mut Config) -> Result<String, Error> {
 }
 
 /// Formats a string with project name and the count that is a standard length
-async fn project_name_with_count(config: &Config, project: &Project) -> String {
+async fn project_name_with_count(config: &Config, project: &LegacyProject) -> String {
     let count = match count_processable_tasks(config, project).await {
         Ok(num) => format!("{}", num),
         Err(_) => String::new(),
@@ -97,7 +97,7 @@ async fn project_name_with_count(config: &Config, project: &Project) -> String {
 }
 
 /// Gets the number of tasks for a project that are not in the future
-async fn count_processable_tasks(config: &Config, project: &Project) -> Result<u8, Error> {
+async fn count_processable_tasks(config: &Config, project: &LegacyProject) -> Result<u8, Error> {
     let all_tasks = todoist::tasks_for_project(config, project).await?;
     let count = tasks::filter_not_in_future(all_tasks, config)?.len();
 
@@ -105,31 +105,31 @@ async fn count_processable_tasks(config: &Config, project: &Project) -> Result<u
 }
 
 /// Add a project to the projects HashMap in Config
-pub async fn add(config: &mut Config, project: &Project) -> Result<String, Error> {
+pub async fn add(config: &mut Config, project: &LegacyProject) -> Result<String, Error> {
     config.add_project(project.clone());
     config.save().await
 }
 
 /// Remove a project from the projects HashMap in Config
-pub async fn remove(config: &mut Config, project: &Project) -> Result<String, Error> {
+pub async fn remove(config: &mut Config, project: &LegacyProject) -> Result<String, Error> {
     config.remove_project(project);
     config.save().await
 }
 
 /// Remove a project from the projects HashMap in Config
-pub async fn delete(config: &mut Config, project: &Project) -> Result<String, Error> {
+pub async fn delete(config: &mut Config, project: &LegacyProject) -> Result<String, Error> {
     todoist::delete_project(config, project, true).await?;
     config.remove_project(project);
     config.save().await
 }
 
 /// Rename a project in config
-pub async fn rename(config: Config, project: &Project) -> Result<String, Error> {
+pub async fn rename(config: Config, project: &LegacyProject) -> Result<String, Error> {
     let new_name = input::string_with_default(input::NAME, &project.name)?;
 
     let mut config = config;
 
-    let new_project = Project {
+    let new_project = LegacyProject {
         name: new_name,
         ..project.clone()
     };
@@ -138,7 +138,7 @@ pub async fn rename(config: Config, project: &Project) -> Result<String, Error> 
 }
 
 /// Get the next task by priority and save its id to config
-pub async fn next_task(config: Config, project: &Project) -> Result<String, Error> {
+pub async fn next_task(config: Config, project: &LegacyProject) -> Result<String, Error> {
     match fetch_next_task(&config, project).await {
         Ok(Some((task, remaining))) => {
             config.set_next_task(task.clone()).save().await?;
@@ -152,7 +152,7 @@ pub async fn next_task(config: Config, project: &Project) -> Result<String, Erro
 
 async fn fetch_next_task(
     config: &Config,
-    project: &Project,
+    project: &LegacyProject,
 ) -> Result<Option<(Task, usize)>, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
     let filtered_tasks = tasks::filter_not_in_future(tasks, config)?;
@@ -196,11 +196,16 @@ pub async fn remove_all(config: &mut Config) -> Result<String, Error> {
         return Ok(String::from("Cancelled"));
     }
 
-    if config.projects.clone().unwrap_or_default().is_empty() {
+    if config
+        .legacy_projects
+        .clone()
+        .unwrap_or_default()
+        .is_empty()
+    {
         return Ok(color::green_string("No projects to remove"));
     }
 
-    for project in &config.projects.clone().unwrap_or_default() {
+    for project in &config.legacy_projects.clone().unwrap_or_default() {
         config.remove_project(project);
     }
     config.save().await?;
@@ -209,10 +214,10 @@ pub async fn remove_all(config: &mut Config) -> Result<String, Error> {
 }
 
 /// Returns the projects that are not already in config
-fn filter_missing_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> {
+fn filter_missing_projects(config: &Config, projects: Vec<LegacyProject>) -> Vec<LegacyProject> {
     let project_ids: Vec<String> = projects.into_iter().map(|v| v.id).collect();
     config
-        .projects
+        .legacy_projects
         .clone()
         .unwrap_or_default()
         .into_iter()
@@ -231,15 +236,15 @@ pub async fn import(config: &mut Config, auto: &bool) -> Result<String, Error> {
 }
 
 /// Returns the projects that are not already in config
-fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> {
+fn filter_new_projects(config: &Config, projects: Vec<LegacyProject>) -> Vec<LegacyProject> {
     let project_ids: Vec<String> = config
-        .projects
+        .legacy_projects
         .clone()
         .unwrap_or_default()
         .iter()
         .map(|v| v.id.clone())
         .collect();
-    let new_projects: Vec<Project> = projects
+    let new_projects: Vec<LegacyProject> = projects
         .into_iter()
         .filter(|p| !project_ids.contains(&p.id))
         .collect();
@@ -250,7 +255,7 @@ fn filter_new_projects(config: &Config, projects: Vec<Project>) -> Vec<Project> 
 /// Prompt the user if they want to add project to config and maybe add
 async fn maybe_add_project(
     config: &mut Config,
-    project: Project,
+    project: LegacyProject,
     auto: &bool,
 ) -> Result<String, Error> {
     if *auto {
@@ -274,7 +279,7 @@ async fn maybe_add_project(
     }
 }
 
-pub async fn edit_task(config: &Config, project: &Project) -> Result<String, Error> {
+pub async fn edit_task(config: &Config, project: &LegacyProject) -> Result<String, Error> {
     let project_tasks = todoist::tasks_for_project(config, project).await?;
 
     let task = input::select(
@@ -308,7 +313,7 @@ pub async fn edit_task(config: &Config, project: &Project) -> Result<String, Err
 }
 
 /// Empty a project by sending tasks to other projects one at a time
-pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Error> {
+pub async fn empty(config: &mut Config, project: &LegacyProject) -> Result<String, Error> {
     let tasks = todoist::tasks_for_project(config, project).await?;
 
     if tasks.is_empty() {
@@ -342,7 +347,7 @@ pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Err
 /// Put dates on all tasks without dates
 pub async fn schedule(
     config: &Config,
-    project: &Project,
+    project: &LegacyProject,
     filter: TaskFilter,
     skip_recurring: bool,
     sort: &SortOrder,
@@ -405,7 +410,7 @@ pub async fn move_task_to_project(
         "Delete" => Ok(tasks::spawn_delete_task(config.clone(), task)),
         "Skip" => Ok(tokio::spawn(async move {})),
         _ => {
-            let projects = config.projects.clone().unwrap_or_default();
+            let projects = config.legacy_projects.clone().unwrap_or_default();
             let project = input::select("Select project", projects, config.mock_select)?;
 
             let sections: Vec<Section> = sections
@@ -456,7 +461,7 @@ mod tests {
         let config = test::fixtures::config().await.create().await.unwrap();
 
         let mut config = config;
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
         let result = remove(&mut config, project).await;
@@ -504,7 +509,10 @@ mod tests {
             mock_url: Some(server.url()),
             ..config
         };
-        let binding = config_with_timezone.projects.clone().unwrap_or_default();
+        let binding = config_with_timezone
+            .legacy_projects
+            .clone()
+            .unwrap_or_default();
         let project = binding.first().unwrap();
 
         config_with_timezone.clone().create().await.unwrap();
@@ -542,7 +550,7 @@ mod tests {
 
         let config = config.reload().await.unwrap();
         let config_keys: Vec<String> = config
-            .projects
+            .legacy_projects
             .unwrap_or_default()
             .iter()
             .map(|p| p.name.to_owned())
@@ -572,7 +580,7 @@ mod tests {
         let expected: Result<String, Error> = Ok(String::from("Auto removed: 'myproject'"));
         assert_eq!(result.await, expected);
         mock.assert_async().await;
-        let projects = config.projects.clone().unwrap_or_default();
+        let projects = config.legacy_projects.clone().unwrap_or_default();
         assert_eq!(projects.is_empty(), true);
     }
 
@@ -589,7 +597,7 @@ mod tests {
         let expected: Result<String, Error> = Ok(String::from("Removed all projects from config"));
         assert_eq!(result, expected);
 
-        let projects = config.projects.clone().unwrap_or_default();
+        let projects = config.legacy_projects.clone().unwrap_or_default();
         assert_eq!(projects.is_empty(), true);
     }
 
@@ -626,7 +634,7 @@ mod tests {
             .mock_string("newtext")
             .mock_select(0);
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
         let result = empty(&mut config, project);
         assert_eq!(
@@ -666,7 +674,7 @@ mod tests {
             .await
             .mock_url(server.url())
             .mock_select(0);
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
         let result = edit_task(&config, project);
@@ -691,7 +699,7 @@ mod tests {
             .create()
             .await
             .unwrap();
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
 
         let result = delete(&mut config, project).await;
@@ -723,7 +731,7 @@ mod tests {
             .mock_select(1)
             .mock_string("tod");
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
         let sort = &SortOrder::Value;
         let result = schedule(&config, project, TaskFilter::Unscheduled, false, sort);
@@ -734,7 +742,7 @@ mod tests {
 
         let config = config.mock_select(2);
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
         let result = schedule(&config, project, TaskFilter::Overdue, false, sort);
         assert_eq!(
@@ -744,7 +752,7 @@ mod tests {
 
         let config = config.mock_select(3);
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
         let result = schedule(&config, project, TaskFilter::Unscheduled, false, sort);
         assert_eq!(

@@ -72,7 +72,9 @@ pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Erro
     tasks::json_to_task(json)
 }
 
-pub async fn get_task(config: &Config, id: &str) -> Result<Task, Error> {
+pub async fn get_task(config: &Config, id: ID) -> Result<Task, Error> {
+    let resource = Resource::Task;
+    let id = get_legacy_id(config, resource, id).await?;
     let url = format!("{TASKS_URL}{id}");
     let json = request::get_todoist_rest(config, url, true).await?;
     tasks::json_to_task(json)
@@ -348,10 +350,12 @@ pub async fn delete_project(
 
 pub async fn comment_task(
     config: &Config,
-    id: &str,
+    id: ID,
     content: String,
     spinner: bool,
 ) -> Result<String, Error> {
+    let resource = Resource::Task;
+    let id = get_legacy_id(config, resource, id).await?;
     let body = json!({"task_id": id, "content": content});
     let url = COMMENTS_URL.to_string();
 
@@ -513,7 +517,13 @@ mod tests {
         let config = test::fixtures::config().await.mock_url(server.url());
 
         assert_eq!(
-            comment_task(&config, "123", String::from("New comment"), true).await,
+            comment_task(
+                &config,
+                ID::Legacy("123".to_string()),
+                String::from("New comment"),
+                true
+            )
+            .await,
             Ok(String::from("✓"))
         );
         mock.assert();
@@ -661,7 +671,9 @@ mod tests {
             ..config
         };
 
-        let response = get_task(&config, "5149481867").await.unwrap();
+        let response = get_task(&config, ID::Legacy("5149481867".to_string()))
+            .await
+            .unwrap();
         mock.assert();
 
         assert_eq!(response.id, String::from("5149481867"));

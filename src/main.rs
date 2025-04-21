@@ -14,6 +14,7 @@ use cargo::Version;
 use clap::{CommandFactory, Parser, Subcommand};
 use config::Config;
 use error::Error;
+use id::ID;
 use input::DateTimeInput;
 use list::Flag;
 use tasks::priority::Priority;
@@ -981,7 +982,7 @@ async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Erro
     match config.next_id.as_ref() {
         Some(id) => {
             let content = fetch_string(content, &config, input::CONTENT)?;
-            todoist::comment_task(&config, id, content, true).await
+            todoist::comment_task(&config, ID::Legacy(id.to_string()), content, true).await
         }
         None => Err(error::new(
             "task_comment",

@@ -5,7 +5,7 @@ pub mod fixtures {
 
     use crate::config::{self, Args, Config, Internal, SortValue};
     use crate::error::Error;
-    use crate::projects::Project;
+    use crate::projects::LegacyProject;
     use crate::sections::Section;
     use crate::tasks::{DateInfo, Task};
 
@@ -48,7 +48,7 @@ pub mod fixtures {
             max_comment_length: Some(100),
             bell_on_failure: true,
             internal: Internal { tx: tx() },
-            projects: Some(vec![Project {
+            legacy_projects: Some(vec![LegacyProject {
                 id: "123".to_string(),
                 name: "myproject".to_string(),
                 color: "blue".to_string(),
@@ -81,8 +81,8 @@ pub mod fixtures {
         }
     }
 
-    pub fn project() -> Project {
-        Project {
+    pub fn project() -> LegacyProject {
+        LegacyProject {
             id: "456".to_string(),
             name: "newproject".to_string(),
             color: "blue".to_string(),

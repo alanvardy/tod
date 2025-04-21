@@ -1291,7 +1291,7 @@ fn fetch_string(
 }
 
 fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Error> {
-    let projects = config.projects.clone().unwrap_or_default();
+    let projects = config.legacy_projects.clone().unwrap_or_default();
     if projects.is_empty() {
         return Err(error::new("fetch_project", NO_PROJECTS_ERR));
     }

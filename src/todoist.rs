@@ -9,7 +9,7 @@ use crate::config::Config;
 use crate::error::Error;
 use crate::id::{self, ID, Id, Resource};
 use crate::labels::{self, Label};
-use crate::projects::Project;
+use crate::projects::LegacyProject;
 use crate::sections::Section;
 use crate::tasks::Task;
 use crate::tasks::priority::Priority;
@@ -85,7 +85,7 @@ pub async fn get_task(config: &Config, id: ID) -> Result<Task, Error> {
 pub async fn add_task(
     config: &Config,
     content: &String,
-    project: &Project,
+    project: &LegacyProject,
     section: Option<Section>,
     priority: Priority,
     description: &String,
@@ -128,7 +128,10 @@ pub async fn add_task(
 }
 
 /// Get a vector of all tasks for a project
-pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, Error> {
+pub async fn tasks_for_project(
+    config: &Config,
+    project: &LegacyProject,
+) -> Result<Vec<Task>, Error> {
     let url = String::from(PROJECT_DATA_URL);
     let body = json!({ "project_id": project.id });
     let json = request::post_todoist_sync(config, url, body, true).await?;
@@ -162,7 +165,7 @@ pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<(String, 
 
 pub async fn sections_for_project(
     config: &Config,
-    project: &Project,
+    project: &LegacyProject,
 ) -> Result<Vec<Section>, Error> {
     let project_id = &project.id;
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
@@ -170,7 +173,7 @@ pub async fn sections_for_project(
     sections::json_to_sections(json)
 }
 
-pub async fn projects(config: &Config) -> Result<Vec<Project>, Error> {
+pub async fn projects(config: &Config) -> Result<Vec<LegacyProject>, Error> {
     let json = request::get_todoist_rest(config, PROJECTS_URL.to_string(), true).await?;
     projects::json_to_projects(json)
 }
@@ -184,7 +187,7 @@ pub async fn labels(config: &Config, spinner: bool) -> Result<Vec<Label>, Error>
 pub async fn move_task_to_project(
     config: &Config,
     task: Task,
-    project: &Project,
+    project: &LegacyProject,
     spinner: bool,
 ) -> Result<String, Error> {
     let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project.id}}]});
@@ -338,7 +341,7 @@ pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<
 
 pub async fn delete_project(
     config: &Config,
-    project: &Project,
+    project: &LegacyProject,
     spinner: bool,
 ) -> Result<String, Error> {
     let url = format!("{}/{}", PROJECTS_URL, project.id);
@@ -546,7 +549,10 @@ mod tests {
             timezone: Some(String::from("US/Pacific")),
             ..config
         };
-        let binding = config_with_timezone.projects.clone().unwrap_or_default();
+        let binding = config_with_timezone
+            .legacy_projects
+            .clone()
+            .unwrap_or_default();
         let project = binding.first().unwrap();
 
         assert_eq!(
@@ -618,7 +624,7 @@ mod tests {
             ..config
         };
 
-        let binding = config.projects.clone().unwrap_or_default();
+        let binding = config.legacy_projects.clone().unwrap_or_default();
         let project = binding.first().unwrap();
         let response = move_task_to_project(&config, task, project, false).await;
         mock.assert();

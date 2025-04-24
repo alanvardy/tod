@@ -9,7 +9,7 @@ use crate::config::Config;
 use crate::error::Error;
 use crate::id::{self, ID, Id, Resource};
 use crate::labels::{self, Label};
-use crate::projects::LegacyProject;
+use crate::projects::Project;
 use crate::sections::Section;
 use crate::tasks::Task;
 use crate::tasks::priority::Priority;
@@ -23,11 +23,10 @@ const SYNC_URL: &str = "/sync/v9/sync";
 pub const TASKS_URL: &str = "/rest/v2/tasks/";
 pub const COMMENTS_URL: &str = "/rest/v2/comments/";
 const SECTIONS_URL: &str = "/rest/v2/sections";
-const PROJECTS_URL: &str = "/rest/v2/projects";
+const PROJECTS_URL: &str = "/api/v1/projects";
 const LABELS_URL: &str = "/rest/v2/labels";
 const IDS_URL: &str = "/api/v1/id_mappings/";
 
-#[allow(dead_code)]
 pub async fn get_legacy_id(config: &Config, resource: Resource, id: ID) -> Result<String, Error> {
     match id {
         ID::Legacy(id) => Ok(id),
@@ -45,7 +44,6 @@ pub async fn get_legacy_id(config: &Config, resource: Resource, id: ID) -> Resul
     }
 }
 
-#[allow(dead_code)]
 pub async fn get_v1_id(config: &Config, resource: Resource, id: ID) -> Result<String, Error> {
     match id {
         ID::V1(id) => Ok(id),
@@ -61,6 +59,22 @@ pub async fn get_v1_id(config: &Config, resource: Resource, id: ID) -> Result<St
             }
         }
     }
+}
+
+pub async fn get_v1_ids(
+    config: &Config,
+    resource: Resource,
+    ids: Vec<String>,
+) -> Result<Vec<String>, Error> {
+    let ids = ids.join(",");
+    let url = format!("{IDS_URL}{resource}/{ids}");
+    let json = request::get_todoist_rest(config, url, true).await?;
+    let ids = id::json_to_ids(json)?
+        .into_iter()
+        .map(|i| i.new_id)
+        .collect();
+
+    Ok(ids)
 }
 
 /// Add a new task to the inbox with natural language support
@@ -85,13 +99,14 @@ pub async fn get_task(config: &Config, id: ID) -> Result<Task, Error> {
 pub async fn add_task(
     config: &Config,
     content: &String,
-    project: &LegacyProject,
+    project: &Project,
     section: Option<Section>,
     priority: Priority,
     description: &String,
     due: &Option<String>,
     labels: &[String],
 ) -> Result<Task, Error> {
+    let project_id = get_v1_id(config, Resource::Project, ID::Legacy(project.id.clone())).await?;
     let url = String::from(TASKS_URL);
     let mut body: HashMap<String, Value> = HashMap::new();
     body.insert("content".to_owned(), Value::String(content.to_owned()));
@@ -99,7 +114,7 @@ pub async fn add_task(
         "description".to_owned(),
         Value::String(description.to_owned()),
     );
-    body.insert("project_id".to_owned(), Value::String(project.id.clone()));
+    body.insert("project_id".to_owned(), Value::String(project_id));
 
     body.insert("auto_reminder".to_owned(), Value::Bool(true));
     body.insert(
@@ -128,12 +143,10 @@ pub async fn add_task(
 }
 
 /// Get a vector of all tasks for a project
-pub async fn tasks_for_project(
-    config: &Config,
-    project: &LegacyProject,
-) -> Result<Vec<Task>, Error> {
+pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, Error> {
+    let project_id = get_v1_id(config, Resource::Project, ID::Legacy(project.id.clone())).await?;
     let url = String::from(PROJECT_DATA_URL);
-    let body = json!({ "project_id": project.id });
+    let body = json!({ "project_id": project_id });
     let json = request::post_todoist_sync(config, url, body, true).await?;
     tasks::sync_json_to_tasks(json)
 }
@@ -165,15 +178,15 @@ pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<(String, 
 
 pub async fn sections_for_project(
     config: &Config,
-    project: &LegacyProject,
+    project: &Project,
 ) -> Result<Vec<Section>, Error> {
-    let project_id = &project.id;
+    let project_id = get_legacy_id(config, Resource::Project, ID::V1(project.id.clone())).await?;
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
     let json = request::get_todoist_rest(config, url, true).await?;
     sections::json_to_sections(json)
 }
 
-pub async fn projects(config: &Config) -> Result<Vec<LegacyProject>, Error> {
+pub async fn projects(config: &Config) -> Result<Vec<Project>, Error> {
     let json = request::get_todoist_rest(config, PROJECTS_URL.to_string(), true).await?;
     projects::json_to_projects(json)
 }
@@ -187,10 +200,11 @@ pub async fn labels(config: &Config, spinner: bool) -> Result<Vec<Label>, Error>
 pub async fn move_task_to_project(
     config: &Config,
     task: Task,
-    project: &LegacyProject,
+    project: &Project,
     spinner: bool,
 ) -> Result<String, Error> {
-    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project.id}}]});
+    let project_id = get_legacy_id(config, Resource::Project, ID::V1(project.id.clone())).await?;
+    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project_id}}]});
     let url = String::from(SYNC_URL);
 
     request::post_todoist_sync(config, url, body, spinner).await?;
@@ -341,7 +355,7 @@ pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<
 
 pub async fn delete_project(
     config: &Config,
-    project: &LegacyProject,
+    project: &Project,
     spinner: bool,
 ) -> Result<String, Error> {
     let url = format!("{}/{}", PROJECTS_URL, project.id);
@@ -411,7 +425,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         assert_eq!(
             get_user_data(&config).await,
@@ -435,7 +449,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         assert_eq!(
             quick_add_task(&config, "testy test").await,
@@ -469,7 +483,15 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let mock2 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let project = test::fixtures::project();
 
@@ -504,6 +526,7 @@ mod tests {
             })
         );
         mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]
@@ -517,7 +540,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         assert_eq!(
             comment_task(
@@ -544,15 +567,16 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
-        let config_with_timezone = Config {
-            timezone: Some(String::from("US/Pacific")),
-            ..config
-        };
-        let binding = config_with_timezone
-            .legacy_projects
-            .clone()
-            .unwrap_or_default();
+        let mock2 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let config_with_timezone = config.with_timezone("US/Pacific");
+        let binding = config_with_timezone.projects().await.unwrap();
         let project = binding.first().unwrap();
 
         assert_eq!(
@@ -583,6 +607,7 @@ mod tests {
         );
 
         mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]
@@ -596,7 +621,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let task = test::fixtures::task();
         let response = complete_task(&config, &task, false).await;
@@ -616,20 +641,24 @@ mod tests {
             .create_async()
             .await;
 
+        let mock2 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
+
         let task = test::fixtures::task();
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
-        let config = Config {
-            mock_url: Some(server.url()),
-            ..config
-        };
-
-        let binding = config.legacy_projects.clone().unwrap_or_default();
+        let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap();
         let response = move_task_to_project(&config, task, project, false).await;
-        mock.assert();
 
         assert_eq!(response, Ok(String::from("✓")));
+        mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]
@@ -645,12 +674,7 @@ mod tests {
             .await;
 
         let task = test::fixtures::task();
-        let config = test::fixtures::config().await.mock_url(server.url());
-
-        let config = Config {
-            mock_url: Some(server.url()),
-            ..config
-        };
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let response = delete_task(&config, &task, false).await;
         mock.assert();
@@ -670,12 +694,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
-
-        let config = Config {
-            mock_url: Some(server.url()),
-            ..config
-        };
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let response = get_task(&config, ID::Legacy("5149481867".to_string()))
             .await
@@ -700,7 +719,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let response = update_task_priority(&config, &task, &Priority::High, true).await;
         mock.assert();
@@ -721,7 +740,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let response =
             update_task_due_natural_language(&config, task, "today".to_string(), None, true).await;
@@ -743,7 +762,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
         let resource = Resource::Task;
 
         // Makes the request when converting a new ID to old
@@ -771,7 +790,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
         let resource = Resource::Task;
 
         // Makes the request when converting an old ID to new

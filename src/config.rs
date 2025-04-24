@@ -1,6 +1,7 @@
 use crate::cargo::Version;
 use crate::error::{self, Error};
-use crate::projects::LegacyProject;
+use crate::id::Resource;
+use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
 use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
@@ -24,15 +25,17 @@ pub struct Config {
     /// The Todoist Api token
     pub token: String,
     /// List of Todoist projects and their project numbers
+    #[serde(rename = "projectsv1")]
+    projects: Option<Vec<Project>>,
     /// These are from the old v9 and SYNC endpoints
     #[serde(rename = "vecprojects")]
-    pub legacy_projects: Option<Vec<LegacyProject>>,
+    legacy_projects: Option<Vec<LegacyProject>>,
     /// Path to config file
     pub path: String,
     /// The ID of the next task (NO LONGER IN USE)
-    pub next_id: Option<String>,
-    /// The ID of the next task (NO LONGER IN USE)
-    pub next_task: Option<Task>,
+    next_id: Option<String>,
+    /// The next task, for use with complete
+    next_task: Option<Task>,
     /// Whether to trigger terminal bell on success
     #[serde(default)]
     pub bell_on_success: bool,
@@ -116,12 +119,48 @@ impl Default for SortValue {
     }
 }
 impl Config {
+    /// Set timezone on Config struct only
+    pub fn with_timezone(self: &Config, timezone: &str) -> Config {
+        Config {
+            timezone: Some(timezone.to_string()),
+            ..self.clone()
+        }
+    }
+
+    /// Converts legacy projects to the new projects if necessary
+    pub async fn projects(self: &Config) -> Result<Vec<Project>, Error> {
+        let projects = self.projects.clone().unwrap_or_default();
+        let legacy_projects = self.legacy_projects.clone().unwrap_or_default();
+
+        if !projects.is_empty() {
+            Ok(projects)
+        } else if legacy_projects.is_empty() {
+            Ok(Vec::new())
+        } else {
+            let new_projects = todoist::projects(self).await?;
+            let legacy_ids = legacy_projects.into_iter().map(|lp| lp.id).collect();
+            let v1_ids = todoist::get_v1_ids(self, Resource::Project, legacy_ids).await?;
+
+            let new_projects: Vec<Project> = new_projects
+                .iter()
+                .filter(|p| v1_ids.contains(&p.id))
+                .map(|p| p.to_owned())
+                .collect();
+
+            let mut config = self.clone();
+            for project in &new_projects {
+                config.add_project(project.clone());
+                config.save().await?;
+            }
+            Ok(new_projects)
+        }
+    }
     pub fn max_comment_length(self: &Config) -> u32 {
         self.max_comment_length.unwrap_or(MAX_COMMENT_LENGTH)
     }
     pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
         let all_projects = todoist::projects(self).await?;
-        let current_projects = self.legacy_projects.clone().unwrap_or_default();
+        let current_projects = self.projects.clone().unwrap_or_default();
         let current_project_ids: Vec<String> =
             current_projects.iter().map(|p| p.id.to_owned()).collect();
 
@@ -129,9 +168,9 @@ impl Config {
             .iter()
             .filter(|p| current_project_ids.contains(&p.id))
             .map(|p| p.to_owned())
-            .collect::<Vec<LegacyProject>>();
+            .collect::<Vec<Project>>();
 
-        self.legacy_projects = Some(updated_projects);
+        self.projects = Some(updated_projects);
 
         Ok(color::green_string("✓"))
     }
@@ -172,7 +211,8 @@ impl Config {
         Ok(())
     }
 
-    pub async fn check_for_timezone(self) -> Result<Config, Error> {
+    /// Prompt user for timezone if it does not exist and write to disk
+    pub async fn maybe_set_timezone(self) -> Result<Config, Error> {
         if self.timezone.is_none() {
             self.set_timezone().await
         } else {
@@ -180,14 +220,11 @@ impl Config {
         }
     }
 
+    /// Set timezone and save to disk
     pub async fn set_timezone(self) -> Result<Config, Error> {
         let user = todoist::get_user_data(&self).await?;
-        let config = Config {
-            timezone: Some(user.tz_info.timezone),
-            ..self
-        };
-
-        config.clone().save().await?;
+        let mut config = self.with_timezone(&user.tz_info.timezone);
+        config.save().await?;
 
         Ok(config)
     }
@@ -247,7 +284,7 @@ impl Config {
         }
     }
 
-    pub async fn new(token: &str, tx: UnboundedSender<Error>) -> Result<Config, Error> {
+    pub async fn new(token: &str, tx: Option<UnboundedSender<Error>>) -> Result<Config, Error> {
         Ok(Config {
             path: generate_path().await?,
             token: String::from(token),
@@ -269,12 +306,13 @@ impl Config {
             mock_select: None,
             max_comment_length: None,
             verbose: None,
-            internal: Internal { tx: Some(tx) },
+            internal: Internal { tx },
             args: Args {
                 verbose: false,
                 timeout: None,
             },
             legacy_projects: Some(Vec::new()),
+            projects: Some(Vec::new()),
         })
     }
 
@@ -285,27 +323,27 @@ impl Config {
         })
     }
 
-    pub fn add_project(&mut self, project: LegacyProject) {
-        let option_projects = &mut self.legacy_projects;
+    pub fn add_project(&mut self, project: Project) {
+        let option_projects = &mut self.projects;
         match option_projects {
             Some(projects) => {
                 projects.push(project);
             }
-            None => self.legacy_projects = Some(vec![project]),
+            None => self.projects = Some(vec![project]),
         }
     }
 
-    pub fn remove_project(&mut self, project: &LegacyProject) {
+    pub fn remove_project(&mut self, project: &Project) {
         let projects = self
-            .legacy_projects
+            .projects
             .clone()
             .unwrap_or_default()
             .iter()
             .filter(|p| p.id != project.id)
             .map(|p| p.to_owned())
-            .collect::<Vec<LegacyProject>>();
+            .collect::<Vec<Project>>();
 
-        self.legacy_projects = Some(projects);
+        self.projects = Some(projects);
     }
 
     pub async fn save(&mut self) -> std::result::Result<String, Error> {
@@ -354,6 +392,10 @@ impl Config {
             }
         }
     }
+
+    pub fn next_task(&self) -> Option<Task> {
+        self.next_task.clone()
+    }
 }
 
 pub async fn get_or_create(
@@ -369,7 +411,7 @@ pub async fn get_or_create(
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
 
             let token = input::string(desc, Some(String::new()))?;
-            Config::new(&token, tx.clone()).await?.create().await
+            Config::new(&token, Some(tx.clone())).await?.create().await
         }
     }
 }
@@ -438,7 +480,7 @@ mod tests {
 
     impl Config {
         /// add the url of the mockito server
-        pub fn mock_url(self, url: String) -> Config {
+        pub fn with_mock_url(self, url: String) -> Config {
             Config {
                 mock_url: Some(url),
                 ..self
@@ -446,7 +488,7 @@ mod tests {
         }
 
         /// Mock out the string response
-        pub fn mock_string(self, string: &str) -> Config {
+        pub fn with_mock_string(self, string: &str) -> Config {
             Config {
                 mock_string: Some(string.to_string()),
                 ..self
@@ -458,6 +500,21 @@ mod tests {
             Config {
                 mock_select: Some(index),
                 ..self
+            }
+        }
+        /// Set path on Config struct
+        pub fn with_path(self: &Config, path: String) -> Config {
+            Config {
+                path,
+                ..self.clone()
+            }
+        }
+
+        /// Set path on Config struct
+        pub fn with_projects(self: &Config, projects: Vec<Project>) -> Config {
+            Config {
+                projects: Some(projects),
+                ..self.clone()
             }
         }
     }
@@ -474,7 +531,7 @@ mod tests {
 
     #[tokio::test]
     async fn new_should_generate_config() {
-        let config = Config::new("something", tx()).await.unwrap();
+        let config = Config::new("something", None).await.unwrap();
         assert_eq!(config.token, String::from("something"));
     }
 
@@ -484,7 +541,7 @@ mod tests {
         let mut config = config.create().await.expect("Failed to create test config");
         let project = test::fixtures::project();
         config.add_project(project);
-        let projects = config.legacy_projects.clone().unwrap_or_default();
+        let projects = config.projects().await.unwrap();
         assert!(!&projects.is_empty());
 
         config.reload().await.expect("Failed to reload config");
@@ -504,22 +561,22 @@ mod tests {
     #[tokio::test]
     async fn add_project_should_work() {
         let mut config = test::fixtures::config().await;
-        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
+        let projects_count = config.projects().await.unwrap().len();
         assert_eq!(projects_count, 1);
         config.add_project(test::fixtures::project());
-        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
+        let projects_count = config.projects().await.unwrap().len();
         assert_eq!(projects_count, 2);
     }
 
     #[tokio::test]
     async fn remove_project_should_work() {
         let mut config = test::fixtures::config().await;
-        let projects = config.legacy_projects.clone().unwrap_or_default();
+        let projects = config.projects().await.unwrap();
         let project = projects.first().unwrap();
-        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
+        let projects_count = config.projects().await.unwrap().len();
         assert_eq!(projects_count, 1);
         config.remove_project(project);
-        let projects_count = config.legacy_projects.clone().unwrap_or_default().len();
+        let projects_count = config.projects().await.unwrap().len();
         assert_eq!(projects_count, 0);
     }
 
@@ -566,7 +623,7 @@ mod tests {
         // get_or_create (load)
         test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .create()
             .await
             .unwrap();

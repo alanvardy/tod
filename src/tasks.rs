@@ -172,7 +172,7 @@ impl Task {
         };
 
         let project = if with_project {
-            format::project(self, config, &buffer)
+            format::project(self, config, &buffer).await?
         } else {
             String::new()
         };
@@ -1255,7 +1255,7 @@ mod tests {
         let config = test::fixtures::config()
             .await
             .mock_select(1)
-            .mock_url(server.url());
+            .with_mock_url(server.url());
 
         let future = set_priority(&config, task, false).await.unwrap();
 
@@ -1277,7 +1277,7 @@ mod tests {
         let task = test::fixtures::task();
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(0)
             .create()
             .await

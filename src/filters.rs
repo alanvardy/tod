@@ -43,11 +43,11 @@ pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error>
 }
 
 /// Get the next task by priority and save its id to config
-pub async fn next_task(config: Config, filter: &str) -> Result<String, Error> {
-    match fetch_next_task(&config, filter).await {
+pub async fn next_task(config: &Config, filter: &str) -> Result<String, Error> {
+    match fetch_next_task(config, filter).await {
         Ok(Some((task, remaining))) => {
             config.set_next_task(task.clone()).save().await?;
-            let task_string = task.fmt(&config, FormatType::Single, true, true).await?;
+            let task_string = task.fmt(config, FormatType::Single, true, true).await?;
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
         Ok(None) => Ok(color::green_string("No tasks on list")),
@@ -115,7 +115,7 @@ mod tests {
 
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(0);
 
         let result = edit_task(&config, String::from("today"));
@@ -133,21 +133,18 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
 
-        let config_with_timezone = Config {
-            timezone: Some(String::from("US/Pacific")),
-            path: format!("{config_dir}/test3"),
-            mock_url: Some(server.url()),
-            ..config
-        };
+        let config_with_timezone = config
+            .with_timezone("US/Pacific")
+            .with_path(format!("{config_dir}/test3"));
 
         config_with_timezone.clone().create().await.unwrap();
 
         let filter = String::from("today");
-        let task = next_task(config_with_timezone, &filter).await.unwrap();
+        let task = next_task(&config_with_timezone, &filter).await.unwrap();
 
         assert!(task.contains("Put out recycling"));
         assert!(task.contains("every other mon at 16:30"));
@@ -174,9 +171,9 @@ mod tests {
 
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(1)
-            .mock_string("tod");
+            .with_mock_string("tod");
 
         let filter = String::from("today");
         let sort = &SortOrder::Value;

@@ -1,18 +1,10 @@
 #[cfg(test)]
 pub mod fixtures {
 
-    use tokio::sync::mpsc::UnboundedSender;
-
-    use crate::config::{self, Args, Config, Internal, SortValue};
-    use crate::error::Error;
-    use crate::projects::LegacyProject;
+    use crate::config::Config;
+    use crate::projects::Project;
     use crate::sections::Section;
     use crate::tasks::{DateInfo, Task};
-
-    fn tx() -> Option<UnboundedSender<Error>> {
-        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-        Some(tx)
-    }
 
     pub fn task() -> Task {
         Task {
@@ -38,63 +30,32 @@ pub mod fixtures {
     }
 
     pub async fn config() -> Config {
-        Config {
-            token: String::from("alreadycreated"),
-            sort_value: Some(SortValue::default()),
-            disable_links: false,
-            completed: None,
-            next_task: None,
-            bell_on_success: false,
-            max_comment_length: Some(100),
-            bell_on_failure: true,
-            internal: Internal { tx: tx() },
-            legacy_projects: Some(vec![LegacyProject {
-                id: "123".to_string(),
-                name: "myproject".to_string(),
-                color: "blue".to_string(),
-                comment_count: 1,
-                order: 0,
-                is_shared: false,
-                is_favorite: false,
-                is_inbox_project: false,
-                is_team_inbox: false,
-                view_style: "List".to_string(),
-                url: "www.google.com".to_string(),
-                parent_id: None,
-            }]),
-            path: config::generate_path().await.unwrap(),
-            next_id: None,
-            args: Args {
-                timeout: None,
-                verbose: false,
-            },
-            timezone: Some(String::from("US/Pacific")),
-            timeout: None,
-            last_version_check: None,
-            no_sections: None,
-            mock_url: None,
-            mock_string: None,
-            verbose: None,
-            mock_select: None,
-            natural_language_only: None,
-            spinners: Some(true),
-        }
+        Config::new("alreadycreated", None)
+            .await
+            .expect("Could not generate directory")
+            .with_projects(vec![project()])
     }
 
-    pub fn project() -> LegacyProject {
-        LegacyProject {
-            id: "456".to_string(),
-            name: "newproject".to_string(),
+    pub fn project() -> Project {
+        Project {
+            id: "123".to_string(),
+            can_assign_tasks: true,
+            child_order: 0,
             color: "blue".to_string(),
-            comment_count: 1,
-            order: 0,
-            is_shared: false,
+            created_at: None,
+            is_archived: false,
+            is_deleted: false,
             is_favorite: false,
-            is_inbox_project: false,
-            is_team_inbox: false,
+            is_frozen: false,
+            name: "myproject".to_string(),
+            updated_at: None,
             view_style: "List".to_string(),
-            url: "www.google.com".to_string(),
+            default_order: 0,
+            description: "Something".to_string(),
             parent_id: None,
+            inbox_project: false,
+            is_collapsed: false,
+            is_shared: false,
         }
     }
 
@@ -390,18 +351,26 @@ pub mod responses {
         String::from(
             "[
               {
-              \"id\": \"123\",
-              \"project_id\": \"5678\",
-              \"order\": 1,
-              \"comment_count\": 1,
-              \"is_shared\": false,
-              \"is_favorite\": false,
-              \"is_inbox_project\": false,
-              \"is_team_inbox\": false,
+              \"can_assign_tasks\": false,
+              \"child_order\": 1,
               \"color\": \"blue\",
-              \"view_style\": \"list\",
-              \"url\": \"http://www.example.com/\",
-              \"name\": \"Doomsday\"
+              \"created_at\": null,
+              \"default_order\": 1,
+              \"description\": \"Bad guy\",
+              \"id\": \"123\",
+              \"inbox_project\": false,
+              \"is_archived\": false,
+              \"is_collapsed\": false,
+              \"is_deleted\": false,
+              \"is_favorite\": false,
+              \"is_frozen\": false,
+              \"is_shared\": false,
+              \"is_team_inbox\": false,
+              \"name\": \"Doomsday\",
+              \"parent_id\": \"5678\",
+              \"updated_at\": null,
+              \"view_style\": \"list\"
+              
               }
             ]
             ",
@@ -413,21 +382,53 @@ pub mod responses {
         String::from(
             "[
               {
-              \"id\": \"890\",
-              \"project_id\": \"5678\",
-              \"order\": 1,
-              \"comment_count\": 1,
-              \"is_shared\": false,
-              \"is_favorite\": false,
-              \"is_inbox_project\": false,
-              \"is_team_inbox\": false,
+              \"can_assign_tasks\": false,
+              \"child_order\": 1,
               \"color\": \"blue\",
-              \"view_style\": \"list\",
-              \"url\": \"http://www.example.com/\",
-              \"name\": \"Doomsday\"
+              \"created_at\": null,
+              \"default_order\": 1,
+              \"description\": \"Bad guy\",
+              \"id\": \"890\",
+              \"inbox_project\": false,
+              \"is_archived\": false,
+              \"is_collapsed\": false,
+              \"is_deleted\": false,
+              \"is_favorite\": false,
+              \"is_frozen\": false,
+              \"is_shared\": false,
+              \"is_team_inbox\": false,
+              \"name\": \"Doomsday\",
+              \"parent_id\": \"5678\",
+              \"updated_at\": null,
+              \"view_style\": \"list\"
+              
               }
             ]
             ",
+        )
+    }
+
+    pub fn new_projects_response() -> String {
+        format!(
+            "{{
+            \"results\":
+                {},
+                \"next_cursor\": null
+            }}
+            ",
+            new_projects()
+        )
+    }
+
+    pub fn projects_response() -> String {
+        format!(
+            "{{
+            \"results\":
+                {},
+                \"next_cursor\": null
+            }}
+            ",
+            projects()
         )
     }
 

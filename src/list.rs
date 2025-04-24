@@ -4,7 +4,7 @@ use crate::{
     color,
     config::Config,
     error::Error,
-    projects::LegacyProject,
+    projects::Project,
     tasks::{self, FormatType, SortOrder, Task, priority::Priority},
     todoist,
 };
@@ -13,7 +13,7 @@ use tokio::{fs, io::AsyncReadExt};
 
 #[derive(Clone)]
 pub enum Flag {
-    Project(LegacyProject),
+    Project(Project),
     Filter(String),
 }
 
@@ -27,7 +27,7 @@ impl Display for Flag {
 }
 
 /// Get a list of all tasks
-pub async fn view(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
+pub async fn view(config: &mut Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
     let list_of_tasks = match flag.clone() {
         Flag::Project(project) => vec![(
             project.name.clone(),
@@ -229,7 +229,7 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
         config.clone().create().await.unwrap();
 
         assert_eq!(import(&config, &config.path).await, Ok(String::from("✓")));
@@ -257,7 +257,7 @@ mod tests {
 
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(1);
 
         let filter = String::from("today");
@@ -286,16 +286,23 @@ mod tests {
             .create_async()
             .await;
 
+        let mock3 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(1)
-            .mock_string("tod")
+            .with_mock_string("tod")
             .create()
             .await
             .unwrap();
 
-        let binding = config.legacy_projects.clone().unwrap_or_default();
+        let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap().to_owned();
         let sort = &SortOrder::Value;
         let result = timebox(&config, Flag::Project(project), sort).await;
@@ -303,14 +310,14 @@ mod tests {
 
         let config = config.mock_select(2);
 
-        let binding = config.legacy_projects.clone().unwrap_or_default();
+        let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap().to_owned();
         let result = timebox(&config, Flag::Project(project), sort).await;
         assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
 
         let config = config.mock_select(3);
 
-        let binding = config.legacy_projects.clone().unwrap_or_default();
+        let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap().to_owned();
         let result = timebox(&config, Flag::Project(project.clone()), sort).await;
         assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
@@ -319,6 +326,7 @@ mod tests {
         assert_matches!(result, Ok(x) if x.contains("Successfully timeboxed"));
         mock.expect(2);
         mock2.expect(2);
+        mock3.expect(1);
     }
 
     #[tokio::test]
@@ -332,18 +340,29 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let mock2 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
 
-        let binding = config.legacy_projects.clone().unwrap_or_default();
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+
+        let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap().to_owned();
         let sort = &SortOrder::Value;
 
         let result = prioritize(&config, Flag::Project(project), sort).await;
         assert_eq!(
             result,
-            Ok(String::from("No tasks for myproject\nwww.google.com"))
+            Ok(String::from(
+                "No tasks for myproject\nhttps://app.todoist.com/app/project/123"
+            ))
         );
         mock.assert();
+        mock2.assert();
     }
     #[tokio::test]
     async fn test_process_with_filter() {
@@ -366,7 +385,7 @@ mod tests {
 
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(0)
             .create()
             .await
@@ -399,25 +418,36 @@ mod tests {
             .create_async()
             .await;
 
+        let mock3 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(0)
             .create()
             .await
             .unwrap();
 
-        let binding = config.legacy_projects.clone().unwrap_or_default();
+        let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap().to_owned();
         let sort = &SortOrder::Value;
 
         let result = process(&config, Flag::Project(project), sort).await;
         assert_eq!(
             result,
-            Ok("Successfully processed myproject\nwww.google.com".to_string())
+            Ok(
+                "Successfully processed myproject\nhttps://app.todoist.com/app/project/123"
+                    .to_string()
+            )
         );
         mock.assert();
         mock2.assert();
+        mock3.assert();
     }
     #[tokio::test]
     async fn test_label() {
@@ -438,17 +468,15 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
 
-        let config_with_timezone = Config {
-            timezone: Some(String::from("US/Pacific")),
-            path: format!("{config_dir}/test3"),
-            mock_url: Some(server.url()),
-            mock_select: Some(0),
-            ..config
-        };
+        let config_with_timezone = config
+            .with_timezone("US/Pacific")
+            .with_path(format!("{config_dir}/test3"))
+            .with_mock_url(server.url())
+            .mock_select(0);
 
         config_with_timezone.clone().create().await.unwrap();
 
@@ -475,18 +503,15 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
-        let config_with_timezone = Config {
-            timezone: Some(String::from("US/Pacific")),
-            mock_url: Some(server.url()),
-            ..config
-        };
-
+        let mut config_with_timezone = config
+            .with_timezone("US/Pacific")
+            .with_mock_url(server.url());
         let filter = String::from("today");
         let sort = &SortOrder::Value;
 
-        let tasks = view(&config_with_timezone, Flag::Filter(filter), sort)
+        let tasks = view(&mut config_with_timezone, Flag::Filter(filter), sort)
             .await
             .unwrap();
 
@@ -505,27 +530,30 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let mock2 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
+        let config = test::fixtures::config().await.with_mock_url(server.url());
 
-        let config_with_timezone = Config {
-            timezone: Some(String::from("US/Pacific")),
-            mock_url: Some(server.url()),
-            ..config
-        };
+        let mut config_with_timezone = config
+            .with_timezone("US/Pacific")
+            .with_mock_url(server.url());
 
-        let binding = config_with_timezone
-            .legacy_projects
-            .clone()
-            .unwrap_or_default();
+        let binding = config_with_timezone.projects().await.unwrap();
         let project = binding.first().unwrap().clone();
         let sort = &SortOrder::Value;
 
-        let tasks = view(&config_with_timezone, Flag::Project(project), sort)
+        let tasks = view(&mut config_with_timezone, Flag::Project(project), sort)
             .await
             .unwrap();
 
         assert!(tasks.contains("Tasks for"));
         assert!(tasks.contains("- Put out recycling\n"));
         mock.assert();
+        mock2.assert();
     }
 }

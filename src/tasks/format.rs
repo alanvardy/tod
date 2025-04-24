@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use supports_hyperlinks::Stream;
 
 use super::{DateTimeInfo, Duration, Task, Unit, priority};
-use crate::{color, config::Config, error::Error, projects::LegacyProject, time, todoist};
+use crate::{color, config::Config, error::Error, projects::Project, time, todoist};
 
 pub fn content(task: &Task, config: &Config) -> String {
     let content = match task.priority {
@@ -20,25 +20,25 @@ pub fn content(task: &Task, config: &Config) -> String {
     }
 }
 
-pub fn project(task: &Task, config: &Config, buffer: &String) -> String {
+pub async fn project(task: &Task, config: &Config, buffer: &String) -> Result<String, Error> {
     let project_icon = color::purple_string("#");
     let maybe_project = config
-        .legacy_projects
-        .clone()
-        .unwrap_or_default()
+        .projects()
+        .await?
         .into_iter()
         .filter(|p| p.id == task.project_id)
-        .collect::<Vec<LegacyProject>>();
+        .collect::<Vec<Project>>();
 
-    match maybe_project.first() {
-        Some(LegacyProject { name, .. }) => format!("\n{buffer}{project_icon} {name}"),
+    let text = match maybe_project.first() {
+        Some(Project { name, .. }) => format!("\n{buffer}{project_icon} {name}"),
         None => {
             let command = color::cyan_string("tod project import --auto");
             format!(
                 "\n{buffer}{project_icon} Project not in config\nUse {command} to import missing projects"
             )
         }
-    }
+    };
+    Ok(text)
 }
 
 pub fn disable_links(config: &Config) -> bool {
@@ -191,14 +191,14 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.mock_url(server.url());
+        let config = test::fixtures::config().await.with_mock_url(server.url());
         let task = test::fixtures::task();
 
         let comments = comments(&config, &task).await.unwrap();
 
         assert_matches!(
             comments.as_str(),
-            "\n\n★ Comments ★\n\nPosted 2016-09-22 00:00:00 PDT\nAttachment \u{1b}]8;;https://s3.amazonaws.com/domorebe[TRUNCATED]"
+            "\n\n★ Comments ★\n\nPosted 2016-09-22 07:00:00 UTC\nAttachment \u{1b}]8;;https://s3.amazonaws.com/domorebetter/Todoist+Setup+Guide.pdf\u{1b}\\[File.pdf]\u{1b}]8;;\u{1b}\\\nNeed one bottle of milk"
         );
         mock.expect(1);
     }

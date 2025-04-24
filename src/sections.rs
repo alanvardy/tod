@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, input, projects::LegacyProject, todoist};
+use crate::{config::Config, error::Error, input, projects::Project, todoist};
 use futures::future;
 use serde::Deserialize;
 
@@ -12,8 +12,8 @@ pub struct Section {
 }
 
 // Fetch all sections for all projects
-pub async fn all_sections(config: &Config) -> Vec<Section> {
-    let projects = config.legacy_projects.clone().unwrap_or_default();
+pub async fn all_sections(config: &mut Config) -> Result<Vec<Section>, Error> {
+    let projects = config.projects().await?;
 
     let mut handles = Vec::new();
     for project in projects.iter() {
@@ -24,7 +24,8 @@ pub async fn all_sections(config: &Config) -> Vec<Section> {
 
     let var = future::join_all(handles).await;
 
-    var.into_iter().filter_map(Result::ok).flatten().collect()
+    let sections = var.into_iter().filter_map(Result::ok).flatten().collect();
+    Ok(sections)
 }
 
 pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
@@ -32,10 +33,7 @@ pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
     Ok(sections)
 }
 
-pub async fn select_section(
-    config: &Config,
-    project: &LegacyProject,
-) -> Result<Option<Section>, Error> {
+pub async fn select_section(config: &Config, project: &Project) -> Result<Option<Section>, Error> {
     let sections = todoist::sections_for_project(config, project).await?;
     let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
     if section_names.is_empty() {
@@ -82,16 +80,23 @@ mod tests {
     async fn test_select_section() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/sections?project_id=456")
+            .mock("GET", "/rest/v2/sections?project_id=6V2J6Qhgq47phxHG")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sections())
             .create_async()
             .await;
 
+        let mock2 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(1);
         let project = test::fixtures::project();
 
@@ -104,5 +109,6 @@ mod tests {
         let result = select_section(&config, &project).await;
         assert_eq!(expected, result);
         mock.assert();
+        mock2.assert();
     }
 }

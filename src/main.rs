@@ -6,10 +6,6 @@
 extern crate matches;
 extern crate clap;
 
-use std::fmt::Display;
-use std::io::{self, Write};
-use std::path::Path;
-
 use cargo::Version;
 use clap::{CommandFactory, Parser, Subcommand};
 use config::Config;
@@ -17,6 +13,9 @@ use error::Error;
 use id::ID;
 use input::DateTimeInput;
 use list::Flag;
+use std::fmt::Display;
+use std::io::{self, Write};
+use std::path::Path;
 use tasks::priority::Priority;
 use tasks::{SortOrder, TaskAttribute, priority};
 use tokio::sync::mpsc::UnboundedSender;

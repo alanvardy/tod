@@ -22,7 +22,7 @@ const PROJECT_DATA_URL: &str = "/sync/v9/projects/get_data";
 const SYNC_URL: &str = "/sync/v9/sync";
 pub const TASKS_URL: &str = "/rest/v2/tasks/";
 pub const COMMENTS_URL: &str = "/rest/v2/comments/";
-const SECTIONS_URL: &str = "/rest/v2/sections";
+const SECTIONS_URL: &str = "/api/v1/sections";
 const PROJECTS_URL: &str = "/api/v1/projects";
 const LABELS_URL: &str = "/rest/v2/labels";
 const IDS_URL: &str = "/api/v1/id_mappings/";
@@ -180,7 +180,7 @@ pub async fn sections_for_project(
     config: &Config,
     project: &Project,
 ) -> Result<Vec<Section>, Error> {
-    let project_id = get_legacy_id(config, Resource::Project, ID::V1(project.id.clone())).await?;
+    let project_id = project.id.clone();
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
     let json = request::get_todoist_rest(config, url, true).await?;
     sections::json_to_sections(json)

@@ -6,9 +6,22 @@ use serde::Deserialize;
 #[derive(PartialEq, Deserialize, Clone, Debug)]
 pub struct Section {
     pub id: String,
-    pub project_id: String,
-    pub order: u8,
     pub name: String,
+    pub user_id: String,
+    pub project_id: String,
+    pub added_at: String,
+    pub updated_at: Option<String>,
+    pub archived_at: Option<String>,
+    pub section_order: u32,
+    pub is_archived: bool,
+    pub is_deleted: bool,
+    pub is_collapsed: bool,
+}
+
+#[derive(PartialEq, Deserialize, Clone, Debug)]
+pub struct SectionResponse {
+    pub results: Vec<Section>,
+    pub next_cursor: Option<String>,
 }
 
 // Fetch all sections for all projects
@@ -29,8 +42,8 @@ pub async fn all_sections(config: &mut Config) -> Result<Vec<Section>, Error> {
 }
 
 pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
-    let sections: Vec<Section> = serde_json::from_str(&json)?;
-    Ok(sections)
+    let response: SectionResponse = serde_json::from_str(&json)?;
+    Ok(response.results)
 }
 
 pub async fn select_section(config: &Config, project: &Project) -> Result<Option<Section>, Error> {
@@ -58,21 +71,20 @@ mod tests {
 
     #[test]
     fn should_convert_json_to_sections() {
-        let sections = vec![
-            Section {
-                id: "1234".to_string(),
-                project_id: "5678".to_string(),
-                order: 1,
-                name: "Bread".to_string(),
-            },
-            Section {
-                id: "9012".to_string(),
-                project_id: "3456".to_string(),
-                order: 2,
-                name: "Meat".to_string(),
-            },
-        ];
-        let result = json_to_sections(test::responses::sections());
+        let sections = vec![Section {
+            id: "1234".to_string(),
+            added_at: "2020-06-11T14:51:08.056500Z".to_string(),
+            user_id: "910".to_string(),
+            project_id: "5678".to_string(),
+            section_order: 1,
+            name: "Bread".to_string(),
+            updated_at: None,
+            archived_at: None,
+            is_archived: false,
+            is_deleted: false,
+            is_collapsed: false,
+        }];
+        let result = json_to_sections(test::responses::sections_response());
         assert_eq!(result, Ok(sections));
     }
 
@@ -80,20 +92,13 @@ mod tests {
     async fn test_select_section() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/sections?project_id=6V2J6Qhgq47phxHG")
+            .mock("GET", "/api/v1/sections?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::sections())
+            .with_body(test::responses::sections_response())
             .create_async()
             .await;
 
-        let mock2 = server
-            .mock("GET", "/api/v1/id_mappings/projects/123")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
-            .create_async()
-            .await;
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -102,13 +107,19 @@ mod tests {
 
         let expected = Ok(Some(Section {
             id: "1234".to_string(),
+            user_id: "910".to_string(),
+            added_at: "2020-06-11T14:51:08.056500Z".to_string(),
             project_id: "5678".to_string(),
-            order: 1,
+            section_order: 1,
             name: "Bread".to_string(),
+            updated_at: None,
+            archived_at: None,
+            is_archived: false,
+            is_deleted: false,
+            is_collapsed: false,
         }));
         let result = select_section(&config, &project).await;
         assert_eq!(expected, result);
         mock.assert();
-        mock2.assert();
     }
 }

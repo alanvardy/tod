@@ -3,7 +3,7 @@ cargo check &&
 echo "=== CLIPPY ===" &&
 cargo clippy -- -D warnings &&
 echo "=== TEST ===" &&
-cargo test &&
+cargo nextest run &&
 echo "=== TODOS ===" &&
 ./scripts/lint_string.sh "TODO " &&
 ./scripts/lint_string.sh "TODO:" &&

@@ -61,10 +61,17 @@ pub mod fixtures {
 
     pub fn section() -> Section {
         Section {
-            id: String::from("123"),
-            project_id: String::from("456"),
-            order: 0,
-            name: String::from("Cool stuff"),
+            id: "1234".to_string(),
+            added_at: "2020-06-11T14:51:08.056500Z".to_string(),
+            user_id: "1234".to_string(),
+            project_id: "5678".to_string(),
+            section_order: 1,
+            name: "Bread".to_string(),
+            updated_at: None,
+            archived_at: None,
+            is_archived: false,
+            is_deleted: false,
+            is_collapsed: false,
         }
     }
 }
@@ -333,17 +340,28 @@ pub mod responses {
               {
               \"id\": \"1234\",
               \"project_id\": \"5678\",
-              \"order\": 1,
-              \"name\": \"Bread\"
-              },
-              {
-              \"id\": \"9012\",
-              \"project_id\": \"3456\",
-              \"order\": 2,
-              \"name\": \"Meat\"
+              \"user_id\": \"910\",
+              \"section_order\": 1,
+              \"name\": \"Bread\",
+              \"added_at\": \"2020-06-11T14:51:08.056500Z\",
+              \"updated_at\": null,
+              \"archived_at\": null,
+              \"is_archived\": false,
+              \"is_deleted\": false,
+              \"is_collapsed\": false
               }
             ]
             ",
+        )
+    }
+    pub fn sections_response() -> String {
+        format!(
+            "{{
+              \"results\": {},
+              \"next_cursor\": null
+              }}
+            ",
+            sections()
         )
     }
 

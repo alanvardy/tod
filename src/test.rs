@@ -2,35 +2,57 @@
 pub mod fixtures {
 
     use crate::config::Config;
+    use crate::error::Error;
     use crate::projects::Project;
     use crate::sections::Section;
-    use crate::tasks::{DateInfo, Task};
+    use crate::tasks::priority::Priority;
+    use crate::tasks::{DateInfo, Deadline, Duration, Task, Unit};
 
     pub fn task() -> Task {
         Task {
-            id: String::from("222"),
-            content: String::from("Get gifts for the twins"),
-            checked: None,
-            duration: None,
+            id: String::from("6Xqhv4cwxgjwG9w8"),
+            section_id: None,
+            added_by_uid: Some("633166".to_string()),
+            added_at: Some("2025-04-26T22:29:34.404051Z".to_string()),
+            child_order: 1,
+            day_order: -1,
+            responsible_uid: None,
+            assigned_by_uid: None,
+            updated_at: Some("2025-04-26T22:32:46.415849Z".to_string()),
+            deadline: Some(Deadline {
+                lang: "en".to_string(),
+                date: "2025-04-26".to_string(),
+            }),
+            completed_at: None,
+            is_collapsed: false,
+            user_id: String::from("635161"),
+            content: String::from("TEST"),
+            checked: false,
+            duration: Some(Duration {
+                amount: 15,
+                unit: Unit::Minute,
+            }),
             parent_id: None,
-            comment_count: None,
-            project_id: String::from("222"),
+            note_count: 0,
+            project_id: String::from("6VRRxv8CM6GVmmgf"),
             labels: vec![String::from("computer")],
             description: String::from(""),
             due: Some(DateInfo {
-                date: String::from("2061-11-13"),
+                date: String::from("2025-04-26T22:00:00Z"),
+                lang: String::from("en"),
                 is_recurring: false,
-                timezone: Some(String::from("America/Los_Angeles")),
-                string: String::from("Every 2 weeks"),
+                timezone: Some(String::from("America/Vancouver")),
+                string: String::from("2025-04-26 15:00"),
             }),
-            priority: crate::tasks::priority::Priority::Medium,
-            is_deleted: None,
-            is_completed: None,
+            priority: Priority::Medium,
+            is_deleted: false,
         }
     }
 
     pub async fn config() -> Config {
-        Config::new("alreadycreated", None)
+        let (tx, mut _rx) = tokio::sync::mpsc::unbounded_channel::<Error>();
+
+        Config::new("alreadycreated", Some(tx))
             .await
             .expect("Could not generate directory")
             .with_projects(vec![project()])
@@ -114,177 +136,211 @@ pub mod responses {
         )
     }
 
-    pub async fn post_tasks() -> String {
-        format!(
-            "{{\
-        \"items\":\
-            [
-                {{\
-                \"added_by_uid\":44444444,\
-                \"assigned_by_uid\":null,\
-                \"checked\":false,\
-                \"comment_count\":0,\
-                \"child_order\":-5,\
-                \"collapsed\":false,\
-                \"content\":\"Put out recycling\",\
-                \"date_added\":\"2021-06-15T13:01:28Z\",\
-                \"date_completed\":null,\
-                \"description\":\"\",\
-                \"due\":{{\
-                \"date\":\"{}T23:59:00Z\",\
-                \"is_recurring\":true,\
-                \"lang\":\"en\",\
-                \"string\":\"every other mon at 16:30\",\
-                \"timezone\":null}},\
-                \"id\":\"999999\",\
-                \"is_deleted\":false,\
-                \"labels\":[],\
-                \"note_count\":0,\
-                \"parent_id\":null,\
-                \"priority\":3,\
-                \"project_id\":\"22222222\",\
-                \"responsible_uid\":null,\
-                \"section_id\":333333333,\
-                \"sync_id\":null,\
-                \"user_id\":111111111\
-                }}
-            ]
-        }}",
-            time::today_string(&fixtures::config().await).unwrap()
-        )
-    }
-    pub async fn get_tasks() -> String {
+    pub async fn today_tasks_response() -> String {
         format!(
             "
-            [
-                {{\
-                \"added_by_uid\":44444444,\
-                \"assigned_by_uid\":null,\
-                \"checked\":false,\
-                \"child_order\":-5,\
-                \"collapsed\":false,\
-                \"content\":\"Put out recycling\",\
-                \"date_added\":\"2021-06-15T13:01:28Z\",\
-                \"date_completed\":null,\
-                \"description\":\"\",\
-                \"due\":{{\
-                \"date\":\"{}T23:59:00Z\",\
-                \"comment_count\":0,\
-                \"is_recurring\":true,\
-                \"lang\":\"en\",\
-                \"string\":\"every other mon at 16:30\",\
-                \"timezone\":null}},\
-                \"id\":\"999999\",\
-                \"is_deleted\":false,\
-                \"labels\":[],\
-                \"note_count\":0,\
-                \"parent_id\":null,\
-                \"priority\":3,\
-                \"project_id\":\"22222222\",\
-                \"responsible_uid\":null,\
-                \"section_id\":333333333,\
-                \"sync_id\":null,\
-                \"user_id\":111111111\
-                }}
-            ]
+            {{\"results\":
+                
+                [
+                {}
+                ],
+                \"next_cursor\": null}}
         ",
-            time::today_string(&fixtures::config().await).unwrap()
+            today_task().await
         )
     }
 
-    pub fn post_unscheduled_tasks() -> String {
-        String::from(
-            "{\
-        \"items\":\
-            [
-                {\
-                \"added_by_uid\":44444444,\
-                \"assigned_by_uid\":null,\
-                \"checked\":false,\
-                \"child_order\":-5,\
-                \"collapsed\":false,\
-                \"content\":\"Put out recycling\",\
-                \"date_added\":\"2021-06-15T13:01:28Z\",\
-                \"date_completed\":null,\
-                \"description\":\"\",\
-                \"due\":null,\
-                \"id\":\"999999\",\
-                \"is_deleted\":false,\
-                \"labels\":[],\
-                \"note_count\":0,\
-                \"parent_id\":null,\
-                \"priority\":3,\
-                \"project_id\":\"22222222\",\
-                \"responsible_uid\":null,\
-                \"section_id\":333333333,\
-                \"sync_id\":null,\
-                \"user_id\":111111111\
-                }
-            ]
-        }",
+    pub async fn tasks_without_duration_response() -> String {
+        format!(
+            "
+            {{\"results\":
+                
+                [
+                {}
+                ],
+                \"next_cursor\": null}}
+        ",
+            task_without_duration().await
         )
     }
-
-    pub fn get_unscheduled_tasks() -> String {
-        String::from(
+    pub async fn unscheduled_tasks_response() -> String {
+        format!(
             "
-            [
-                {\
-                \"added_by_uid\":44444444,\
-                \"assigned_by_uid\":null,\
-                \"checked\":false,\
-                \"child_order\":-5,\
-                \"collapsed\":false,\
-                \"content\":\"Put out recycling\",\
-                \"date_added\":\"2021-06-15T13:01:28Z\",\
-                \"date_completed\":null,\
-                \"description\":\"\",\
-                \"due\":null,\
-                \"id\":\"999999\",\
-                \"is_deleted\":false,\
-                \"labels\":[],\
-                \"note_count\":0,\
-                \"parent_id\":null,\
-                \"priority\":3,\
-                \"project_id\":\"22222222\",\
-                \"responsible_uid\":null,\
-                \"section_id\":333333333,\
-                \"sync_id\":null,\
-                \"user_id\":111111111\
-                }
-            ]
+            {{\"results\":
+                
+                [
+                {}
+                ],
+                \"next_cursor\": null}}
         ",
+            unscheduled_task().await
         )
     }
 
     pub fn task() -> String {
         String::from(
             "\
-        {\"added_by_uid\":635166,\
-        \"assigned_by_uid\":null,\
-        \"checked\":false,\
-        \"child_order\":2,\
-        \"collapsed\":false,\
-        \"content\":\"testy test\",\
-        \"date_added\":\"2021-09-12T19:11:07Z\",\
-        \"date_completed\":null,\
-        \"description\":\"\",\
-        \"due\":null,\
-        \"id\":\"5149481867\",\
-        \"is_deleted\":false,\
-        \"labels\":[],\
-        \"legacy_project_id\":333333333,\
-        \"parent_id\":null,\
-        \"priority\":1,\
-        \"comment_count\":0,\
-        \"project_id\":\"5555555\",\
-        \"reminder\":null,\
-        \"responsible_uid\":null,\
-        \"section_id\":null,\
-        \"sync_id\":null,\
-        \"user_id\":111111\
-    }",
+{
+                        \"user_id\": \"635161\",
+                        \"id\": \"6Xqhv4cwxgjwG9w8\",
+                        \"project_id\": \"6VRRxv8CM6GVmmgf\",
+                        \"section_id\": null,
+                        \"parent_id\": null,
+                        \"added_by_uid\": \"633166\",
+                        \"assigned_by_uid\": null,
+                        \"responsible_uid\": null,
+                        \"labels\": [\"computer\"],
+                        \"deadline\": {
+                                \"date\": \"2025-04-26\",
+                                \"lang\": \"en\"
+                        },
+                        \"duration\": {
+                                \"amount\": 15,
+                                \"unit\": \"minute\"
+                        },
+                        \"checked\": false,
+                        \"is_deleted\": false,
+                        \"added_at\": \"2025-04-26T22:29:34.404051Z\",
+                        \"completed_at\": null,
+                        \"updated_at\": \"2025-04-26T22:32:46.415849Z\",
+                        \"due\": {
+                                \"date\": \"2025-04-26T22:00:00Z\",
+                                \"timezone\": \"America/Vancouver\",
+                                \"string\": \"2025-04-26 15:00\",
+                                \"lang\": \"en\",
+                                \"is_recurring\": false
+                        },
+                        \"priority\": 3,
+                        \"child_order\": 1,
+                        \"content\": \"TEST\",
+                        \"description\": \"\",
+                        \"note_count\": 0,
+                        \"day_order\": -1,
+                        \"is_collapsed\": false
+                }",
         )
+    }
+
+    pub async fn today_task() -> String {
+        let config = fixtures::config().await.with_timezone("America/Vancouver");
+        let date = time::today_string(&config).unwrap();
+
+        format!(
+            "
+                    {{\
+                        \"user_id\": \"635161\",
+                        \"id\": \"6Xqhv4cwxgjwG9w8\",
+                        \"project_id\": \"6VRRxv8CM6GVmmgf\",
+                        \"section_id\": null,
+                        \"parent_id\": null,
+                        \"added_by_uid\": \"633166\",
+                        \"assigned_by_uid\": null,
+                        \"responsible_uid\": null,
+                        \"labels\": [\"computer\"],
+                        \"deadline\": {{
+                                \"date\": \"{}\",
+                                \"lang\": \"en\"
+                        }},
+                        \"duration\": {{
+                                \"amount\": 15,
+                                \"unit\": \"minute\"
+                        }},
+                        \"checked\": false,
+                        \"is_deleted\": false,
+                        \"added_at\": \"2025-04-26T22:29:34.404051Z\",
+                        \"completed_at\": null,
+                        \"updated_at\": \"2025-04-26T22:32:46.415849Z\",
+                        \"due\": {{
+                                \"date\": \"{}T22:00:00Z\",
+                                \"timezone\": \"America/Vancouver\",
+                                \"string\": \"2025-04-26 15:00\",
+                                \"lang\": \"en\",
+                                \"is_recurring\": false
+                        }},
+                        \"priority\": 3,
+                        \"child_order\": 1,
+                        \"content\": \"TEST\",
+                        \"description\": \"\",
+                        \"note_count\": 0,
+                        \"day_order\": -1,
+                        \"is_collapsed\": false
+                    }}
+        ",
+            date, date
+        )
+    }
+
+    pub async fn task_without_duration() -> String {
+        format!(
+            "
+                    {{\
+                        \"user_id\": \"635161\",
+                        \"id\": \"6Xqhv4cwxgjwG9w8\",
+                        \"project_id\": \"6VRRxv8CM6GVmmgf\",
+                        \"section_id\": null,
+                        \"parent_id\": null,
+                        \"added_by_uid\": \"633166\",
+                        \"assigned_by_uid\": null,
+                        \"responsible_uid\": null,
+                        \"labels\": [\"computer\"],
+                        \"deadline\": {{
+                                \"date\": \"2025-04-26\",
+                                \"lang\": \"en\"
+                        }},
+                        \"duration\": null,
+                        \"checked\": false,
+                        \"is_deleted\": false,
+                        \"added_at\": \"2025-04-26T22:29:34.404051Z\",
+                        \"completed_at\": null,
+                        \"updated_at\": \"2025-04-26T22:32:46.415849Z\",
+                        \"due\": {{
+                                \"date\": \"{}T22:00:00Z\",
+                                \"timezone\": \"America/Vancouver\",
+                                \"string\": \"2025-04-26 15:00\",
+                                \"lang\": \"en\",
+                                \"is_recurring\": false
+                        }},
+                        \"priority\": 3,
+                        \"child_order\": 1,
+                        \"content\": \"TEST\",
+                        \"description\": \"\",
+                        \"note_count\": 0,
+                        \"day_order\": -1,
+                        \"is_collapsed\": false
+                    }}
+        ",
+            time::today_string(&fixtures::config().await).unwrap()
+        )
+    }
+
+    pub async fn unscheduled_task() -> String {
+        "
+                    {\
+                    \"added_by_uid\":\"44444444\",\
+                    \"assigned_by_uid\":null,\
+                    \"checked\":false,\
+                    \"child_order\":-5,\
+                    \"day_order\":-5,\
+                    \"is_collapsed\":false,\
+                    \"content\":\"Put out recycling\",\
+                    \"date_added\":\"2021-06-15T13:01:28Z\",\
+                    \"date_completed\":null,\
+                    \"description\":\"\",\
+                    \"due\": null,\
+                    \"id\":\"999999\",\
+                    \"is_deleted\":false,\
+                    \"labels\":[],\
+                    \"note_count\":0,\
+                    \"parent_id\":null,\
+                    \"priority\":3,\
+                    \"project_id\":\"22222222\",\
+                    \"responsible_uid\":null,\
+                    \"section_id\":\"333333333\",\
+                    \"sync_id\":null,\
+                    \"user_id\":\"111111111\"\
+                    }
+        "
+        .to_string()
     }
 
     pub fn comment() -> String {

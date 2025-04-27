@@ -97,6 +97,11 @@ enum Commands {
     #[clap(alias = "s")]
     /// (s) Commands for generating shell completions
     Shell(ShellCommands),
+
+    #[command(subcommand)]
+    #[clap(alias = "e")]
+    /// (e) Commands for manually testing Tod against the API
+    Test(TestCommands),
 }
 
 // -- PROJECTS --
@@ -446,8 +451,19 @@ enum ShellCommands {
     Completions(ShellCompletions),
 }
 
+#[derive(Subcommand, Debug, Clone)]
+enum TestCommands {
+    #[clap(alias = "a")]
+    /// (a) Hit all API endpoints
+    All(TestAll),
+}
+
 #[derive(Parser, Debug, Clone)]
 struct ConfigCheckVersion {}
+
+#[derive(Parser, Debug, Clone)]
+struct TestAll {}
+
 #[derive(Parser, Debug, Clone)]
 struct ConfigReset {}
 
@@ -772,6 +788,19 @@ async fn select_command(
         Commands::Shell(ShellCommands::Completions(args)) => {
             (true, true, shell_completions(args).await)
         }
+
+        // Test
+        Commands::Test(TestCommands::All(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                test_all(config, args).await,
+            )
+        }
     }
 }
 
@@ -802,6 +831,9 @@ async fn shell_completions(args: &ShellCompletions) -> Result<String, Error> {
     };
 
     Ok(String::new())
+}
+async fn test_all(config: Config, _args: &TestAll) -> Result<String, Error> {
+    todoist::test_all_endpoints(config).await
 }
 
 // --- TASK ---

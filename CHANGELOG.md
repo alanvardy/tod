@@ -5,6 +5,8 @@
 - Completing recurring tasks will uncheck child tasks
 - Use V1 Ids for new V1 API
 - Fetch projects from new v1 endpoint
+- Fetch sections from new v1 endpoint
+- Fetch tasks from new v1 endpoint
 
 ## 2025-03-25 v0.6.31
 

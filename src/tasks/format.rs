@@ -124,7 +124,7 @@ fn create_links(content: &str) -> String {
 
 pub fn number_comments(task: &Task) -> String {
     let comment_icon = color::purple_string("★");
-    let num_comments = task.comment_count.unwrap_or_default();
+    let num_comments = task.note_count;
     if num_comments == 1 {
         return format!("\n{comment_icon} 1 comment");
     }
@@ -184,7 +184,7 @@ mod tests {
     async fn test_comments() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/comments/?task_id=222")
+            .mock("GET", "/rest/v2/comments/?task_id=6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::comments())

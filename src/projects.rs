@@ -695,7 +695,7 @@ mod tests {
     #[tokio::test]
     async fn test_move_task_to_project() {
         let mut config = test::fixtures::config().await.mock_select(2);
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let sections: Vec<Section> = Vec::new();
 
         move_task_to_project(&mut config, task, &sections)
@@ -767,7 +767,7 @@ mod tests {
             .mock("POST", "/rest/v2/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
 

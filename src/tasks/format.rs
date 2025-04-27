@@ -192,7 +192,7 @@ mod tests {
             .await;
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
 
         let comments = comments(&config, &task).await.unwrap();
 

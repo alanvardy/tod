@@ -35,6 +35,7 @@ pub struct Config {
     /// The ID of the next task (NO LONGER IN USE)
     next_id: Option<String>,
     /// The next task, for use with complete
+    #[serde(rename = "next_taskv1")]
     next_task: Option<Task>,
     /// Whether to trigger terminal bell on success
     #[serde(default)]
@@ -551,7 +552,7 @@ mod tests {
     async fn set_and_clear_next_task_should_work() {
         let config = test::fixtures::config().await;
         assert_eq!(config.next_task, None);
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let config = config.set_next_task(task.clone());
         assert_eq!(config.next_task, Some(task));
         let config = config.clear_next_task();

@@ -22,7 +22,7 @@ pub const TASKS_URL: &str = "/api/v1/tasks/";
 pub const COMMENTS_URL: &str = "/rest/v2/comments/";
 const SECTIONS_URL: &str = "/api/v1/sections";
 const PROJECTS_URL: &str = "/api/v1/projects";
-const LABELS_URL: &str = "/rest/v2/labels";
+const LABELS_URL: &str = "/api/v1/labels";
 const IDS_URL: &str = "/api/v1/id_mappings/";
 
 /// Used to sanity check all the Todoist API endpoints to make sure that we are able to process the JSON payloads they are sending back.
@@ -524,7 +524,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/quick")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
 
@@ -532,7 +532,27 @@ mod tests {
 
         assert_eq!(
             quick_add_task(&config, "testy test").await,
-            Ok(test::fixtures::task())
+            Ok(test::fixtures::today_task().await)
+        );
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_list_labels() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/api/v1/labels")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::labels_response())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+
+        assert_eq!(
+            list_labels(&config, false).await,
+            Ok(vec![test::fixtures::label()])
         );
         mock.assert();
     }
@@ -544,7 +564,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
 
@@ -566,7 +586,7 @@ mod tests {
                 &[]
             )
             .await,
-            Ok(test::fixtures::task())
+            Ok(test::fixtures::today_task().await)
         );
         mock.assert();
     }
@@ -616,7 +636,7 @@ mod tests {
 
         assert_eq!(
             tasks_for_project(&config_with_timezone, project).await,
-            Ok(vec![test::fixtures::task()])
+            Ok(vec![test::fixtures::today_task().await])
         );
 
         mock.assert();
@@ -635,7 +655,7 @@ mod tests {
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let response = complete_task(&config, &task, false).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
@@ -661,7 +681,7 @@ mod tests {
             .create_async()
             .await;
 
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let binding = config.projects().await.unwrap();
@@ -685,7 +705,7 @@ mod tests {
             .create_async()
             .await;
 
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let response = delete_task(&config, &task, false).await;
@@ -702,7 +722,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/5149481867")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
 
@@ -717,7 +737,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_prioritize_a_task() {
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let url: &str = &format!("{}{}", "/api/v1/tasks/", task.id);
         let mut server = mockito::Server::new_async().await;
 
@@ -738,7 +758,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_update_date_on_a_task() {
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let url: &str = &format!("{}{}", "/api/v1/tasks/", task.id);
         let mut server = mockito::Server::new_async().await;
 
@@ -760,7 +780,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_legacy_id() {
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let url: &str = &format!("{}{}", "/api/v1/id_mappings/tasks/", task.id);
         let mut server = mockito::Server::new_async().await;
 

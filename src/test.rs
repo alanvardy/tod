@@ -3,25 +3,42 @@ pub mod fixtures {
 
     use crate::config::Config;
     use crate::error::Error;
+    use crate::labels::Label;
     use crate::projects::Project;
     use crate::sections::Section;
     use crate::tasks::priority::Priority;
     use crate::tasks::{DateInfo, Deadline, Duration, Task, Unit};
+    use crate::time;
 
-    pub fn task() -> Task {
+    pub fn label() -> Label {
+        Label {
+            id: "123".to_string(),
+            name: "345".to_string(),
+            color: "red".to_string(),
+            order: None,
+            is_favorite: false,
+        }
+    }
+    async fn today_date() -> String {
+        let config = config().await.with_timezone("America/Vancouver");
+        time::today_string(&config).unwrap()
+    }
+
+    pub async fn today_task() -> Task {
+        let date = today_date().await;
         Task {
             id: String::from("6Xqhv4cwxgjwG9w8"),
             section_id: None,
             added_by_uid: Some("633166".to_string()),
-            added_at: Some("2025-04-26T22:29:34.404051Z".to_string()),
+            added_at: Some(format!("{}T22:29:34.404051Z", date)),
             child_order: 1,
             day_order: -1,
             responsible_uid: None,
             assigned_by_uid: None,
-            updated_at: Some("2025-04-26T22:32:46.415849Z".to_string()),
+            updated_at: Some(format!("{}T22:32:46.415849Z", date)),
             deadline: Some(Deadline {
                 lang: "en".to_string(),
-                date: "2025-04-26".to_string(),
+                date: date.clone(),
             }),
             completed_at: None,
             is_collapsed: false,
@@ -38,11 +55,11 @@ pub mod fixtures {
             labels: vec![String::from("computer")],
             description: String::from(""),
             due: Some(DateInfo {
-                date: String::from("2025-04-26T22:00:00Z"),
+                date: format!("{}T22:00:00Z", date),
                 lang: String::from("en"),
                 is_recurring: false,
                 timezone: Some(String::from("America/Vancouver")),
-                string: String::from("2025-04-26 15:00"),
+                string: format!("{} 15:00", date),
             }),
             priority: Priority::Medium,
             is_deleted: false,
@@ -136,13 +153,39 @@ pub mod responses {
         )
     }
 
+    pub fn label() -> String {
+        String::from(
+            "{
+                \"id\": \"123\",
+                \"name\": \"345\",
+                \"is_favorite\": false,
+                \"order\": null,
+                \"color\": \"red\"
+            }",
+        )
+    }
+
+    pub fn labels_response() -> String {
+        format!(
+            "
+            {{\"results\":
+                
+                [
+                    {}
+                ],
+                \"next_cursor\": null}}
+        ",
+            label()
+        )
+    }
+
     pub async fn today_tasks_response() -> String {
         format!(
             "
             {{\"results\":
                 
                 [
-                {}
+                    {}
                 ],
                 \"next_cursor\": null}}
         ",
@@ -156,7 +199,7 @@ pub mod responses {
             {{\"results\":
                 
                 [
-                {}
+                    {}
                 ],
                 \"next_cursor\": null}}
         ",
@@ -169,7 +212,7 @@ pub mod responses {
             {{\"results\":
                 
                 [
-                {}
+                    {}
                 ],
                 \"next_cursor\": null}}
         ",
@@ -177,57 +220,11 @@ pub mod responses {
         )
     }
 
-    pub fn task() -> String {
-        String::from(
-            "\
-{
-                        \"user_id\": \"635161\",
-                        \"id\": \"6Xqhv4cwxgjwG9w8\",
-                        \"project_id\": \"6VRRxv8CM6GVmmgf\",
-                        \"section_id\": null,
-                        \"parent_id\": null,
-                        \"added_by_uid\": \"633166\",
-                        \"assigned_by_uid\": null,
-                        \"responsible_uid\": null,
-                        \"labels\": [\"computer\"],
-                        \"deadline\": {
-                                \"date\": \"2025-04-26\",
-                                \"lang\": \"en\"
-                        },
-                        \"duration\": {
-                                \"amount\": 15,
-                                \"unit\": \"minute\"
-                        },
-                        \"checked\": false,
-                        \"is_deleted\": false,
-                        \"added_at\": \"2025-04-26T22:29:34.404051Z\",
-                        \"completed_at\": null,
-                        \"updated_at\": \"2025-04-26T22:32:46.415849Z\",
-                        \"due\": {
-                                \"date\": \"2025-04-26T22:00:00Z\",
-                                \"timezone\": \"America/Vancouver\",
-                                \"string\": \"2025-04-26 15:00\",
-                                \"lang\": \"en\",
-                                \"is_recurring\": false
-                        },
-                        \"priority\": 3,
-                        \"child_order\": 1,
-                        \"content\": \"TEST\",
-                        \"description\": \"\",
-                        \"note_count\": 0,
-                        \"day_order\": -1,
-                        \"is_collapsed\": false
-                }",
-        )
-    }
-
     pub async fn today_task() -> String {
-        let config = fixtures::config().await.with_timezone("America/Vancouver");
-        let date = time::today_string(&config).unwrap();
-
+        let date = today_date().await;
         format!(
-            "
-                    {{\
+            "\
+                {{
                         \"user_id\": \"635161\",
                         \"id\": \"6Xqhv4cwxgjwG9w8\",
                         \"project_id\": \"6VRRxv8CM6GVmmgf\",
@@ -247,13 +244,13 @@ pub mod responses {
                         }},
                         \"checked\": false,
                         \"is_deleted\": false,
-                        \"added_at\": \"2025-04-26T22:29:34.404051Z\",
+                        \"added_at\": \"{}T22:29:34.404051Z\",
                         \"completed_at\": null,
-                        \"updated_at\": \"2025-04-26T22:32:46.415849Z\",
+                        \"updated_at\": \"{}T22:32:46.415849Z\",
                         \"due\": {{
                                 \"date\": \"{}T22:00:00Z\",
                                 \"timezone\": \"America/Vancouver\",
-                                \"string\": \"2025-04-26 15:00\",
+                                \"string\": \"{} 15:00\",
                                 \"lang\": \"en\",
                                 \"is_recurring\": false
                         }},
@@ -264,13 +261,13 @@ pub mod responses {
                         \"note_count\": 0,
                         \"day_order\": -1,
                         \"is_collapsed\": false
-                    }}
-        ",
-            date, date
+                }}",
+            date, date, date, date, date
         )
     }
 
     pub async fn task_without_duration() -> String {
+        let date = today_date().await;
         format!(
             "
                     {{\
@@ -309,7 +306,7 @@ pub mod responses {
                         \"is_collapsed\": false
                     }}
         ",
-            time::today_string(&fixtures::config().await).unwrap()
+            date
         )
     }
 
@@ -591,5 +588,10 @@ pub mod responses {
                     \"yanked\":false}}]}}",
             VERSION
         )
+    }
+
+    async fn today_date() -> String {
+        let config = fixtures::config().await.with_timezone("America/Vancouver");
+        time::today_string(&config).unwrap()
     }
 }

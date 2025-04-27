@@ -922,15 +922,15 @@ mod tests {
     async fn date_value_can_handle_date() {
         let config = test::fixtures::config().await;
         // On another day
-        assert_eq!(test::fixtures::task().date_value(&config), 50);
+        assert_eq!(test::fixtures::today_task().await.date_value(&config), 50);
 
         // Recurring
         let task = Task {
             due: Some(DateInfo {
                 is_recurring: true,
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert_eq!(task.date_value(&config), 0);
 
@@ -943,7 +943,7 @@ mod tests {
                 timezone: Some(String::from("America/Los_Angeles")),
                 string: String::from("Every 2 weeks"),
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert_eq!(task.date_value(&config), 150);
 
@@ -958,9 +958,9 @@ mod tests {
         let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-02-27T19:41:56Z"),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert_eq!(task.date_value(&config), 50);
@@ -973,9 +973,9 @@ mod tests {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: String::from("2021-08-13"),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let task = task
@@ -994,9 +994,9 @@ mod tests {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let task_text = task
@@ -1013,9 +1013,9 @@ mod tests {
         let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert_matches!(task.datetime(&config), Some(DateTime { .. }));
@@ -1027,9 +1027,9 @@ mod tests {
         let task = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert!(task.datetime(&config).is_some());
@@ -1040,7 +1040,7 @@ mod tests {
         let config = test::fixtures::config().await;
         let task = Task {
             due: None,
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert!(task.has_no_date());
@@ -1048,9 +1048,9 @@ mod tests {
         let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert!(!task_today.has_no_date());
     }
@@ -1060,7 +1060,7 @@ mod tests {
         let config = test::fixtures::config().await;
         let task = Task {
             due: None,
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert!(!task.is_today(&config).unwrap());
@@ -1073,7 +1073,7 @@ mod tests {
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert!(task_today.is_today(&config).unwrap());
 
@@ -1085,7 +1085,7 @@ mod tests {
                 timezone: None,
                 string: String::from("Every 2 weeks"),
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert!(!task_in_past.is_today(&config).unwrap());
     }
@@ -1101,7 +1101,7 @@ mod tests {
                 timezone: None,
                 string: String::from("Every 2 weeks"),
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let today_recurring = Task {
@@ -1112,7 +1112,7 @@ mod tests {
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let future = Task {
@@ -1123,7 +1123,7 @@ mod tests {
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let input = vec![future.clone(), today_recurring.clone(), today.clone()];
@@ -1300,13 +1300,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_priority() {
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
         let config = test::fixtures::config()
@@ -1331,7 +1331,7 @@ mod tests {
             .create_async()
             .await;
 
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -1352,7 +1352,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_display_task() {
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let string = String::from("TEST");
         assert_eq!(string, task.to_string())
     }

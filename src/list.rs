@@ -222,7 +222,7 @@ mod tests {
     async fn test_import() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/quick/add")
+            .mock("POST", "/api/v1/tasks/quick")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())
@@ -241,17 +241,17 @@ mod tests {
     async fn test_prioritize() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
         let mock2 = server
-            .mock("POST", "/rest/v2/tasks/999999")
+            .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -271,15 +271,15 @@ mod tests {
     async fn test_timebox() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_unscheduled_tasks())
+            .with_body(test::responses::tasks_without_duration_response().await)
             .create_async()
             .await;
 
         let mock2 = server
-            .mock("POST", "/rest/v2/tasks/999999")
+            .mock("POST", "/api/v1/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())
@@ -333,18 +333,10 @@ mod tests {
     async fn test_prioritize_tasks_with_no_tasks() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks().await)
-            .create_async()
-            .await;
-
-        let mock2 = server
-            .mock("GET", "/api/v1/id_mappings/projects/123")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -362,16 +354,15 @@ mod tests {
             ))
         );
         mock.assert();
-        mock2.assert();
     }
     #[tokio::test]
     async fn test_process_with_filter() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -403,10 +394,10 @@ mod tests {
     async fn test_process_with_project() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -418,13 +409,6 @@ mod tests {
             .create_async()
             .await;
 
-        let mock3 = server
-            .mock("GET", "/api/v1/id_mappings/projects/123")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
-            .create_async()
-            .await;
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -447,24 +431,23 @@ mod tests {
         );
         mock.assert();
         mock2.assert();
-        mock3.assert();
     }
     #[tokio::test]
     async fn test_label() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
         let mock2 = server
-            .mock("POST", "/rest/v2/tasks/999999")
+            .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -496,10 +479,10 @@ mod tests {
     async fn test_view() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -523,20 +506,13 @@ mod tests {
     async fn test_view_with_project() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
-        let mock2 = server
-            .mock("GET", "/api/v1/id_mappings/projects/123")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
-            .create_async()
-            .await;
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let mut config_with_timezone = config
@@ -552,8 +528,7 @@ mod tests {
             .unwrap();
 
         assert!(tasks.contains("Tasks for"));
-        assert!(tasks.contains("- Put out recycling\n"));
+        assert!(tasks.contains("- TEST\n"));
         mock.assert();
-        mock2.assert();
     }
 }

@@ -106,10 +106,10 @@ mod tests {
     async fn test_rename_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -126,10 +126,10 @@ mod tests {
     async fn test_get_next_task() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -146,23 +146,23 @@ mod tests {
         let filter = String::from("today");
         let task = next_task(&config_with_timezone, &filter).await.unwrap();
 
-        assert!(task.contains("Put out recycling"));
-        assert!(task.contains("every other mon at 16:30"));
+        assert!(task.contains("TEST"));
+        assert!(task.contains("for 15 min"));
     }
 
     #[tokio::test]
     async fn test_schedule() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/tasks/?filter=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::get_unscheduled_tasks())
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
         let mock2 = server
-            .mock("POST", "/rest/v2/tasks/999999")
+            .mock("POST", "/api/v1/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::task())

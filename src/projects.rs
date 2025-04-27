@@ -78,6 +78,10 @@ impl Display for Project {
         write!(f, "{}\n{}/{}", self.name, PROJECT_URL, self.id)
     }
 }
+pub fn json_to_project(json: String) -> Result<Project, Error> {
+    let project: Project = serde_json::from_str(&json)?;
+    Ok(project)
+}
 pub fn json_to_projects(json: String) -> Result<Vec<Project>, Error> {
     let response: ProjectResponse = serde_json::from_str(&json)?;
     Ok(response.results)
@@ -532,26 +536,19 @@ mod tests {
     async fn test_get_next_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
-        let mock2 = server
-            .mock("GET", "/api/v1/id_mappings/projects/123")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
-            .create_async()
-            .await;
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
 
         let config_with_timezone = config
-            .with_timezone("US/Pacific")
+            .with_timezone("America/Vancouver")
             .with_path(format!("{config_dir}/test2"))
             .with_mock_url(server.url());
         let binding = config_with_timezone.projects().await.unwrap();
@@ -559,12 +556,11 @@ mod tests {
 
         config_with_timezone.clone().create().await.unwrap();
 
-        let task = next_task(config_with_timezone, project).await.unwrap();
+        let response = next_task(config_with_timezone, project).await.unwrap();
 
-        assert!(task.contains("Put out recycling"));
-        assert!(task.contains("1 task(s) remaining"));
+        assert!(response.contains("TEST"));
+        assert!(response.contains("1 task(s) remaining"));
         mock.assert();
-        mock2.assert();
     }
 
     #[tokio::test]
@@ -650,10 +646,10 @@ mod tests {
     async fn test_empty() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
@@ -713,20 +709,13 @@ mod tests {
     async fn test_rename_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_tasks().await)
+            .with_body(test::responses::today_tasks_response().await)
             .create_async()
             .await;
 
-        let mock2 = server
-            .mock("GET", "/api/v1/id_mappings/projects/123")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
-            .create_async()
-            .await;
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -737,7 +726,6 @@ mod tests {
         let result = edit_task(&config, project);
         assert_eq!(result.await, Ok("Finished editing task".to_string()));
         mock.assert();
-        mock2.assert();
     }
     #[tokio::test]
     async fn test_project_delete() {
@@ -768,10 +756,10 @@ mod tests {
     async fn test_schedule() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/projects/get_data")
+            .mock("GET", "/api/v1/tasks/?project_id=123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::post_unscheduled_tasks())
+            .with_body(test::responses::unscheduled_tasks_response().await)
             .create_async()
             .await;
 

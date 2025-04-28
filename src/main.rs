@@ -10,7 +10,6 @@ use cargo::Version;
 use clap::{CommandFactory, Parser, Subcommand};
 use config::Config;
 use error::Error;
-use id::ID;
 use input::DateTimeInput;
 use list::Flag;
 use std::fmt::Display;
@@ -1011,9 +1010,9 @@ async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, E
 async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Error> {
     let TaskComment { content } = args;
     match config.next_task() {
-        Some(id) => {
+        Some(task) => {
             let content = fetch_string(content, &config, input::CONTENT)?;
-            todoist::comment_task(&config, ID::Legacy(id.to_string()), content, true).await
+            todoist::comment_task(&config, &task, content, true).await
         }
         None => Err(error::new(
             "task_comment",

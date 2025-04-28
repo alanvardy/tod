@@ -4,12 +4,24 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Comment {
     pub id: String,
-    pub task_id: Option<String>,
-    pub project_id: Option<String>,
+    pub posted_uid: Option<String>,
     pub content: String,
+    pub uids_to_notify: Option<Vec<String>>,
+    pub is_deleted: bool,
     pub posted_at: String,
-    pub attachment: Option<Attachment>,
+    pub reactions: Option<Reactions>,
+    pub item_id: String,
+    pub file_attachment: Option<Attachment>,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct CommentResponse {
+    pub results: Vec<Comment>,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct Reactions {}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(untagged)]
@@ -63,7 +75,7 @@ impl Comment {
         let datetime = time::datetime_from_str(&self.posted_at, timezone)?;
         let formatted_date = time::format_datetime(&datetime, config)?;
 
-        let link = match &self.attachment {
+        let link = match &self.file_attachment {
             None => String::new(),
             Some(Attachment::Url(UrlAttachment {
                 url,

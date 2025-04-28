@@ -184,10 +184,10 @@ mod tests {
     async fn test_comments() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/rest/v2/comments/?task_id=6Xqhv4cwxgjwG9w8")
+            .mock("GET", "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::comments())
+            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -198,7 +198,7 @@ mod tests {
 
         assert_matches!(
             comments.as_str(),
-            "\n\n★ Comments ★\n\nPosted 2016-09-22 07:00:00 UTC\nAttachment \u{1b}]8;;https://s3.amazonaws.com/domorebetter/Todoist+Setup+Guide.pdf\u{1b}\\[File.pdf]\u{1b}]8;;\u{1b}\\\nNeed one bottle of milk"
+            "\n\n★ Comments ★\n\nPosted 2016-09-22 07:00:00 UTC\nNeed one bottle of milk"
         );
         mock.expect(1);
     }

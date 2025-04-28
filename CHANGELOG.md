@@ -8,6 +8,7 @@
 - Fetch sections from new v1 endpoint
 - Fetch tasks from new v1 endpoint
 - Fetch labels from new v1 endpoint
+- Fetch comments from new v1 endpoint
 
 ## 2025-03-25 v0.6.31
 

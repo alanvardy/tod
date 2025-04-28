@@ -12,7 +12,6 @@ pub mod priority;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::error::Error;
-use crate::id::ID;
 use crate::input::CONTENT;
 use crate::input::DateTimeInput;
 use crate::projects;
@@ -729,9 +728,7 @@ pub fn spawn_update_task_due(
 /// Updates task inside another thread
 pub fn spawn_comment_task(config: Config, task: Task, task_comment: String) -> JoinHandle<()> {
     tokio::spawn(async move {
-        if let Err(e) =
-            todoist::comment_task(&config, ID::Legacy(task.id), task_comment, false).await
-        {
+        if let Err(e) = todoist::comment_task(&config, &task, task_comment, false).await {
             config.tx().send(e).unwrap();
         }
     })

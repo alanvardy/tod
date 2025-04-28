@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use urlencoding::encode;
 mod request;
 
-use crate::comment::Comment;
+use crate::comment::{Comment, CommentResponse};
 use crate::config::Config;
 use crate::error::Error;
 use crate::id::{self, ID, Id, Resource};
@@ -19,7 +19,7 @@ use crate::{color, projects, sections, tasks, time};
 // TODOIST URLS
 const SYNC_URL: &str = "/sync/v9/sync";
 pub const TASKS_URL: &str = "/api/v1/tasks/";
-pub const COMMENTS_URL: &str = "/rest/v2/comments/";
+pub const COMMENTS_URL: &str = "/api/v1/comments/";
 const SECTIONS_URL: &str = "/api/v1/sections";
 const PROJECTS_URL: &str = "/api/v1/projects";
 const LABELS_URL: &str = "/api/v1/labels";
@@ -54,7 +54,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let task = get_task(&config, &task.id).await?;
 
     println!("Commenting on task");
-    let _comment = comment_task(&config, ID::V1(task.id.clone()), name.clone(), false).await?;
+    let _comment = comment_task(&config, &task, name.clone(), false).await?;
 
     println!("Getting comments for task");
     let _comments = comments(&config, &task).await?;
@@ -447,13 +447,12 @@ pub async fn create_project(
 
 pub async fn comment_task(
     config: &Config,
-    id: ID,
+    task: &Task,
     content: String,
     spinner: bool,
 ) -> Result<String, Error> {
-    let resource = Resource::Task;
-    let id = get_legacy_id(config, resource, id).await?;
-    let body = json!({"task_id": id, "content": content});
+    let task_id = task.id.clone();
+    let body = json!({"task_id": task_id, "content": content});
     let url = COMMENTS_URL.to_string();
 
     request::post_todoist_rest(config, url, body, spinner).await?;
@@ -481,8 +480,8 @@ pub fn sync_json_to_user(json: String) -> Result<User, Error> {
 }
 
 pub fn rest_json_to_comments(json: String) -> Result<Vec<Comment>, Error> {
-    let comments: Vec<Comment> = serde_json::from_str(&json)?;
-    Ok(comments)
+    let response: CommentResponse = serde_json::from_str(&json)?;
+    Ok(response.results)
 }
 
 #[cfg(test)]
@@ -595,7 +594,7 @@ mod tests {
     async fn test_comment_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/rest/v2/comments/")
+            .mock("POST", "/api/v1/comments/")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::comment())
@@ -603,15 +602,9 @@ mod tests {
             .await;
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
-
+        let task = test::fixtures::today_task().await;
         assert_eq!(
-            comment_task(
-                &config,
-                ID::Legacy("123".to_string()),
-                String::from("New comment"),
-                true
-            )
-            .await,
+            comment_task(&config, &task, String::from("New comment"), true).await,
             Ok(String::from("✓"))
         );
         mock.assert();

@@ -7,7 +7,7 @@ mod request;
 use crate::comment::{Comment, CommentResponse};
 use crate::config::Config;
 use crate::error::Error;
-use crate::id::{self, ID, Id, Resource};
+use crate::id::{self, Resource};
 use crate::labels::{self, Label};
 use crate::projects::Project;
 use crate::sections::Section;
@@ -113,23 +113,6 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     // - sections_for_project
     // - move_task_to_section
     Ok(color::green_string("Completed successfully"))
-}
-
-pub async fn get_legacy_id(config: &Config, resource: Resource, id: ID) -> Result<String, Error> {
-    match id {
-        ID::Legacy(id) => Ok(id),
-        ID::V1(id) => {
-            let url = format!("{IDS_URL}{resource}/{id}");
-            let json = request::get_todoist_rest(config, url, true).await?;
-            match id::json_to_ids(json)?.pop() {
-                None => Err(Error {
-                    source: "get_legacy_id".to_string(),
-                    message: format!("Could not convert {id} to legacy id"),
-                }),
-                Some(Id { old_id, .. }) => Ok(old_id),
-            }
-        }
-    }
 }
 
 pub async fn get_v1_ids(
@@ -271,9 +254,10 @@ pub async fn move_task_to_project(
     project: &Project,
     spinner: bool,
 ) -> Result<String, Error> {
-    let project_id = get_legacy_id(config, Resource::Project, ID::V1(project.id.clone())).await?;
-    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "project_id": project_id}}]});
-    let url = String::from(SYNC_URL);
+    let project_id = project.id.clone();
+    let task_id = task.id;
+    let body = json!({"project_id": project_id});
+    let url = format!("{TASKS_URL}{task_id}/move");
 
     request::post_todoist_sync(config, url, body, spinner).await?;
     Ok(String::from("✓"))
@@ -285,8 +269,10 @@ pub async fn move_task_to_section(
     section: &Section,
     spinner: bool,
 ) -> Result<String, Error> {
-    let body = json!({"commands": [{"type": "item_move", "uuid": request::new_uuid(), "args": {"id": task.id, "section_id": section.id}}]});
-    let url = String::from(SYNC_URL);
+    let section_id = section.id.clone();
+    let task_id = task.id;
+    let body = json!({"section_id": section_id});
+    let url = format!("{TASKS_URL}{task_id}/move");
 
     request::post_todoist_sync(config, url, body, spinner).await?;
     Ok(String::from("✓"))
@@ -655,22 +641,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_move_a_task() {
+    async fn should_move_a_task_to_a_project() {
         let mut server = mockito::Server::new_async().await;
 
         let mock = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8/move")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::sync())
-            .create_async()
-            .await;
-
-        let mock2 = server
-            .mock("GET", "/api/v1/id_mappings/projects/123")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
 
@@ -683,7 +661,27 @@ mod tests {
 
         assert_eq!(response, Ok(String::from("✓")));
         mock.assert();
-        mock2.assert();
+    }
+    #[tokio::test]
+    async fn should_move_a_task_to_a_section() {
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server
+            .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8/move")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::today_task().await)
+            .create_async()
+            .await;
+
+        let task = test::fixtures::today_task().await;
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+
+        let section = test::fixtures::section();
+        let response = move_task_to_section(&config, task, &section, false).await;
+
+        assert_eq!(response, Ok(String::from("✓")));
+        mock.assert();
     }
 
     #[tokio::test]
@@ -769,33 +767,5 @@ mod tests {
             update_task_due_natural_language(&config, task, "today".to_string(), None, true).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
-    }
-
-    #[tokio::test]
-    async fn should_get_legacy_id() {
-        let task = test::fixtures::today_task().await;
-        let url: &str = &format!("{}{}", "/api/v1/id_mappings/tasks/", task.id);
-        let mut server = mockito::Server::new_async().await;
-
-        let mock = server
-            .mock("GET", url)
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
-            .create_async()
-            .await;
-
-        let config = test::fixtures::config().await.with_mock_url(server.url());
-        let resource = Resource::Task;
-
-        // Makes the request when converting a new ID to old
-        let response = get_legacy_id(&config, resource.clone(), ID::V1(task.id.clone())).await;
-        mock.assert();
-        assert_eq!(response, Ok(String::from("6V2J6Qhgq47phxHG")));
-
-        // Makes no request when passed an old ID
-        let response = get_legacy_id(&config, resource, ID::Legacy(task.id)).await;
-        mock.expect(0);
-        assert_eq!(response, Ok(String::from("6Xqhv4cwxgjwG9w8")));
     }
 }

@@ -8,9 +8,9 @@ use crate::comment::{Comment, CommentResponse};
 use crate::config::Config;
 use crate::error::Error;
 use crate::id::{self, Resource};
-use crate::labels::{self, Label};
+use crate::labels::{self, Label, LabelResponse};
 use crate::projects::{Project, ProjectResponse};
-use crate::sections::Section;
+use crate::sections::{Section, SectionResponse};
 use crate::tasks::priority::Priority;
 use crate::tasks::{Task, TaskResponse};
 use crate::user::User;
@@ -274,11 +274,29 @@ pub async fn all_tasks_by_filter(
 pub async fn all_sections_by_project(
     config: &Config,
     project: &Project,
+    limit: Option<u8>,
 ) -> Result<Vec<Section>, Error> {
+    let limit = limit.unwrap_or(QUERY_LIMIT);
     let project_id = project.id.clone();
-    let url = format!("{SECTIONS_URL}?project_id={project_id}");
-    let json = request::get_todoist(config, url, true).await?;
-    sections::json_to_sections(json)
+    let mut url = format!("{SECTIONS_URL}?project_id={project_id}&limit={limit}");
+    let mut sections: Vec<Section> = Vec::new();
+
+    loop {
+        let json = request::get_todoist(config, url, true).await?;
+        let SectionResponse {
+            results,
+            next_cursor,
+        } = sections::json_to_sections_response(json)?;
+        sections.extend(results);
+        match next_cursor {
+            None => break,
+            Some(string) => {
+                url =
+                    format!("{SECTIONS_URL}?project_id={project_id}&limit={limit}&cursor={string}");
+            }
+        };
+    }
+    Ok(sections)
 }
 
 pub async fn all_projects(config: &Config, limit: Option<u8>) -> Result<Vec<Project>, Error> {
@@ -308,9 +326,24 @@ pub async fn all_labels(
     spinner: bool,
     limit: Option<u8>,
 ) -> Result<Vec<Label>, Error> {
-    let _limit = limit.unwrap_or(QUERY_LIMIT);
-    let json = request::get_todoist(config, LABELS_URL.to_string(), spinner).await?;
-    labels::json_to_labels(json)
+    let limit = limit.unwrap_or(QUERY_LIMIT);
+    let mut url = format!("{LABELS_URL}?limit={limit}");
+    let mut labels: Vec<Label> = Vec::new();
+    loop {
+        let json = request::get_todoist(config, url, spinner).await?;
+        let LabelResponse {
+            results,
+            next_cursor,
+        } = labels::json_to_labels_response(json)?;
+        labels.extend(results);
+        match next_cursor {
+            None => break,
+            Some(string) => {
+                url = format!("{LABELS_URL}?limit={limit}&cursor={string}");
+            }
+        }
+    }
+    Ok(labels)
 }
 
 /// Move an task to a different project
@@ -608,7 +641,7 @@ mod tests {
     async fn test_all_labels() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/labels")
+            .mock("GET", "/api/v1/labels?limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::labels_response())

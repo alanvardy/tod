@@ -30,7 +30,7 @@ pub async fn all_sections(config: &mut Config) -> Result<Vec<Section>, Error> {
 
     let mut handles = Vec::new();
     for project in projects.iter() {
-        let handle = todoist::all_sections_by_project(config, project);
+        let handle = todoist::all_sections_by_project(config, project, None);
 
         handles.push(handle);
     }
@@ -41,13 +41,13 @@ pub async fn all_sections(config: &mut Config) -> Result<Vec<Section>, Error> {
     Ok(sections)
 }
 
-pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
+pub fn json_to_sections_response(json: String) -> Result<SectionResponse, Error> {
     let response: SectionResponse = serde_json::from_str(&json)?;
-    Ok(response.results)
+    Ok(response)
 }
 
 pub async fn select_section(config: &Config, project: &Project) -> Result<Option<Section>, Error> {
-    let sections = todoist::all_sections_by_project(config, project).await?;
+    let sections = todoist::all_sections_by_project(config, project, None).await?;
     let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
     if section_names.is_empty() {
         Ok(None)
@@ -84,15 +84,17 @@ mod tests {
             is_deleted: false,
             is_collapsed: false,
         }];
-        let result = json_to_sections(test::responses::sections_response());
-        assert_eq!(result, Ok(sections));
+        let result = json_to_sections_response(test::responses::sections_response())
+            .unwrap()
+            .results;
+        assert_eq!(result, sections);
     }
 
     #[tokio::test]
     async fn test_select_section() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/sections?project_id=123")
+            .mock("GET", "/api/v1/sections?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sections_response())

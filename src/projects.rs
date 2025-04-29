@@ -662,7 +662,7 @@ mod tests {
             .await;
 
         let mock3 = server
-            .mock("GET", "/api/v1/sections?project_id=123")
+            .mock("GET", "/api/v1/sections?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::sections())

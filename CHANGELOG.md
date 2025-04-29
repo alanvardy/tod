@@ -3,17 +3,13 @@
 ## Unreleased (on main branch only)
 
 - Completing recurring tasks will uncheck child tasks
-- Use V1 Ids for new V1 API
-- Fetch projects from new v1 endpoint
-- Fetch sections from new v1 endpoint
-- Fetch tasks from new v1 endpoint
-- Fetch labels from new v1 endpoint
-- Fetch comments from new v1 endpoint
-- Move tasks with new v1 endpoint
-- Complete tasks with new v1 endpoint
-- Get user data from new v1 endpoint
-- Paginate tasks
-- Paginate comments
+- Use new endpoints
+  - Projects
+  - Sections
+  - Tasks
+  - Labels
+  - Comments
+  - User data
 
 ## 2025-03-25 v0.6.31
 

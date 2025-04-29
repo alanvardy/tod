@@ -4,7 +4,6 @@ use crate::{config::Config, error::Error, todoist};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
-#[allow(dead_code)]
 pub struct Label {
     pub id: String,
     pub name: String,

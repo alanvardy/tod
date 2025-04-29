@@ -51,6 +51,7 @@ pub async fn post_todoist_sync(
 
 /// Post to Todoist via REST api
 /// We use this when we want more options and don't need natural language processing
+/// Pass in a Value::Null for the body if there is no payload
 pub async fn post_todoist_rest(
     config: &Config,
     url: String,
@@ -66,16 +67,18 @@ pub async fn post_todoist_rest(
 
     debug::print(config, format!("POST {request_url}\nbody: {body}"));
 
-    let response = Client::new()
+    let client = Client::new()
         .post(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization)
         .header("X-Request-Id", new_uuid())
-        .json(&body)
-        .timeout(get_timeout(config))
-        .send()
-        .await?;
+        .timeout(get_timeout(config));
 
+    let response = match &body {
+        Value::Null => client.send().await?,
+
+        body => client.json(&body).send().await?,
+    };
     maybe_stop_spinner(spinner);
     handle_response(config, response, "POST", url, body).await
 }

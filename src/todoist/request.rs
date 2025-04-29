@@ -23,36 +23,10 @@ const TODOIST_URL: &str = "https://api.todoist.com";
 const SPINNER: Spinners = Spinners::Dots4;
 const MESSAGE: &str = "Querying API";
 
-/// Post to Todoist via sync API
-/// We use sync when we want natural languague processing.
-pub async fn post_todoist_sync(
-    config: &Config,
-    url: String,
-    body: serde_json::Value,
-    spinner: bool,
-) -> Result<String, Error> {
-    let base_url = get_base_url(config);
-    let request_url = format!("{base_url}{url}");
-    let token = &config.token;
-
-    let spinner = maybe_start_spinner(config, spinner);
-    debug::print(config, format!("POST {request_url}\nbody: {body}"));
-    let response = Client::new()
-        .post(request_url.clone())
-        .header(CONTENT_TYPE, "application/json")
-        .header(AUTHORIZATION, format!("Bearer {token}"))
-        .json(&body)
-        .timeout(get_timeout(config))
-        .send()
-        .await?;
-    maybe_stop_spinner(spinner);
-    handle_response(config, response, "POST", url, body).await
-}
-
 /// Post to Todoist via REST api
 /// We use this when we want more options and don't need natural language processing
 /// Pass in a Value::Null for the body if there is no payload
-pub async fn post_todoist_rest(
+pub async fn post_todoist(
     config: &Config,
     url: String,
     body: serde_json::Value,
@@ -83,7 +57,7 @@ pub async fn post_todoist_rest(
     handle_response(config, response, "POST", url, body).await
 }
 
-pub async fn delete_todoist_rest(
+pub async fn delete_todoist(
     config: &Config,
     url: String,
     body: serde_json::Value,
@@ -114,11 +88,7 @@ pub async fn delete_todoist_rest(
 
 // Combine get and post into one function
 /// Get Todoist via REST api
-pub async fn get_todoist_rest(
-    config: &Config,
-    url: String,
-    spinner: bool,
-) -> Result<String, Error> {
+pub async fn get_todoist(config: &Config, url: String, spinner: bool) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let token = config.token.clone();
 

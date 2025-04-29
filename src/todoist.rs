@@ -11,8 +11,8 @@ use crate::id::{self, Resource};
 use crate::labels::{self, Label};
 use crate::projects::Project;
 use crate::sections::Section;
-use crate::tasks::Task;
 use crate::tasks::priority::Priority;
+use crate::tasks::{Task, TaskResponse};
 use crate::user::User;
 use crate::{color, projects, sections, tasks, time};
 
@@ -24,6 +24,8 @@ const USER_URL: &str = "/api/v1/user";
 const PROJECTS_URL: &str = "/api/v1/projects";
 const LABELS_URL: &str = "/api/v1/labels";
 const IDS_URL: &str = "/api/v1/id_mappings/";
+/// Number of items that can be requested from API at once
+pub const QUERY_LIMIT: u8 = 200;
 
 /// Used to sanity check all the Todoist API endpoints to make sure that we are able to process the JSON payloads they are sending back.
 pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
@@ -35,10 +37,10 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let project = create_project(&config, name.clone(), false).await?;
 
     println!("List projects");
-    let _projects = projects(&config).await?;
+    let _projects = all_projects(&config).await?;
 
     println!("Creating task with add_task");
-    let task = add_task(
+    let task = create_task(
         &config,
         &name,
         &project,
@@ -54,22 +56,22 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let task = get_task(&config, &task.id).await?;
 
     println!("Commenting on task");
-    let _comment = comment_task(&config, &task, name.clone(), false).await?;
+    let _comment = create_comment(&config, &task, name.clone(), false).await?;
 
     println!("Getting comments for task");
-    let _comments = comments(&config, &task).await?;
+    let _comments = all_comments(&config, &task).await?;
 
     println!("Deleting task");
     delete_task(&config, &task, false).await?;
 
     println!("Creating task with quick_add_task");
-    let task = quick_add_task(&config, &name).await?;
+    let task = quick_create_task(&config, &name).await?;
 
     println!("Finding tasks with tasks_for_project");
-    let _tasks = tasks_for_project(&config, &project).await?;
+    let _tasks = all_tasks_by_project(&config, &project).await?;
 
     println!("Finding tasks with tasks_for_filter");
-    let _tasks = tasks_for_filter(&config, "tod").await?;
+    let _tasks = all_tasks_by_filter(&config, "tod").await?;
 
     println!("Updating task priority");
     let _task = update_task_priority(&config, &task, &priority, false).await?;
@@ -104,7 +106,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     delete_project(&config, &project, false).await?;
 
     println!("List labels");
-    let _labels = list_labels(&config, false).await?;
+    let _labels = all_labels(&config, false).await?;
 
     println!("Get user data");
     let _data = get_user_data(&config).await?;
@@ -122,7 +124,7 @@ pub async fn get_v1_ids(
 ) -> Result<Vec<String>, Error> {
     let ids = ids.join(",");
     let url = format!("{IDS_URL}{resource}/{ids}");
-    let json = request::get_todoist_rest(config, url, true).await?;
+    let json = request::get_todoist(config, url, true).await?;
     let ids = id::json_to_ids(json)?
         .into_iter()
         .map(|i| i.new_id)
@@ -132,23 +134,23 @@ pub async fn get_v1_ids(
 }
 
 /// Add a new task to the inbox with natural language support
-pub async fn quick_add_task(config: &Config, content: &str) -> Result<Task, Error> {
+pub async fn quick_create_task(config: &Config, content: &str) -> Result<Task, Error> {
     let url = format!("{TASKS_URL}quick");
     let body = json!({"text": content, "auto_reminder": true});
 
-    let json = request::post_todoist_sync(config, url, body, true).await?;
+    let json = request::post_todoist(config, url, body, true).await?;
     tasks::json_to_task(json)
 }
 
 pub async fn get_task(config: &Config, id: &str) -> Result<Task, Error> {
     let url = format!("{TASKS_URL}{id}");
-    let json = request::get_todoist_rest(config, url, true).await?;
+    let json = request::get_todoist(config, url, true).await?;
     tasks::json_to_task(json)
 }
 
 /// Add Task without natural language support but supports additional parameters
 #[allow(clippy::too_many_arguments)]
-pub async fn add_task(
+pub async fn create_task(
     config: &Config,
     content: &String,
     project: &Project,
@@ -190,25 +192,42 @@ pub async fn add_task(
 
     let body = json!(body);
 
-    let json = request::post_todoist_rest(config, url, body, true).await?;
+    let json = request::post_todoist(config, url, body, true).await?;
     tasks::json_to_task(json)
 }
 
 /// Get a vector of all tasks for a project
-pub async fn tasks_for_project(config: &Config, project: &Project) -> Result<Vec<Task>, Error> {
+pub async fn all_tasks_by_project(config: &Config, project: &Project) -> Result<Vec<Task>, Error> {
     let project_id = project.id.clone();
-    let url = format!("{TASKS_URL}?project_id={project_id}");
-    let json = request::get_todoist_rest(config, url, true).await?;
-    tasks::json_to_tasks(json)
+    let mut tasks: Vec<Task> = Vec::new();
+    let mut url = format!("{TASKS_URL}?project_id={project_id}&limit={QUERY_LIMIT}");
+
+    loop {
+        let json = request::get_todoist(config, url, true).await?;
+        let TaskResponse {
+            results,
+            next_cursor,
+        } = tasks::json_to_tasks_response(json)?;
+        tasks.extend(results);
+        match next_cursor {
+            None => break,
+            Some(string) => {
+                url = format!(
+                    "{TASKS_URL}?project_id={project_id}&limit={QUERY_LIMIT}&cursor={string}"
+                );
+            }
+        };
+    }
+    Ok(tasks)
 }
 
-pub async fn tasks_for_filters(
+pub async fn all_tasks_by_filters(
     config: &Config,
     filter: &str,
 ) -> Result<Vec<(String, Vec<Task>)>, Error> {
     let filters: Vec<_> = filter
         .split(',')
-        .map(|f| tasks_for_filter(config, f))
+        .map(|f| all_tasks_by_filter(config, f))
         .collect();
 
     let mut acc = Vec::new();
@@ -219,31 +238,50 @@ pub async fn tasks_for_filters(
     Ok(acc)
 }
 
-pub async fn tasks_for_filter(config: &Config, filter: &str) -> Result<(String, Vec<Task>), Error> {
+pub async fn all_tasks_by_filter(
+    config: &Config,
+    filter: &str,
+) -> Result<(String, Vec<Task>), Error> {
     let encoded = encode(filter);
-    let url = format!("{TASKS_URL}filter?query={encoded}");
-    let json = request::get_todoist_rest(config, url, true).await?;
-    let tasks = tasks::json_to_tasks(json)?;
+    let mut tasks: Vec<Task> = Vec::new();
+    let mut url = format!("{TASKS_URL}filter?query={encoded}&limit={QUERY_LIMIT}");
+
+    loop {
+        let json = request::get_todoist(config, url, true).await?;
+        let TaskResponse {
+            results,
+            next_cursor,
+        } = tasks::json_to_tasks_response(json)?;
+        tasks.extend(results);
+        match next_cursor {
+            None => break,
+            Some(string) => {
+                url = format!(
+                    "{TASKS_URL}filter?query={encoded}&limit={QUERY_LIMIT}&cursor={string}"
+                );
+            }
+        };
+    }
     Ok((filter.to_string(), tasks))
 }
 
-pub async fn sections_for_project(
+pub async fn all_sections_by_project(
     config: &Config,
     project: &Project,
 ) -> Result<Vec<Section>, Error> {
     let project_id = project.id.clone();
     let url = format!("{SECTIONS_URL}?project_id={project_id}");
-    let json = request::get_todoist_rest(config, url, true).await?;
+    let json = request::get_todoist(config, url, true).await?;
     sections::json_to_sections(json)
 }
 
-pub async fn projects(config: &Config) -> Result<Vec<Project>, Error> {
-    let json = request::get_todoist_rest(config, PROJECTS_URL.to_string(), true).await?;
+pub async fn all_projects(config: &Config) -> Result<Vec<Project>, Error> {
+    let json = request::get_todoist(config, PROJECTS_URL.to_string(), true).await?;
     projects::json_to_projects(json)
 }
 
-pub async fn list_labels(config: &Config, spinner: bool) -> Result<Vec<Label>, Error> {
-    let json = request::get_todoist_rest(config, LABELS_URL.to_string(), spinner).await?;
+pub async fn all_labels(config: &Config, spinner: bool) -> Result<Vec<Label>, Error> {
+    let json = request::get_todoist(config, LABELS_URL.to_string(), spinner).await?;
     labels::json_to_labels(json)
 }
 
@@ -259,7 +297,7 @@ pub async fn move_task_to_project(
     let body = json!({"project_id": project_id});
     let url = format!("{TASKS_URL}{task_id}/move");
 
-    request::post_todoist_sync(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     Ok(String::from("✓"))
 }
 
@@ -274,7 +312,7 @@ pub async fn move_task_to_section(
     let body = json!({"section_id": section_id});
     let url = format!("{TASKS_URL}{task_id}/move");
 
-    request::post_todoist_sync(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     Ok(String::from("✓"))
 }
 
@@ -288,7 +326,7 @@ pub async fn update_task_priority(
     let body = json!({ "priority": priority });
     let url = format!("{}{}", TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
@@ -305,7 +343,7 @@ pub async fn add_task_label(
     let body = json!({ "labels": labels});
     let url = format!("{}{}", TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back an task
     Ok(String::from("✓"))
 }
@@ -330,7 +368,7 @@ pub async fn update_task_due_natural_language(
     };
     let url = format!("{}{}", TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -345,7 +383,7 @@ pub async fn update_task_content(
     let body = json!({ "content": content});
     let url = format!("{}{}", TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -360,7 +398,7 @@ pub async fn update_task_description(
     let body = json!({ "description": description});
     let url = format!("{}{}", TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -376,7 +414,7 @@ pub async fn update_task_labels(
     let body = json!({ "labels": labels});
     let url = format!("{}{}", TASKS_URL, task.id);
 
-    request::post_todoist_rest(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
@@ -386,7 +424,7 @@ pub async fn complete_task(config: &Config, task: &Task, spinner: bool) -> Resul
     let task_id = task.id.clone();
     let url = format!("{TASKS_URL}{task_id}/close");
 
-    request::post_todoist_rest(config, url, Value::Null, spinner).await?;
+    request::post_todoist(config, url, Value::Null, spinner).await?;
 
     if !cfg!(test) {
         config.reload().await?.clear_next_task().save().await?;
@@ -400,7 +438,7 @@ pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<
     let body = json!({});
     let url = format!("{}{}", TASKS_URL, task.id);
 
-    request::delete_todoist_rest(config, url, body, spinner).await?;
+    request::delete_todoist(config, url, body, spinner).await?;
     Ok(String::from("✓"))
 }
 
@@ -412,7 +450,7 @@ pub async fn delete_project(
     let url = format!("{}/{}", PROJECTS_URL, project.id);
     let body = json!({});
 
-    request::delete_todoist_rest(config, url, body, spinner).await?;
+    request::delete_todoist(config, url, body, spinner).await?;
     Ok(String::from("✓"))
 }
 pub async fn create_project(
@@ -423,11 +461,11 @@ pub async fn create_project(
     let url = PROJECTS_URL.to_string();
     let body = json!({"name": name});
 
-    let json = request::post_todoist_rest(config, url, body, spinner).await?;
+    let json = request::post_todoist(config, url, body, spinner).await?;
     projects::json_to_project(json)
 }
 
-pub async fn comment_task(
+pub async fn create_comment(
     config: &Config,
     task: &Task,
     content: String,
@@ -437,30 +475,30 @@ pub async fn comment_task(
     let body = json!({"task_id": task_id, "content": content});
     let url = COMMENTS_URL.to_string();
 
-    request::post_todoist_rest(config, url, body, spinner).await?;
+    request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
     Ok(String::from("✓"))
 }
 
 pub async fn get_user_data(config: &Config) -> Result<User, Error> {
     let url = USER_URL.to_string();
-    let json = request::get_todoist_rest(config, url, true).await?;
-    sync_json_to_user(json)
+    let json = request::get_todoist(config, url, true).await?;
+    json_to_user(json)
 }
 
-pub async fn comments(config: &Config, task: &Task) -> Result<Vec<Comment>, Error> {
+pub async fn all_comments(config: &Config, task: &Task) -> Result<Vec<Comment>, Error> {
     let task_id = &task.id;
     let url = format!("{COMMENTS_URL}?task_id={task_id}");
-    let json = request::get_todoist_rest(config, url, true).await?;
-    rest_json_to_comments(json)
+    let json = request::get_todoist(config, url, true).await?;
+    json_to_comments(json)
 }
 
-pub fn sync_json_to_user(json: String) -> Result<User, Error> {
+pub fn json_to_user(json: String) -> Result<User, Error> {
     let user: User = serde_json::from_str(&json)?;
     Ok(user)
 }
 
-pub fn rest_json_to_comments(json: String) -> Result<Vec<Comment>, Error> {
+pub fn json_to_comments(json: String) -> Result<Vec<Comment>, Error> {
     let response: CommentResponse = serde_json::from_str(&json)?;
     Ok(response.results)
 }
@@ -498,7 +536,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_quick_add_task() {
+    async fn test_quick_create_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/api/v1/tasks/quick")
@@ -511,14 +549,14 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         assert_eq!(
-            quick_add_task(&config, "testy test").await,
+            quick_create_task(&config, "testy test").await,
             Ok(test::fixtures::today_task().await)
         );
         mock.assert();
     }
 
     #[tokio::test]
-    async fn test_list_labels() {
+    async fn test_all_labels() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/api/v1/labels")
@@ -531,14 +569,14 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         assert_eq!(
-            list_labels(&config, false).await,
+            all_labels(&config, false).await,
             Ok(vec![test::fixtures::label()])
         );
         mock.assert();
     }
 
     #[tokio::test]
-    async fn test_add_task() {
+    async fn test_create_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/api/v1/tasks/")
@@ -555,7 +593,7 @@ mod tests {
         let priority = priority::Priority::None;
         let section = test::fixtures::section();
         assert_eq!(
-            add_task(
+            create_task(
                 &config,
                 &String::from("New task"),
                 &project,
@@ -572,7 +610,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_comment_task() {
+    async fn test_create_comment() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/api/v1/comments/")
@@ -585,18 +623,18 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
         let task = test::fixtures::today_task().await;
         assert_eq!(
-            comment_task(&config, &task, String::from("New comment"), true).await,
+            create_comment(&config, &task, String::from("New comment"), true).await,
             Ok(String::from("✓"))
         );
         mock.assert();
     }
 
     #[tokio::test]
-    async fn should_get_tasks_for_project() {
+    async fn test_all_tasks_by_project() {
         let mut server = mockito::Server::new_async().await;
 
         let mock = server
-            .mock("GET", "/api/v1/tasks/?project_id=123")
+            .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -609,7 +647,7 @@ mod tests {
         let project = binding.first().unwrap();
 
         assert_eq!(
-            tasks_for_project(&config_with_timezone, project).await,
+            all_tasks_by_project(&config_with_timezone, project).await,
             Ok(vec![test::fixtures::today_task().await])
         );
 
@@ -617,7 +655,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_complete_a_task() {
+    async fn test_complete_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8/close")
@@ -636,7 +674,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_move_a_task_to_a_project() {
+    async fn test_move_task_to_project() {
         let mut server = mockito::Server::new_async().await;
 
         let mock = server
@@ -658,7 +696,7 @@ mod tests {
         mock.assert();
     }
     #[tokio::test]
-    async fn should_move_a_task_to_a_section() {
+    async fn test_move_task_to_section() {
         let mut server = mockito::Server::new_async().await;
 
         let mock = server
@@ -722,7 +760,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_prioritize_a_task() {
+    async fn test_update_task_priority() {
         let task = test::fixtures::today_task().await;
         let url: &str = &format!("{}{}", "/api/v1/tasks/", task.id);
         let mut server = mockito::Server::new_async().await;
@@ -743,7 +781,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn should_update_date_on_a_task() {
+    async fn test_update_task_due_natural_language() {
         let task = test::fixtures::today_task().await;
         let url: &str = &format!("{}{}", "/api/v1/tasks/", task.id);
         let mut server = mockito::Server::new_async().await;

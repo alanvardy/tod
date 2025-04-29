@@ -26,7 +26,7 @@ impl Display for Label {
     }
 }
 pub async fn get_labels(config: &Config, spinner: bool) -> Result<Vec<Label>, Error> {
-    todoist::list_labels(config, spinner).await
+    todoist::all_labels(config, spinner).await
 }
 
 pub fn json_to_labels(json: String) -> Result<Vec<Label>, Error> {

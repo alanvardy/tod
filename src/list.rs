@@ -31,9 +31,9 @@ pub async fn view(config: &mut Config, flag: Flag, sort: &SortOrder) -> Result<S
     let list_of_tasks = match flag.clone() {
         Flag::Project(project) => vec![(
             project.name.clone(),
-            todoist::tasks_for_project(config, &project).await?,
+            todoist::all_tasks_by_project(config, &project).await?,
         )],
-        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter).await?,
+        Flag::Filter(filter) => todoist::all_tasks_by_filters(config, &filter).await?,
     };
 
     let mut buffer = String::new();
@@ -55,12 +55,12 @@ pub async fn view(config: &mut Config, flag: Flag, sort: &SortOrder) -> Result<S
 /// Prioritize all unprioritized tasks
 pub async fn prioritize(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
     let tasks = match flag.clone() {
-        Flag::Project(project) => todoist::tasks_for_project(config, &project)
+        Flag::Project(project) => todoist::all_tasks_by_project(config, &project)
             .await?
             .into_iter()
             .filter(|task| task.priority == Priority::None)
             .collect::<Vec<Task>>(),
-        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+        Flag::Filter(filter) => todoist::all_tasks_by_filters(config, &filter)
             .await?
             .iter()
             .flat_map(|(_, tasks)| tasks.to_owned())
@@ -89,12 +89,12 @@ pub async fn prioritize(config: &Config, flag: Flag, sort: &SortOrder) -> Result
 /// Gives tasks durations
 pub async fn timebox(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
     let tasks = match flag.clone() {
-        Flag::Project(project) => todoist::tasks_for_project(config, &project)
+        Flag::Project(project) => todoist::all_tasks_by_project(config, &project)
             .await?
             .into_iter()
             .filter(|task| task.duration.is_none())
             .collect::<Vec<Task>>(),
-        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+        Flag::Filter(filter) => todoist::all_tasks_by_filters(config, &filter)
             .await?
             .into_iter()
             .flat_map(|(_, tasks)| tasks.to_owned())
@@ -126,11 +126,11 @@ pub async fn timebox(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
 pub async fn process(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
     let tasks = match flag.clone() {
         Flag::Project(project) => {
-            let tasks = todoist::tasks_for_project(config, &project).await?;
+            let tasks = todoist::all_tasks_by_project(config, &project).await?;
             tasks::filter_not_in_future(tasks, config)?
         }
 
-        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+        Flag::Filter(filter) => todoist::all_tasks_by_filters(config, &filter)
             .await?
             .into_iter()
             .flat_map(|(_, tasks)| tasks.to_owned())
@@ -167,8 +167,8 @@ pub async fn label(
     sort: &SortOrder,
 ) -> Result<String, Error> {
     let tasks = match flag.clone() {
-        Flag::Project(project) => todoist::tasks_for_project(config, &project).await?,
-        Flag::Filter(filter) => todoist::tasks_for_filters(config, &filter)
+        Flag::Project(project) => todoist::all_tasks_by_project(config, &project).await?,
+        Flag::Filter(filter) => todoist::all_tasks_by_filters(config, &filter)
             .await?
             .into_iter()
             .flat_map(|(_, tasks)| tasks.to_owned())
@@ -206,7 +206,7 @@ pub async fn import(config: &Config, file_path: &String) -> Result<String, Error
         .filter(|s| !s.is_empty())
         .collect();
     for line in lines {
-        todoist::quick_add_task(config, &line).await?;
+        todoist::quick_create_task(config, &line).await?;
     }
 
     Ok(String::from("✓"))
@@ -241,7 +241,7 @@ mod tests {
     async fn test_prioritize() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/filter?query=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -271,7 +271,7 @@ mod tests {
     async fn test_timebox() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/?project_id=123")
+            .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::tasks_without_duration_response().await)
@@ -333,7 +333,7 @@ mod tests {
     async fn test_prioritize_tasks_with_no_tasks() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/?project_id=123")
+            .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -359,7 +359,7 @@ mod tests {
     async fn test_process_with_filter() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/filter?query=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -394,7 +394,7 @@ mod tests {
     async fn test_process_with_project() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/?project_id=123")
+            .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -436,7 +436,7 @@ mod tests {
     async fn test_label() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/filter?query=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -479,7 +479,7 @@ mod tests {
     async fn test_view() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/filter?query=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -506,7 +506,7 @@ mod tests {
     async fn test_view_with_project() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/?project_id=123")
+            .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)

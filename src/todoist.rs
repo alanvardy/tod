@@ -488,9 +488,25 @@ pub async fn get_user_data(config: &Config) -> Result<User, Error> {
 
 pub async fn all_comments(config: &Config, task: &Task) -> Result<Vec<Comment>, Error> {
     let task_id = &task.id;
-    let url = format!("{COMMENTS_URL}?task_id={task_id}");
-    let json = request::get_todoist(config, url, true).await?;
-    json_to_comments(json)
+    let mut url = format!("{COMMENTS_URL}?task_id={task_id}&limit={QUERY_LIMIT}");
+    let mut comments: Vec<Comment> = Vec::new();
+    loop {
+        let json = request::get_todoist(config, url, true).await?;
+        let CommentResponse {
+            results,
+            next_cursor,
+        } = json_to_comment_response(json)?;
+
+        comments.extend(results);
+        match next_cursor {
+            None => break,
+            Some(string) => {
+                url =
+                    format!("{COMMENTS_URL}?task_id={task_id}&limit={QUERY_LIMIT}&cursor={string}");
+            }
+        };
+    }
+    Ok(comments)
 }
 
 pub fn json_to_user(json: String) -> Result<User, Error> {
@@ -498,9 +514,9 @@ pub fn json_to_user(json: String) -> Result<User, Error> {
     Ok(user)
 }
 
-pub fn json_to_comments(json: String) -> Result<Vec<Comment>, Error> {
+pub fn json_to_comment_response(json: String) -> Result<CommentResponse, Error> {
     let response: CommentResponse = serde_json::from_str(&json)?;
-    Ok(response.results)
+    Ok(response)
 }
 
 #[cfg(test)]

@@ -12,6 +12,8 @@
 - Move tasks with new v1 endpoint
 - Complete tasks with new v1 endpoint
 - Get user data from new v1 endpoint
+- Paginate tasks
+- Paginate comments
 
 ## 2025-03-25 v0.6.31
 

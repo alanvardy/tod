@@ -31,7 +31,7 @@ pub async fn view(config: &mut Config, flag: Flag, sort: &SortOrder) -> Result<S
     let list_of_tasks = match flag.clone() {
         Flag::Project(project) => vec![(
             project.name.clone(),
-            todoist::all_tasks_by_project(config, &project).await?,
+            todoist::all_tasks_by_project(config, &project, None).await?,
         )],
         Flag::Filter(filter) => todoist::all_tasks_by_filters(config, &filter).await?,
     };
@@ -55,7 +55,7 @@ pub async fn view(config: &mut Config, flag: Flag, sort: &SortOrder) -> Result<S
 /// Prioritize all unprioritized tasks
 pub async fn prioritize(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
     let tasks = match flag.clone() {
-        Flag::Project(project) => todoist::all_tasks_by_project(config, &project)
+        Flag::Project(project) => todoist::all_tasks_by_project(config, &project, None)
             .await?
             .into_iter()
             .filter(|task| task.priority == Priority::None)
@@ -89,7 +89,7 @@ pub async fn prioritize(config: &Config, flag: Flag, sort: &SortOrder) -> Result
 /// Gives tasks durations
 pub async fn timebox(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
     let tasks = match flag.clone() {
-        Flag::Project(project) => todoist::all_tasks_by_project(config, &project)
+        Flag::Project(project) => todoist::all_tasks_by_project(config, &project, None)
             .await?
             .into_iter()
             .filter(|task| task.duration.is_none())
@@ -126,7 +126,7 @@ pub async fn timebox(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
 pub async fn process(config: &Config, flag: Flag, sort: &SortOrder) -> Result<String, Error> {
     let tasks = match flag.clone() {
         Flag::Project(project) => {
-            let tasks = todoist::all_tasks_by_project(config, &project).await?;
+            let tasks = todoist::all_tasks_by_project(config, &project, None).await?;
             tasks::filter_not_in_future(tasks, config)?
         }
 
@@ -167,7 +167,7 @@ pub async fn label(
     sort: &SortOrder,
 ) -> Result<String, Error> {
     let tasks = match flag.clone() {
-        Flag::Project(project) => todoist::all_tasks_by_project(config, &project).await?,
+        Flag::Project(project) => todoist::all_tasks_by_project(config, &project, None).await?,
         Flag::Filter(filter) => todoist::all_tasks_by_filters(config, &filter)
             .await?
             .into_iter()

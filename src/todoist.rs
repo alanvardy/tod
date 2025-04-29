@@ -9,7 +9,7 @@ use crate::config::Config;
 use crate::error::Error;
 use crate::id::{self, Resource};
 use crate::labels::{self, Label};
-use crate::projects::Project;
+use crate::projects::{Project, ProjectResponse};
 use crate::sections::Section;
 use crate::tasks::priority::Priority;
 use crate::tasks::{Task, TaskResponse};
@@ -37,7 +37,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let project = create_project(&config, name.clone(), false).await?;
 
     println!("List projects");
-    let _projects = all_projects(&config).await?;
+    let _projects = all_projects(&config, Some(1)).await?;
 
     println!("Creating task with add_task");
     let task = create_task(
@@ -55,23 +55,26 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     println!("Getting task with get_task");
     let task = get_task(&config, &task.id).await?;
 
-    println!("Commenting on task");
+    println!("Commenting on task twice");
+    let _comment = create_comment(&config, &task, name.clone(), false).await?;
+
     let _comment = create_comment(&config, &task, name.clone(), false).await?;
 
     println!("Getting comments for task");
-    let _comments = all_comments(&config, &task).await?;
+    let _comments = all_comments(&config, &task, Some(1)).await?;
 
     println!("Deleting task");
     delete_task(&config, &task, false).await?;
 
-    println!("Creating task with quick_add_task");
+    println!("Creating two tasks with quick_add_task");
+    let _task = quick_create_task(&config, &name).await?;
     let task = quick_create_task(&config, &name).await?;
 
     println!("Finding tasks with tasks_for_project");
-    let _tasks = all_tasks_by_project(&config, &project).await?;
+    let _tasks = all_tasks_by_project(&config, &project, Some(1)).await?;
 
     println!("Finding tasks with tasks_for_filter");
-    let _tasks = all_tasks_by_filter(&config, "tod").await?;
+    let _tasks = all_tasks_by_filter(&config, "tod", Some(1)).await?;
 
     println!("Updating task priority");
     let _task = update_task_priority(&config, &task, &priority, false).await?;
@@ -106,7 +109,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     delete_project(&config, &project, false).await?;
 
     println!("List labels");
-    let _labels = all_labels(&config, false).await?;
+    let _labels = all_labels(&config, false, Some(1)).await?;
 
     println!("Get user data");
     let _data = get_user_data(&config).await?;
@@ -197,10 +200,15 @@ pub async fn create_task(
 }
 
 /// Get a vector of all tasks for a project
-pub async fn all_tasks_by_project(config: &Config, project: &Project) -> Result<Vec<Task>, Error> {
+pub async fn all_tasks_by_project(
+    config: &Config,
+    project: &Project,
+    limit: Option<u8>,
+) -> Result<Vec<Task>, Error> {
+    let limit = limit.unwrap_or(QUERY_LIMIT);
     let project_id = project.id.clone();
     let mut tasks: Vec<Task> = Vec::new();
-    let mut url = format!("{TASKS_URL}?project_id={project_id}&limit={QUERY_LIMIT}");
+    let mut url = format!("{TASKS_URL}?project_id={project_id}&limit={limit}");
 
     loop {
         let json = request::get_todoist(config, url, true).await?;
@@ -212,9 +220,7 @@ pub async fn all_tasks_by_project(config: &Config, project: &Project) -> Result<
         match next_cursor {
             None => break,
             Some(string) => {
-                url = format!(
-                    "{TASKS_URL}?project_id={project_id}&limit={QUERY_LIMIT}&cursor={string}"
-                );
+                url = format!("{TASKS_URL}?project_id={project_id}&limit={limit}&cursor={string}");
             }
         };
     }
@@ -227,7 +233,7 @@ pub async fn all_tasks_by_filters(
 ) -> Result<Vec<(String, Vec<Task>)>, Error> {
     let filters: Vec<_> = filter
         .split(',')
-        .map(|f| all_tasks_by_filter(config, f))
+        .map(|f| all_tasks_by_filter(config, f, None))
         .collect();
 
     let mut acc = Vec::new();
@@ -241,10 +247,12 @@ pub async fn all_tasks_by_filters(
 pub async fn all_tasks_by_filter(
     config: &Config,
     filter: &str,
+    limit: Option<u8>,
 ) -> Result<(String, Vec<Task>), Error> {
+    let limit = limit.unwrap_or(QUERY_LIMIT);
     let encoded = encode(filter);
     let mut tasks: Vec<Task> = Vec::new();
-    let mut url = format!("{TASKS_URL}filter?query={encoded}&limit={QUERY_LIMIT}");
+    let mut url = format!("{TASKS_URL}filter?query={encoded}&limit={limit}");
 
     loop {
         let json = request::get_todoist(config, url, true).await?;
@@ -256,9 +264,7 @@ pub async fn all_tasks_by_filter(
         match next_cursor {
             None => break,
             Some(string) => {
-                url = format!(
-                    "{TASKS_URL}filter?query={encoded}&limit={QUERY_LIMIT}&cursor={string}"
-                );
+                url = format!("{TASKS_URL}filter?query={encoded}&limit={limit}&cursor={string}");
             }
         };
     }
@@ -275,12 +281,34 @@ pub async fn all_sections_by_project(
     sections::json_to_sections(json)
 }
 
-pub async fn all_projects(config: &Config) -> Result<Vec<Project>, Error> {
-    let json = request::get_todoist(config, PROJECTS_URL.to_string(), true).await?;
-    projects::json_to_projects(json)
+pub async fn all_projects(config: &Config, limit: Option<u8>) -> Result<Vec<Project>, Error> {
+    let limit = limit.unwrap_or(QUERY_LIMIT);
+    let mut url = format!("{PROJECTS_URL}?limit={limit}");
+    let mut projects: Vec<Project> = Vec::new();
+
+    loop {
+        let json = request::get_todoist(config, url, true).await?;
+        let ProjectResponse {
+            results,
+            next_cursor,
+        } = projects::json_to_projects_response(json)?;
+        projects.extend(results);
+        match next_cursor {
+            None => break,
+            Some(string) => {
+                url = format!("{PROJECTS_URL}?limit={limit}&cursor={string}");
+            }
+        };
+    }
+    Ok(projects)
 }
 
-pub async fn all_labels(config: &Config, spinner: bool) -> Result<Vec<Label>, Error> {
+pub async fn all_labels(
+    config: &Config,
+    spinner: bool,
+    limit: Option<u8>,
+) -> Result<Vec<Label>, Error> {
+    let _limit = limit.unwrap_or(QUERY_LIMIT);
     let json = request::get_todoist(config, LABELS_URL.to_string(), spinner).await?;
     labels::json_to_labels(json)
 }
@@ -486,9 +514,14 @@ pub async fn get_user_data(config: &Config) -> Result<User, Error> {
     json_to_user(json)
 }
 
-pub async fn all_comments(config: &Config, task: &Task) -> Result<Vec<Comment>, Error> {
+pub async fn all_comments(
+    config: &Config,
+    task: &Task,
+    limit: Option<u8>,
+) -> Result<Vec<Comment>, Error> {
     let task_id = &task.id;
-    let mut url = format!("{COMMENTS_URL}?task_id={task_id}&limit={QUERY_LIMIT}");
+    let limit = limit.unwrap_or(QUERY_LIMIT);
+    let mut url = format!("{COMMENTS_URL}?task_id={task_id}&limit={limit}");
     let mut comments: Vec<Comment> = Vec::new();
     loop {
         let json = request::get_todoist(config, url, true).await?;
@@ -585,7 +618,7 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         assert_eq!(
-            all_labels(&config, false).await,
+            all_labels(&config, false, None).await,
             Ok(vec![test::fixtures::label()])
         );
         mock.assert();
@@ -663,7 +696,7 @@ mod tests {
         let project = binding.first().unwrap();
 
         assert_eq!(
-            all_tasks_by_project(&config_with_timezone, project).await,
+            all_tasks_by_project(&config_with_timezone, project, None).await,
             Ok(vec![test::fixtures::today_task().await])
         );
 

@@ -151,7 +151,7 @@ async fn handle_response(
     if response.status().is_success() {
         let json_string = response.text().await?;
         debug::print(config, format!("{method} {url}\nresponse: {json_string}"));
-        parse_sync_error(json_string, method, url)
+        Ok(json_string)
     } else {
         let json_string = response.text().await?;
         Err(error::new(
@@ -164,46 +164,6 @@ async fn handle_response(
             response: {json_string}",
             ),
         ))
-    }
-}
-
-// We can get sync errors in format
-// Object {
-//     "full_sync": Bool(true),
-//     "sync_status": Object {
-//         "04c08bac-beb9-47d3-9077-2d167fb4d9e6": Object {
-//             "error": String("Maximum number of items per user project limit reached"),
-//             "error_code": Number(49),
-//             "error_extra": Object {},
-//             "error_tag": String("MAX_ITEMS_LIMIT_REACHED"),
-//             "http_code": Number(403),
-//         },
-//     },
-//     "sync_token": String("xxx"),
-//     "temp_id_mapping": Object {},
-// }
-fn parse_sync_error(json_string: String, method: &str, url: String) -> Result<String, Error> {
-    let json: Value = serde_json::from_str(&json_string).unwrap_or(Value::Null);
-
-    match &json["sync_status"] {
-        Value::Null => Ok(json_string),
-        Value::Object(map) => {
-            if let Some(Value::String(error)) = map.values().next().and_then(|v| v.get("error")) {
-                Err(error::new(
-                    "reqwest",
-                    &format!(
-                        "
-                        method: {method}
-                        url: {url}
-                        response: {json_string}
-                        error: {error}"
-                    ),
-                ))
-            } else {
-                Ok(json_string)
-            }
-        }
-        _ => Ok(json_string),
     }
 }
 

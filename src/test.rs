@@ -371,11 +371,73 @@ pub mod responses {
     pub fn user() -> String {
         String::from(
             "\
-                {\"user\": {
-                  \"tz_info\": {
-                    \"timezone\": \"America/Vancouver\"
-                  }
-                }
+            {
+                \"activated_user\":true,
+                \"auto_reminder\":0,
+                \"business_account_id\":null,
+                \"completed_count\":36169,
+                \"completed_today\":42,
+                \"daily_goal\":20,
+                \"date_format\":0,
+                \"days_off\":[],
+                \"deleted_at\":null,
+                \"email\":\"me@gmail.com\",
+                \"feature_identifier\":\"635166_f037865dbe43759d0a8401f917a93fa344948a84d28774c858f3da12efd337c6\",
+                \"features\": {
+                    \"beta\":1,
+                    \"dateist_inline_disabled\":false,
+                    \"dateist_lang\":null,
+                    \"global.teams\":true,
+                    \"gold_theme\":true,
+                    \"has_push_reminders\":true,
+                    \"karma_disabled\":false,
+                    \"karma_vacation\":false,
+                    \"kisa_consent_timestamp\":null,
+                    \"restriction\":3
+                },
+                \"full_name\":\"This Guy\",
+                \"has_magic_number\":true,
+                \"has_password\":true,
+                \"has_started_a_trial\":false,
+                \"id\":\"111111\",
+                \"image_id\":null,
+                \"inbox_project_id\":\"222222\",
+                \"is_celebrations_enabled\":false,
+                \"is_deleted\":false,
+                \"is_premium\":true,
+                \"joinable_workspace\":null,
+                \"joined_at\":\"2013-07-01T05:22:21.000000Z\",
+                \"karma\":58121.0,
+                \"karma_trend\":\"up\",
+                \"lang\":\"en\",
+                \"mfa_enabled\":false,
+                \"next_week\":1,
+                \"onboarding_level\":null,
+                \"onboarding_role\":null,
+                \"onboarding_team_mode\":null,
+                \"onboarding_use_cases\":null,
+                \"premium_status\":\"current_personal_plan\",
+                \"premium_until\":\"2026-02-22T03:47:31.000000Z\",
+                \"shard_id\":1,
+                \"share_limit\":5,
+                \"sort_order\":0,
+                \"start_day\":1,
+                \"start_page\":\"filter?id=2297647060\",
+                \"theme_id\":\"11\",
+                \"time_format\":0,
+                \"token\":\"a5c4e1bc54e1c79aca0c7b8bf57c4ed2b99ba608\",
+                \"tz_info\":{
+                    \"gmt_string\":\"-07:00\",
+                    \"hours\":-7,
+                    \"is_dst\":1,
+                    \"minutes\":0,
+                    \"timezone\":\"America/Vancouver\"
+                },
+                \"unique_prefix\":1,
+                \"verification_status\":\"legacy\",
+                \"websocket_url\":\"wss://ws.todoist.com/ws?token=MTcxMDk0OTNS7SW7dE-1ltDRhxBc0iXJ\",
+                \"weekend_start_day\":6,
+                \"weekly_goal\":50
             }",
         )
     }

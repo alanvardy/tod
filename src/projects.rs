@@ -82,9 +82,9 @@ pub fn json_to_project(json: String) -> Result<Project, Error> {
     let project: Project = serde_json::from_str(&json)?;
     Ok(project)
 }
-pub fn json_to_projects(json: String) -> Result<Vec<Project>, Error> {
+pub fn json_to_projects_response(json: String) -> Result<ProjectResponse, Error> {
     let response: ProjectResponse = serde_json::from_str(&json)?;
-    Ok(response.results)
+    Ok(response)
 }
 
 /// List the projects in config with task counts
@@ -132,7 +132,7 @@ async fn project_name_with_count(config: &Config, project: &Project) -> String {
 
 /// Gets the number of tasks for a project that are not in the future
 async fn count_processable_tasks(config: &Config, project: &Project) -> Result<u8, Error> {
-    let all_tasks = todoist::all_tasks_by_project(config, project).await?;
+    let all_tasks = todoist::all_tasks_by_project(config, project, None).await?;
     let count = tasks::filter_not_in_future(all_tasks, config)?.len();
 
     Ok(count as u8)
@@ -188,7 +188,7 @@ async fn fetch_next_task(
     config: &Config,
     project: &Project,
 ) -> Result<Option<(Task, usize)>, Error> {
-    let tasks = todoist::all_tasks_by_project(config, project).await?;
+    let tasks = todoist::all_tasks_by_project(config, project, None).await?;
     let filtered_tasks = tasks::filter_not_in_future(tasks, config)?;
     let tasks = tasks::sort_by_value(filtered_tasks, config);
 
@@ -197,7 +197,7 @@ async fn fetch_next_task(
 
 /// Removes all projects from config that don't exist in Todoist
 pub async fn remove_auto(config: &mut Config) -> Result<String, Error> {
-    let projects = todoist::all_projects(config).await?;
+    let projects = todoist::all_projects(config, None).await?;
     let missing_projects = filter_missing_projects(config, projects).await?;
 
     if missing_projects.is_empty() {
@@ -261,7 +261,7 @@ async fn filter_missing_projects(
 
 /// Fetch projects and prompt to add them to config one by one
 pub async fn import(config: &mut Config, auto: &bool) -> Result<String, Error> {
-    let projects = todoist::all_projects(config).await?;
+    let projects = todoist::all_projects(config, None).await?;
     let new_projects = filter_new_projects(config, projects).await?;
     for project in new_projects {
         maybe_add_project(config, project, auto).await?;
@@ -316,7 +316,7 @@ async fn maybe_add_project(
 }
 
 pub async fn edit_task(config: &Config, project: &Project) -> Result<String, Error> {
-    let project_tasks = todoist::all_tasks_by_project(config, project).await?;
+    let project_tasks = todoist::all_tasks_by_project(config, project, None).await?;
 
     let task = input::select(
         "Choose a task of the project:",
@@ -350,7 +350,7 @@ pub async fn edit_task(config: &Config, project: &Project) -> Result<String, Err
 
 /// Empty a project by sending tasks to other projects one at a time
 pub async fn empty(config: &mut Config, project: &Project) -> Result<String, Error> {
-    let tasks = todoist::all_tasks_by_project(config, project).await?;
+    let tasks = todoist::all_tasks_by_project(config, project, None).await?;
 
     if tasks.is_empty() {
         Ok(color::green_string(&format!(
@@ -388,7 +388,7 @@ pub async fn schedule(
     skip_recurring: bool,
     sort: &SortOrder,
 ) -> Result<String, Error> {
-    let tasks = todoist::all_tasks_by_project(config, project).await?;
+    let tasks = todoist::all_tasks_by_project(config, project, None).await?;
     let tasks = tasks::sort(tasks, config, sort);
 
     let filtered_tasks: Vec<Task> = if skip_recurring {
@@ -509,7 +509,7 @@ mod tests {
     async fn test_list() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/projects")
+            .mock("GET", "/api/v1/projects?limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::projects_response())
@@ -567,7 +567,7 @@ mod tests {
     async fn test_import() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/projects")
+            .mock("GET", "/api/v1/projects?limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::new_projects_response())
@@ -603,7 +603,7 @@ mod tests {
     async fn test_remove_auto() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/projects")
+            .mock("GET", "/api/v1/projects?limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::new_projects_response())

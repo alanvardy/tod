@@ -1062,7 +1062,7 @@ async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, 
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
-        let tasks = todoist::all_tasks_by_project(&config, &project).await?;
+        let tasks = todoist::all_tasks_by_project(&config, &project, None).await?;
 
         if !tasks.is_empty() {
             println!();

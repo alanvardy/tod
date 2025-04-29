@@ -841,7 +841,7 @@ async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, E
     let TaskQuickAdd { content } = args;
     let maybe_string = &content.as_ref().map(|c| c.join(" "));
     let content = fetch_string(maybe_string, &config, input::CONTENT)?;
-    todoist::quick_add_task(&config, &content).await?;
+    todoist::quick_create_task(&config, &content).await?;
     Ok(color::green_string("✓"))
 }
 
@@ -914,7 +914,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
             sections::select_section(&config, &project).await?
         };
 
-        todoist::add_task(
+        todoist::create_task(
             &config,
             &content,
             &project,
@@ -948,7 +948,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         let content = fetch_string(content, &config, input::CONTENT)?;
         let priority = fetch_priority(priority, &config)?;
 
-        todoist::add_task(
+        todoist::create_task(
             &config,
             &content,
             &project,
@@ -1012,7 +1012,7 @@ async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Erro
     match config.next_task() {
         Some(task) => {
             let content = fetch_string(content, &config, input::CONTENT)?;
-            todoist::comment_task(&config, &task, content, true).await
+            todoist::create_comment(&config, &task, content, true).await
         }
         None => Err(error::new(
             "task_comment",
@@ -1062,7 +1062,7 @@ async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, 
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
-        let tasks = todoist::tasks_for_project(&config, &project).await?;
+        let tasks = todoist::all_tasks_by_project(&config, &project).await?;
 
         if !tasks.is_empty() {
             println!();

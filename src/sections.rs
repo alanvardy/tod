@@ -30,7 +30,7 @@ pub async fn all_sections(config: &mut Config) -> Result<Vec<Section>, Error> {
 
     let mut handles = Vec::new();
     for project in projects.iter() {
-        let handle = todoist::sections_for_project(config, project);
+        let handle = todoist::all_sections_by_project(config, project);
 
         handles.push(handle);
     }
@@ -47,7 +47,7 @@ pub fn json_to_sections(json: String) -> Result<Vec<Section>, Error> {
 }
 
 pub async fn select_section(config: &Config, project: &Project) -> Result<Option<Section>, Error> {
-    let sections = todoist::sections_for_project(config, project).await?;
+    let sections = todoist::all_sections_by_project(config, project).await?;
     let mut section_names: Vec<String> = sections.clone().into_iter().map(|x| x.name).collect();
     if section_names.is_empty() {
         Ok(None)

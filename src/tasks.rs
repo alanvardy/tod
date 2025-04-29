@@ -728,7 +728,7 @@ pub fn spawn_update_task_due(
 /// Updates task inside another thread
 pub fn spawn_comment_task(config: Config, task: Task, task_comment: String) -> JoinHandle<()> {
     tokio::spawn(async move {
-        if let Err(e) = todoist::comment_task(&config, &task, task_comment, false).await {
+        if let Err(e) = todoist::create_comment(&config, &task, task_comment, false).await {
             config.tx().send(e).unwrap();
         }
     })
@@ -782,9 +782,9 @@ pub fn json_to_task(json: String) -> Result<Task, Error> {
     let task: Task = serde_json::from_str(&json)?;
     Ok(task)
 }
-pub fn json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
+pub fn json_to_tasks_response(json: String) -> Result<TaskResponse, Error> {
     let response: TaskResponse = serde_json::from_str(&json)?;
-    Ok(response.results)
+    Ok(response)
 }
 
 pub fn sort_by_value(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {

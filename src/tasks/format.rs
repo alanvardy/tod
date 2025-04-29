@@ -134,7 +134,7 @@ pub fn number_comments(task: &Task) -> String {
 
 pub async fn comments(config: &Config, task: &Task) -> Result<String, Error> {
     let comment_icon = color::purple_string("★");
-    let comments = todoist::comments(config, task).await?;
+    let comments = todoist::all_comments(config, task).await?;
     let mut comments = comments
         .iter()
         .map(|c| {

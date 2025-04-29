@@ -138,7 +138,7 @@ impl Config {
         } else if legacy_projects.is_empty() {
             Ok(Vec::new())
         } else {
-            let new_projects = todoist::projects(self).await?;
+            let new_projects = todoist::all_projects(self).await?;
             let legacy_ids = legacy_projects.into_iter().map(|lp| lp.id).collect();
             let v1_ids = todoist::get_v1_ids(self, Resource::Project, legacy_ids).await?;
 
@@ -160,7 +160,7 @@ impl Config {
         self.max_comment_length.unwrap_or(MAX_COMMENT_LENGTH)
     }
     pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
-        let all_projects = todoist::projects(self).await?;
+        let all_projects = todoist::all_projects(self).await?;
         let current_projects = self.projects.clone().unwrap_or_default();
         let current_project_ids: Vec<String> =
             current_projects.iter().map(|p| p.id.to_owned()).collect();

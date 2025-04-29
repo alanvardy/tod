@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error> {
-    let tasks = todoist::tasks_for_filters(config, &filter)
+    let tasks = todoist::all_tasks_by_filters(config, &filter)
         .await?
         .into_iter()
         .flat_map(|(_, tasks)| tasks.to_owned())
@@ -56,7 +56,7 @@ pub async fn next_task(config: &Config, filter: &str) -> Result<String, Error> {
 }
 
 async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, usize)>, Error> {
-    let tasks = todoist::tasks_for_filters(config, filter)
+    let tasks = todoist::all_tasks_by_filters(config, filter)
         .await?
         .into_iter()
         .flat_map(|(_, tasks)| tasks.to_owned())
@@ -69,7 +69,7 @@ async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, 
 
 /// Put dates on all tasks without dates
 pub async fn schedule(config: &Config, filter: &String, sort: &SortOrder) -> Result<String, Error> {
-    let tasks = todoist::tasks_for_filters(config, filter)
+    let tasks = todoist::all_tasks_by_filters(config, filter)
         .await?
         .into_iter()
         .flat_map(|(_, tasks)| tasks.to_owned())
@@ -106,7 +106,7 @@ mod tests {
     async fn test_rename_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/filter?query=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -126,7 +126,7 @@ mod tests {
     async fn test_get_next_task() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock("GET", "/api/v1/tasks/filter?query=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
@@ -154,7 +154,7 @@ mod tests {
     async fn test_schedule() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/tasks/filter?query=today")
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)

@@ -184,7 +184,10 @@ mod tests {
     async fn test_comments() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("GET", "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8")
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::comments_response())

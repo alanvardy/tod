@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 echo "=== CHECK ===" &&
 cargo check &&
 echo "=== CLIPPY ===" &&

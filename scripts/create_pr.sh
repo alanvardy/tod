@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Check if the VERSION environment variable is set
 if [ -z "${VERSION}" ]; then
   echo "Error: VERSION environment variable is not set."

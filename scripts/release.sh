@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Publish Checklist
 
 # Check if the VERSION environment variable is set
@@ -17,7 +17,7 @@ fi
 echo "=== BUILDING RELEASE ===" &&
 cargo build --release &&
 echo "=== GZIPPING ===" &&
-cd target/release
+cd target/release || exit
 tar -czf tod-mac.tar.gz tod 
 cd ../..
 echo "=== CREATING GITHUB RELEASE ===" &&

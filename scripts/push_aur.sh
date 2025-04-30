@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [ -z "${NAME}" ]; then
   echo "Error: NAME environment variable is not set."
   echo "Usage: NAME=tod VERSION=0.6.15 ./push_aur.sh"

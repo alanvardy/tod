@@ -855,13 +855,6 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         let options = tasks::create_task_attributes();
         let selections = input::multi_select(input::ATTRIBUTES, options, config.mock_select)?;
 
-        if selections.is_empty() {
-            return Err(Error {
-                message: "Nothing selected".to_string(),
-                source: "create_task".to_string(),
-            });
-        }
-
         let content = fetch_string(&None, &config, input::CONTENT)?;
 
         let description = if selections.contains(&TaskAttribute::Description) {

@@ -25,9 +25,12 @@ brew install tod
 
 ## Related projects
 
-- [Alfred Workflow](https://github.com/stacksjb/AlfredTodWorkflow)
+- [Alfred Tod Workflow](https://github.com/stacksjb/AlfredTodWorkflow)
 
-## Other CLI projects by Alan Vardy
+## Other projects by Alan Vardy
 
-- [lnr - Linear CLI](https://github.com/alanvardy/lnr)
-- [gpto - OpenAI CLI](https://github.com/alanvardy/gpto)
+- [lnr - Linear CLI client](https://github.com/alanvardy/lnr)
+- [gpto - OpenAI CLI client](https://github.com/alanvardy/gpto)
+- SingleTask - A webapp for completing Todoist tasks one at a time
+  - [GitHub](https://github.com/alanvardy/singletask)
+  - [WebApp](https://singletask-6hm5.shuttle.app)

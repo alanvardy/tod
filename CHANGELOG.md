@@ -2,7 +2,16 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-04-29 v0.7.0
+
 - Completing recurring tasks will uncheck child tasks
+- Use new endpoints
+  - Projects
+  - Sections
+  - Tasks
+  - Labels
+  - Comments
+  - User data
 
 ## 2025-03-25 v0.6.31
 

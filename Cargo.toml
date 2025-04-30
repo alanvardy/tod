@@ -1,6 +1,6 @@
 [package]
 name = "tod"
-version = "0.6.31"
+version = "0.7.0"
 authors = ["Alan Vardy <alan@vardy.cc>"]
 edition = "2024"
 license = "MIT"
@@ -24,7 +24,7 @@ regex = "1"
 chrono = "0.4.40"
 chrono-tz = "0.10.3"
 colored = "3"
-clap = { version = "4.5.36", features = ["derive"] }
+clap = { version = "4.5.37", features = ["derive"] }
 spinners = "4.1.1"
 inquire = { version = "0.7.5", features = ["date"] }
 serde_repr = "0.1.20"
@@ -37,7 +37,7 @@ tokio = { version = "1.44.2", features = ["full"] }
 futures = "0.3.31"
 supports-hyperlinks = "3.1.0"
 terminal_size = "0.4.2"
-clap_complete = "4.5.47"
+clap_complete = "4.5.48"
 walkdir = "2.5.0"
 
 

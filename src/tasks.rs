@@ -22,20 +22,35 @@ use crate::{input, time, todoist};
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Task {
     pub id: String,
-    pub content: String,
-    pub priority: Priority,
-    pub description: String,
-    pub labels: Vec<String>,
-    pub parent_id: Option<String>,
+    pub user_id: String,
     pub project_id: String,
-    pub comment_count: Option<u32>,
-    pub due: Option<DateInfo>,
-    /// Only on rest api return value
-    pub is_completed: Option<bool>,
-    pub is_deleted: Option<bool>,
-    /// only on sync api return value
-    pub checked: Option<bool>,
+    pub section_id: Option<String>,
+    pub parent_id: Option<String>,
+    pub added_by_uid: Option<String>,
+    pub assigned_by_uid: Option<String>,
+    pub responsible_uid: Option<String>,
+    pub labels: Vec<String>,
+    pub deadline: Option<Deadline>,
     pub duration: Option<Duration>,
+    pub due: Option<DateInfo>,
+    pub checked: bool,
+    pub is_deleted: bool,
+    pub is_collapsed: bool,
+    pub added_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub priority: Priority,
+    pub child_order: i16,
+    pub content: String,
+    pub description: String,
+    pub note_count: u32,
+    pub day_order: i16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct TaskResponse {
+    pub results: Vec<Task>,
+    pub next_cursor: Option<String>,
 }
 
 // Update task_attributes fn when adding here
@@ -87,10 +102,23 @@ impl Display for Task {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct DateInfo {
+    /// "2025-04-26T22:00:00Z"
     pub date: String,
     pub is_recurring: bool,
+    /// "2025-04-26 15:00"
     pub string: String,
+    /// i.e. "en"
+    pub lang: String,
+    /// i.e. "America/Vancouver"
     pub timezone: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct Deadline {
+    /// In format YYYY-MM-DD
+    pub date: String,
+    /// i.e. "en"
+    pub lang: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -171,7 +199,7 @@ impl Task {
         };
 
         let project = if with_project {
-            format::project(self, config, &buffer)
+            format::project(self, config, &buffer).await?
         } else {
             String::new()
         };
@@ -194,7 +222,7 @@ impl Task {
             format::labels(self)
         };
 
-        let comment_count = self.comment_count.unwrap_or_default();
+        let comment_count = self.note_count;
 
         let comment_number = match comment_count {
             0 => String::new(),
@@ -700,7 +728,7 @@ pub fn spawn_update_task_due(
 /// Updates task inside another thread
 pub fn spawn_comment_task(config: Config, task: Task, task_comment: String) -> JoinHandle<()> {
     tokio::spawn(async move {
-        if let Err(e) = todoist::comment_task(&config, &task.id, task_comment, false).await {
+        if let Err(e) = todoist::create_comment(&config, &task, task_comment, false).await {
             config.tx().send(e).unwrap();
         }
     })
@@ -750,19 +778,13 @@ pub fn spawn_update_task_priority(
     })
 }
 
-pub fn sync_json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
-    let body: Body = serde_json::from_str(&json)?;
-    Ok(body.items)
-}
-
-pub fn rest_json_to_tasks(json: String) -> Result<Vec<Task>, Error> {
-    let tasks: Vec<Task> = serde_json::from_str(&json)?;
-    Ok(tasks)
-}
-
 pub fn json_to_task(json: String) -> Result<Task, Error> {
     let task: Task = serde_json::from_str(&json)?;
     Ok(task)
+}
+pub fn json_to_tasks_response(json: String) -> Result<TaskResponse, Error> {
+    let response: TaskResponse = serde_json::from_str(&json)?;
+    Ok(response)
 }
 
 pub fn sort_by_value(mut tasks: Vec<Task>, config: &Config) -> Vec<Task> {
@@ -795,7 +817,7 @@ pub async fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task>
     let parent_ids: Vec<String> = tasks
         .clone()
         .into_iter()
-        .filter(|task| task.parent_id.is_some() && !task.checked.unwrap_or_default())
+        .filter(|task| task.parent_id.is_some() && !task.checked)
         .map(|task| task.parent_id.unwrap_or_default())
         .collect();
 
@@ -809,7 +831,7 @@ pub async fn reject_parent_tasks(tasks: Vec<Task>, config: &Config) -> Vec<Task>
         let config = config.clone();
         let handle = tokio::spawn(async move {
             if !parent_ids.contains(&task.id)
-                && !task.checked.unwrap_or_default()
+                && !task.checked
                 && !parent_in_future(task.clone(), tasks, &config).await
             {
                 Some(task)
@@ -897,15 +919,15 @@ mod tests {
     async fn date_value_can_handle_date() {
         let config = test::fixtures::config().await;
         // On another day
-        assert_eq!(test::fixtures::task().date_value(&config), 50);
+        assert_eq!(test::fixtures::today_task().await.date_value(&config), 50);
 
         // Recurring
         let task = Task {
             due: Some(DateInfo {
                 is_recurring: true,
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert_eq!(task.date_value(&config), 0);
 
@@ -914,10 +936,11 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2001-11-13"),
                 is_recurring: true,
+                lang: String::from("en"),
                 timezone: Some(String::from("America/Los_Angeles")),
                 string: String::from("Every 2 weeks"),
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert_eq!(task.date_value(&config), 150);
 
@@ -932,9 +955,9 @@ mod tests {
         let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-02-27T19:41:56Z"),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert_eq!(task.date_value(&config), 50);
@@ -947,9 +970,9 @@ mod tests {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: String::from("2021-08-13"),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let task = task
@@ -968,9 +991,9 @@ mod tests {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let task_text = task
@@ -987,9 +1010,9 @@ mod tests {
         let task = Task {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert_matches!(task.datetime(&config), Some(DateTime { .. }));
@@ -1001,9 +1024,9 @@ mod tests {
         let task = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert!(task.datetime(&config).is_some());
@@ -1014,7 +1037,7 @@ mod tests {
         let config = test::fixtures::config().await;
         let task = Task {
             due: None,
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert!(task.has_no_date());
@@ -1022,9 +1045,9 @@ mod tests {
         let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
-                ..test::fixtures::task().due.unwrap()
+                ..test::fixtures::today_task().await.due.unwrap()
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert!(!task_today.has_no_date());
     }
@@ -1034,7 +1057,7 @@ mod tests {
         let config = test::fixtures::config().await;
         let task = Task {
             due: None,
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         assert!(!task.is_today(&config).unwrap());
@@ -1042,11 +1065,12 @@ mod tests {
         let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
+                lang: String::from("en"),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert!(task_today.is_today(&config).unwrap());
 
@@ -1054,10 +1078,11 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2021-09-06T16:00:00"),
                 is_recurring: false,
+                lang: String::from("en"),
                 timezone: None,
                 string: String::from("Every 2 weeks"),
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
         assert!(!task_in_past.is_today(&config).unwrap());
     }
@@ -1068,31 +1093,34 @@ mod tests {
         let today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
+                lang: String::from("en"),
                 is_recurring: false,
                 timezone: None,
                 string: String::from("Every 2 weeks"),
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let today_recurring = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
                 is_recurring: false,
+                lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let future = Task {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
                 is_recurring: false,
+                lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
-            ..test::fixtures::task()
+            ..test::fixtures::today_task().await
         };
 
         let input = vec![future.clone(), today_recurring.clone(), today.clone()];
@@ -1106,9 +1134,21 @@ mod tests {
         let config = test::fixtures::config().await;
         let no_date = Task {
             id: String::from("222"),
+            section_id: None,
+            user_id: String::from("222"),
             content: String::from("Get gifts for the twins"),
-            checked: None,
-            comment_count: None,
+            checked: false,
+            child_order: 0,
+            day_order: 0,
+            updated_at: None,
+            deadline: None,
+            completed_at: None,
+            added_at: None,
+            added_by_uid: None,
+            responsible_uid: None,
+            assigned_by_uid: None,
+            note_count: 0,
+            is_collapsed: false,
             parent_id: None,
             project_id: String::from("123"),
             description: String::from(""),
@@ -1119,14 +1159,14 @@ mod tests {
             due: None,
             labels: vec![String::from("computer")],
             priority: Priority::Medium,
-            is_deleted: None,
-            is_completed: None,
+            is_deleted: false,
         };
 
         let date_not_datetime = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
                 is_recurring: false,
+                lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
@@ -1137,6 +1177,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2020-09-06T16:00:00"),
                 is_recurring: false,
+                lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
                 timezone: None,
             }),
@@ -1147,6 +1188,7 @@ mod tests {
             due: Some(DateInfo {
                 date: String::from("2035-09-06T16:00:00"),
                 string: String::from("Every 2 weeks"),
+                lang: String::from("en"),
                 is_recurring: false,
                 timezone: None,
             }),
@@ -1156,6 +1198,7 @@ mod tests {
         let past = Task {
             due: Some(DateInfo {
                 date: String::from("2015-09-06T16:00:00"),
+                lang: String::from("en"),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
                 timezone: None,
@@ -1180,18 +1223,29 @@ mod tests {
         let config = test::fixtures::config().await;
         let task = Task {
             id: String::from("222"),
-            content: String::from("Get gifts for the twins"),
-            checked: None,
+            section_id: None,
+            added_by_uid: None,
+            responsible_uid: None,
+            assigned_by_uid: None,
+            added_at: None,
+            is_collapsed: false,
+            user_id: String::from("222"),
+            checked: false,
+            child_order: 0,
+            day_order: 0,
+            deadline: None,
+            updated_at: None,
             duration: None,
+            completed_at: None,
             parent_id: None,
-            comment_count: Some(1),
+            note_count: 1,
+            content: String::from("Get gifts for the twins"),
             description: String::from(""),
             project_id: String::from("123"),
             labels: vec![String::from("computer")],
             due: None,
             priority: Priority::Medium,
-            is_deleted: None,
-            is_completed: None,
+            is_deleted: false,
         };
 
         assert!(!task.is_overdue(&config).unwrap());
@@ -1199,6 +1253,7 @@ mod tests {
         let task_today = Task {
             due: Some(DateInfo {
                 date: time::today_string(&config).unwrap(),
+                lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
                 is_recurring: false,
                 timezone: None,
@@ -1210,6 +1265,7 @@ mod tests {
         let task_future = Task {
             due: Some(DateInfo {
                 date: String::from("2035-12-12"),
+                lang: String::from("en"),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
                 timezone: None,
@@ -1221,6 +1277,7 @@ mod tests {
         let task_today = Task {
             due: Some(DateInfo {
                 date: String::from("2020-12-20"),
+                lang: String::from("en"),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
                 timezone: None,
@@ -1240,19 +1297,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_priority() {
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/rest/v2/tasks/222")
+            .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::task())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
         let config = test::fixtures::config()
             .await
             .mock_select(1)
-            .mock_url(server.url());
+            .with_mock_url(server.url());
 
         let future = set_priority(&config, task, false).await.unwrap();
 
@@ -1264,17 +1321,17 @@ mod tests {
     async fn test_process_task() {
         let mut server = mockito::Server::new_async().await;
         let mock = server
-            .mock("POST", "/sync/v9/sync")
+            .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8/close")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::sync())
+            .with_body(test::responses::today_task().await)
             .create_async()
             .await;
 
-        let task = test::fixtures::task();
+        let task = test::fixtures::today_task().await;
         let config = test::fixtures::config()
             .await
-            .mock_url(server.url())
+            .with_mock_url(server.url())
             .mock_select(0)
             .create()
             .await
@@ -1292,8 +1349,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_display_task() {
-        let task = test::fixtures::task();
-        let string = String::from("Get gifts for the twins");
+        let task = test::fixtures::today_task().await;
+        let string = String::from("TEST");
         assert_eq!(string, task.to_string())
     }
 }

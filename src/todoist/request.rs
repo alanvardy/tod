@@ -23,35 +23,10 @@ const TODOIST_URL: &str = "https://api.todoist.com";
 const SPINNER: Spinners = Spinners::Dots4;
 const MESSAGE: &str = "Querying API";
 
-/// Post to Todoist via sync API
-/// We use sync when we want natural languague processing.
-pub async fn post_todoist_sync(
-    config: &Config,
-    url: String,
-    body: serde_json::Value,
-    spinner: bool,
-) -> Result<String, Error> {
-    let base_url = get_base_url(config);
-    let request_url = format!("{base_url}{url}");
-    let token = &config.token;
-
-    let spinner = maybe_start_spinner(config, spinner);
-    debug::print(config, format!("POST {request_url}\nbody: {body}"));
-    let response = Client::new()
-        .post(request_url.clone())
-        .header(CONTENT_TYPE, "application/json")
-        .header(AUTHORIZATION, format!("Bearer {token}"))
-        .json(&body)
-        .timeout(get_timeout(config))
-        .send()
-        .await?;
-    maybe_stop_spinner(spinner);
-    handle_response(config, response, "POST", url, body).await
-}
-
 /// Post to Todoist via REST api
 /// We use this when we want more options and don't need natural language processing
-pub async fn post_todoist_rest(
+/// Pass in a Value::Null for the body if there is no payload
+pub async fn post_todoist(
     config: &Config,
     url: String,
     body: serde_json::Value,
@@ -66,21 +41,23 @@ pub async fn post_todoist_rest(
 
     debug::print(config, format!("POST {request_url}\nbody: {body}"));
 
-    let response = Client::new()
+    let client = Client::new()
         .post(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization)
         .header("X-Request-Id", new_uuid())
-        .json(&body)
-        .timeout(get_timeout(config))
-        .send()
-        .await?;
+        .timeout(get_timeout(config));
 
+    let response = match &body {
+        Value::Null => client.send().await?,
+
+        body => client.json(&body).send().await?,
+    };
     maybe_stop_spinner(spinner);
     handle_response(config, response, "POST", url, body).await
 }
 
-pub async fn delete_todoist_rest(
+pub async fn delete_todoist(
     config: &Config,
     url: String,
     body: serde_json::Value,
@@ -111,11 +88,7 @@ pub async fn delete_todoist_rest(
 
 // Combine get and post into one function
 /// Get Todoist via REST api
-pub async fn get_todoist_rest(
-    config: &Config,
-    url: String,
-    spinner: bool,
-) -> Result<String, Error> {
+pub async fn get_todoist(config: &Config, url: String, spinner: bool) -> Result<String, Error> {
     let base_url = get_base_url(config);
     let token = config.token.clone();
 
@@ -148,7 +121,7 @@ async fn handle_response(
     if response.status().is_success() {
         let json_string = response.text().await?;
         debug::print(config, format!("{method} {url}\nresponse: {json_string}"));
-        parse_sync_error(json_string, method, url)
+        Ok(json_string)
     } else {
         let json_string = response.text().await?;
         Err(error::new(
@@ -161,46 +134,6 @@ async fn handle_response(
             response: {json_string}",
             ),
         ))
-    }
-}
-
-// We can get sync errors in format
-// Object {
-//     "full_sync": Bool(true),
-//     "sync_status": Object {
-//         "04c08bac-beb9-47d3-9077-2d167fb4d9e6": Object {
-//             "error": String("Maximum number of items per user project limit reached"),
-//             "error_code": Number(49),
-//             "error_extra": Object {},
-//             "error_tag": String("MAX_ITEMS_LIMIT_REACHED"),
-//             "http_code": Number(403),
-//         },
-//     },
-//     "sync_token": String("xxx"),
-//     "temp_id_mapping": Object {},
-// }
-fn parse_sync_error(json_string: String, method: &str, url: String) -> Result<String, Error> {
-    let json: Value = serde_json::from_str(&json_string).unwrap_or(Value::Null);
-
-    match &json["sync_status"] {
-        Value::Null => Ok(json_string),
-        Value::Object(map) => {
-            if let Some(Value::String(error)) = map.values().next().and_then(|v| v.get("error")) {
-                Err(error::new(
-                    "reqwest",
-                    &format!(
-                        "
-                        method: {method}
-                        url: {url}
-                        response: {json_string}
-                        error: {error}"
-                    ),
-                ))
-            } else {
-                Ok(json_string)
-            }
-        }
-        _ => Ok(json_string),
     }
 }
 

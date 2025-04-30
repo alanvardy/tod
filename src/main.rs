@@ -6,16 +6,15 @@
 extern crate matches;
 extern crate clap;
 
-use std::fmt::Display;
-use std::io::{self, Write};
-use std::path::Path;
-
 use cargo::Version;
 use clap::{CommandFactory, Parser, Subcommand};
 use config::Config;
 use error::Error;
 use input::DateTimeInput;
 use list::Flag;
+use std::fmt::Display;
+use std::io::{self, Write};
+use std::path::Path;
 use tasks::priority::Priority;
 use tasks::{SortOrder, TaskAttribute, priority};
 use tokio::sync::mpsc::UnboundedSender;
@@ -28,6 +27,7 @@ mod config;
 mod debug;
 mod error;
 mod filters;
+mod id;
 mod input;
 mod labels;
 mod list;
@@ -96,6 +96,11 @@ enum Commands {
     #[clap(alias = "s")]
     /// (s) Commands for generating shell completions
     Shell(ShellCommands),
+
+    #[command(subcommand)]
+    #[clap(alias = "e")]
+    /// (e) Commands for manually testing Tod against the API
+    Test(TestCommands),
 }
 
 // -- PROJECTS --
@@ -445,8 +450,19 @@ enum ShellCommands {
     Completions(ShellCompletions),
 }
 
+#[derive(Subcommand, Debug, Clone)]
+enum TestCommands {
+    #[clap(alias = "a")]
+    /// (a) Hit all API endpoints
+    All(TestAll),
+}
+
 #[derive(Parser, Debug, Clone)]
 struct ConfigCheckVersion {}
+
+#[derive(Parser, Debug, Clone)]
+struct TestAll {}
+
 #[derive(Parser, Debug, Clone)]
 struct ConfigReset {}
 
@@ -578,7 +594,7 @@ async fn select_command(
             (
                 config.bell_on_success,
                 config.bell_on_failure,
-                project_empty(config, args).await,
+                project_empty(&config, args).await,
             )
         }
         Commands::Project(ProjectCommands::Delete(args)) => {
@@ -771,6 +787,19 @@ async fn select_command(
         Commands::Shell(ShellCommands::Completions(args)) => {
             (true, true, shell_completions(args).await)
         }
+
+        // Test
+        Commands::Test(TestCommands::All(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                test_all(config, args).await,
+            )
+        }
     }
 }
 
@@ -802,6 +831,9 @@ async fn shell_completions(args: &ShellCompletions) -> Result<String, Error> {
 
     Ok(String::new())
 }
+async fn test_all(config: Config, _args: &TestAll) -> Result<String, Error> {
+    todoist::test_all_endpoints(config).await
+}
 
 // --- TASK ---
 
@@ -809,7 +841,7 @@ async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, E
     let TaskQuickAdd { content } = args;
     let maybe_string = &content.as_ref().map(|c| c.join(" "));
     let content = fetch_string(maybe_string, &config, input::CONTENT)?;
-    todoist::quick_add_task(&config, &content).await?;
+    todoist::quick_create_task(&config, &content).await?;
     Ok(color::green_string("✓"))
 }
 
@@ -871,7 +903,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         .map(|l| l.name.to_owned())
         .collect::<Vec<String>>();
 
-        let project = match fetch_project(&args.project, &config)? {
+        let project = match fetch_project(&args.project, &config).await? {
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
@@ -882,7 +914,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
             sections::select_section(&config, &project).await?
         };
 
-        todoist::add_task(
+        todoist::create_task(
             &config,
             &content,
             &project,
@@ -903,7 +935,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
             label: labels,
             no_section: _no_section,
         } = args;
-        let project = match fetch_project(project, &config)? {
+        let project = match fetch_project(project, &config).await? {
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
@@ -916,7 +948,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         let content = fetch_string(content, &config, input::CONTENT)?;
         let priority = fetch_priority(priority, &config)?;
 
-        todoist::add_task(
+        todoist::create_task(
             &config,
             &content,
             &project,
@@ -952,22 +984,22 @@ fn no_flags_used(args: &TaskCreate) -> bool {
 
 async fn task_edit(config: Config, args: &TaskEdit) -> Result<String, Error> {
     let TaskEdit { project, filter } = args;
-    match fetch_project_or_filter(project, filter, &config)? {
+    match fetch_project_or_filter(project, filter, &config).await? {
         Flag::Project(project) => projects::edit_task(&config, &project).await,
         Flag::Filter(filter) => filters::edit_task(&config, filter).await,
     }
 }
 async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {
     let TaskNext { project, filter } = args;
-    match fetch_project_or_filter(project, filter, &config)? {
+    match fetch_project_or_filter(project, filter, &config).await? {
         Flag::Project(project) => projects::next_task(config, &project).await,
-        Flag::Filter(filter) => filters::next_task(config, &filter).await,
+        Flag::Filter(filter) => filters::next_task(&config, &filter).await,
     }
 }
 
 async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, Error> {
-    match config.next_task.as_ref() {
-        Some(task) => todoist::complete_task(&config, task, true).await,
+    match config.next_task() {
+        Some(task) => todoist::complete_task(&config, &task, true).await,
         None => Err(error::new(
             "task_complete",
             "There is nothing to complete. A task must first be marked as 'next'.",
@@ -977,10 +1009,10 @@ async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, E
 
 async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Error> {
     let TaskComment { content } = args;
-    match config.next_id.as_ref() {
-        Some(id) => {
+    match config.next_task() {
+        Some(task) => {
             let content = fetch_string(content, &config, input::CONTENT)?;
-            todoist::comment_task(&config, id, content, true).await
+            todoist::create_comment(&config, &task, content, true).await
         }
         None => Err(error::new(
             "task_comment",
@@ -1008,7 +1040,7 @@ async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, 
         (true, false) => projects::remove_all(&mut config).await,
         (false, true) => projects::remove_auto(&mut config).await,
         (false, false) => loop {
-            let project = match fetch_project(project, &config)? {
+            let project = match fetch_project(project, &config).await? {
                 Flag::Project(project) => project,
                 _ => unreachable!(),
             };
@@ -1026,11 +1058,11 @@ async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, 
     let ProjectDelete { project, repeat } = args;
     let mut config = config.clone();
     loop {
-        let project = match fetch_project(project, &config)? {
+        let project = match fetch_project(project, &config).await? {
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
-        let tasks = todoist::tasks_for_project(&config, &project).await?;
+        let tasks = todoist::all_tasks_by_project(&config, &project, None).await?;
 
         if !tasks.is_empty() {
             println!();
@@ -1053,7 +1085,7 @@ async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, 
 
 async fn project_rename(config: Config, args: &ProjectRename) -> Result<String, Error> {
     let ProjectRename { project } = args;
-    let project = match fetch_project(project, &config)? {
+    let project = match fetch_project(project, &config).await? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
@@ -1071,9 +1103,9 @@ async fn project_import(config: Config, args: &ProjectImport) -> Result<String, 
     projects::import(&mut config, auto).await
 }
 
-async fn project_empty(config: Config, args: &ProjectEmpty) -> Result<String, Error> {
+async fn project_empty(config: &Config, args: &ProjectEmpty) -> Result<String, Error> {
     let ProjectEmpty { project } = args;
-    let project = match fetch_project(project, &config)? {
+    let project = match fetch_project(project, config).await? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
@@ -1085,14 +1117,16 @@ async fn project_empty(config: Config, args: &ProjectEmpty) -> Result<String, Er
 // --- LIST ---
 
 async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
+    let mut config = config;
+
     let ListView {
         project,
         filter,
         sort,
     } = args;
 
-    let flag = fetch_project_or_filter(project, filter, &config)?;
-    list::view(&config, flag, sort).await
+    let flag = fetch_project_or_filter(project, filter, &config).await?;
+    list::view(&mut config, flag, sort).await
 }
 
 async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
@@ -1103,7 +1137,7 @@ async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
         sort,
     } = args;
     let labels = maybe_fetch_labels(&config, labels).await?;
-    let flag = fetch_project_or_filter(project, filter, &config)?;
+    let flag = fetch_project_or_filter(project, filter, &config).await?;
     list::label(&config, flag, &labels, sort).await
 }
 
@@ -1113,7 +1147,7 @@ async fn list_process(config: Config, args: &ListProcess) -> Result<String, Erro
         filter,
         sort,
     } = args;
-    let flag = fetch_project_or_filter(project, filter, &config)?;
+    let flag = fetch_project_or_filter(project, filter, &config).await?;
     list::process(&config, flag, sort).await
 }
 
@@ -1123,7 +1157,7 @@ async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Erro
         filter,
         sort,
     } = args;
-    let flag = fetch_project_or_filter(project, filter, &config)?;
+    let flag = fetch_project_or_filter(project, filter, &config).await?;
     list::timebox(&config, flag, sort).await
 }
 
@@ -1133,7 +1167,7 @@ async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String
         filter,
         sort,
     } = args;
-    let flag = fetch_project_or_filter(project, filter, &config)?;
+    let flag = fetch_project_or_filter(project, filter, &config).await?;
     list::prioritize(&config, flag, sort).await
 }
 async fn list_import(config: Config, args: &ListImport) -> Result<String, Error> {
@@ -1183,7 +1217,7 @@ async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Er
         overdue,
         sort,
     } = args;
-    match fetch_project_or_filter(project, filter, &config)? {
+    match fetch_project_or_filter(project, filter, &config).await? {
         Flag::Filter(filter) => filters::schedule(&config, &filter, sort).await,
         Flag::Project(project) => {
             let task_filter = if *overdue {
@@ -1258,7 +1292,7 @@ async fn fetch_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, 
 
     tokio::spawn(async move { async_config.check_for_latest_version().await });
 
-    config.check_for_timezone().await
+    config.maybe_set_timezone().await
 }
 
 /// Find config without creating
@@ -1288,8 +1322,8 @@ fn fetch_string(
     }
 }
 
-fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Error> {
-    let projects = config.projects.clone().unwrap_or_default();
+async fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Error> {
+    let projects = config.projects().await?;
     if projects.is_empty() {
         return Err(error::new("fetch_project", NO_PROJECTS_ERR));
     }
@@ -1325,13 +1359,13 @@ fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, Error>
     }
 }
 
-fn fetch_project_or_filter(
+async fn fetch_project_or_filter(
     project: &Option<String>,
     filter: &Option<String>,
     config: &Config,
 ) -> Result<Flag, Error> {
     match (project, filter) {
-        (Some(_), None) => fetch_project(project, config),
+        (Some(_), None) => fetch_project(project, config).await,
         (None, Some(_)) => fetch_filter(filter, config),
         (Some(_), Some(_)) => Err(error::new(
             "project_or_filter",
@@ -1340,7 +1374,7 @@ fn fetch_project_or_filter(
         (None, None) => {
             let options = vec![FlagOptions::Project, FlagOptions::Filter];
             match input::select(input::OPTION, options, config.mock_select)? {
-                FlagOptions::Project => fetch_project(project, config),
+                FlagOptions::Project => fetch_project(project, config).await,
                 FlagOptions::Filter => fetch_filter(filter, config),
             }
         }

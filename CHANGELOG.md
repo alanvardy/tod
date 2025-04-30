@@ -4,6 +4,7 @@
 
 - Allow `task create` without selecting any attributes (thus editing to content only)
 - Expand update instructions to include Homebrew
+- Add `project create`
 
 ## 2025-04-29 v0.7.0
 

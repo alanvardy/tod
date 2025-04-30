@@ -42,7 +42,7 @@ pub mod fixtures {
             }),
             completed_at: None,
             is_collapsed: false,
-            user_id: String::from("635161"),
+            user_id: String::from("910"),
             content: String::from("TEST"),
             checked: false,
             duration: Some(Duration {
@@ -102,7 +102,7 @@ pub mod fixtures {
         Section {
             id: "1234".to_string(),
             added_at: "2020-06-11T14:51:08.056500Z".to_string(),
-            user_id: "1234".to_string(),
+            user_id: "910".to_string(),
             project_id: "5678".to_string(),
             section_order: 1,
             name: "Bread".to_string(),
@@ -225,7 +225,7 @@ pub mod responses {
         format!(
             "\
                 {{
-                        \"user_id\": \"635161\",
+                        \"user_id\": \"910\",
                         \"id\": \"6Xqhv4cwxgjwG9w8\",
                         \"project_id\": \"6VRRxv8CM6GVmmgf\",
                         \"section_id\": null,
@@ -271,7 +271,7 @@ pub mod responses {
         format!(
             "
                     {{\
-                        \"user_id\": \"635161\",
+                        \"user_id\": \"910\",
                         \"id\": \"6Xqhv4cwxgjwG9w8\",
                         \"project_id\": \"6VRRxv8CM6GVmmgf\",
                         \"section_id\": null,
@@ -334,7 +334,7 @@ pub mod responses {
                     \"responsible_uid\":null,\
                     \"section_id\":\"333333333\",\
                     \"sync_id\":null,\
-                    \"user_id\":\"111111111\"\
+                    \"user_id\":\"910\"\
                     }
         "
         .to_string()
@@ -439,6 +439,26 @@ pub mod responses {
                 \"weekend_start_day\":6,
                 \"weekly_goal\":50
             }",
+        )
+    }
+    pub fn section() -> String {
+        String::from(
+            "
+              {
+              \"id\": \"1234\",
+              \"project_id\": \"5678\",
+              \"user_id\": \"910\",
+              \"section_order\": 1,
+              \"name\": \"Bread\",
+              \"added_at\": \"2020-06-11T14:51:08.056500Z\",
+              \"updated_at\": null,
+              \"archived_at\": null,
+              \"is_archived\": false,
+              \"is_deleted\": false,
+              \"is_collapsed\": false
+              }
+            
+            ",
         )
     }
     pub fn sections() -> String {

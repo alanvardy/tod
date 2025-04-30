@@ -107,6 +107,10 @@ enum Commands {
 
 #[derive(Subcommand, Debug, Clone)]
 enum ProjectCommands {
+    #[clap(alias = "c")]
+    /// (c) Create a new project in Todoist and add to config
+    Create(ProjectCreate),
+
     #[clap(alias = "l")]
     /// (l) List all of the projects in config
     List(ProjectList),
@@ -134,6 +138,21 @@ enum ProjectCommands {
 
 #[derive(Parser, Debug, Clone)]
 struct ProjectList {}
+
+#[derive(Parser, Debug, Clone)]
+struct ProjectCreate {
+    #[arg(short, long)]
+    /// Project name
+    name: Option<String>,
+
+    #[arg(short, long)]
+    /// Project description
+    description: Option<String>,
+
+    #[arg(short, long, default_value_t = false)]
+    /// Whether the project is marked as favorite
+    is_favorite: bool,
+}
 
 #[derive(Parser, Debug, Clone)]
 struct ProjectImport {
@@ -542,6 +561,17 @@ async fn select_command(
 ) -> (bool, bool, Result<String, Error>) {
     match &cli.command {
         // Project
+        Commands::Project(ProjectCommands::Create(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                project_create(config, args).await,
+            )
+        }
         Commands::Project(ProjectCommands::List(args)) => {
             let config = match fetch_config(&cli, &tx).await {
                 Ok(config) => config,
@@ -855,13 +885,6 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         let options = tasks::create_task_attributes();
         let selections = input::multi_select(input::ATTRIBUTES, options, config.mock_select)?;
 
-        if selections.is_empty() {
-            return Err(Error {
-                message: "Nothing selected".to_string(),
-                source: "create_task".to_string(),
-            });
-        }
-
         let content = fetch_string(&None, &config, input::CONTENT)?;
 
         let description = if selections.contains(&TaskAttribute::Description) {
@@ -1022,6 +1045,18 @@ async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Erro
 }
 
 // --- PROJECT ---
+
+async fn project_create(config: Config, args: &ProjectCreate) -> Result<String, Error> {
+    let ProjectCreate {
+        name,
+        description,
+        is_favorite,
+    } = args;
+    let name = fetch_string(name, &config, input::NAME)?;
+    let description = description.clone().unwrap_or_default();
+    let mut config = config;
+    projects::create(&mut config, name, description, *is_favorite).await
+}
 
 async fn project_list(config: Config, _args: &ProjectList) -> Result<String, Error> {
     let mut config = config.clone();

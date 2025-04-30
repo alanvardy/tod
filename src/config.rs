@@ -193,10 +193,14 @@ impl Config {
             match cargo::compare_versions(None).await {
                 Ok(Version::Dated(version)) => {
                     let message = format!(
-                        "Latest Tod version is {}, found {}.\nRun {} to update if you installed with Cargo",
+                        "Your version of Tod is out of date
+                        Latest Tod version is {}, you have {} installed.
+                        Run {} to update if you installed with Cargo
+                        or run {} if you installed with Homebrew",
                         version,
                         VERSION,
-                        color::cyan_string("cargo install tod --force")
+                        color::cyan_string("cargo install tod --force"),
+                        color::cyan_string("brew update && brew upgrade tod")
                     );
                     self.tx().send(Error {
                         message,

@@ -34,7 +34,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let labels = vec![String::from("one"), String::from("two")];
 
     println!("Creating project");
-    let project = create_project(&config, name.clone(), false).await?;
+    let project = create_project(&config, name.clone(), name.clone(), false, false).await?;
 
     println!("List projects");
     let _projects = all_projects(&config, Some(1)).await?;
@@ -517,10 +517,12 @@ pub async fn delete_project(
 pub async fn create_project(
     config: &Config,
     name: String,
+    description: String,
+    is_favorite: bool,
     spinner: bool,
 ) -> Result<Project, Error> {
     let url = PROJECTS_URL.to_string();
-    let body = json!({"name": name});
+    let body = json!({"name": name, "description": description, "is_favorite": is_favorite});
 
     let json = request::post_todoist(config, url, body, spinner).await?;
     projects::json_to_project(json)

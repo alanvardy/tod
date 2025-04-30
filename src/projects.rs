@@ -87,6 +87,17 @@ pub fn json_to_projects_response(json: String) -> Result<ProjectResponse, Error>
     Ok(response)
 }
 
+pub async fn create(
+    config: &mut Config,
+    name: String,
+    description: String,
+    is_favorite: bool,
+) -> Result<String, Error> {
+    let project =
+        todoist::create_project(config, name.clone(), description, is_favorite, true).await?;
+    add(config, &project).await?;
+    Ok(format!("Created project {name} and added to config"))
+}
 /// List the projects in config with task counts
 pub async fn list(config: &mut Config) -> Result<String, Error> {
     config.reload_projects().await?;

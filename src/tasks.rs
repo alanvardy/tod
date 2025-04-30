@@ -717,7 +717,7 @@ pub fn spawn_update_task_due(
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         if let Err(e) =
-            todoist::update_task_due_natural_language(&config, task, due_string, duration, false)
+            todoist::update_task_due_natural_language(&config, &task, due_string, duration, false)
                 .await
         {
             config.tx().send(e).unwrap();

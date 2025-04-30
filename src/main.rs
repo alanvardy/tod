@@ -78,6 +78,11 @@ enum Commands {
     Project(ProjectCommands),
 
     #[command(subcommand)]
+    #[clap(alias = "n")]
+    /// (n) Commands that change projects
+    Section(SectionCommands),
+
+    #[command(subcommand)]
     #[clap(alias = "t")]
     /// (t) Commands for individual tasks
     Task(TaskCommands),
@@ -201,6 +206,26 @@ struct ProjectRename {
 struct ProjectEmpty {
     #[arg(short, long)]
     /// Project to remove
+    project: Option<String>,
+}
+
+// -- SECTIONS --
+
+#[derive(Subcommand, Debug, Clone)]
+enum SectionCommands {
+    #[clap(alias = "c")]
+    /// (c) Create a new section for a project in Todoist
+    Create(SectionCreate),
+}
+
+#[derive(Parser, Debug, Clone)]
+struct SectionCreate {
+    #[arg(short, long)]
+    /// Section name
+    name: Option<String>,
+
+    #[arg(short, long)]
+    /// Project to put the section in
     project: Option<String>,
 }
 
@@ -636,6 +661,18 @@ async fn select_command(
                 config.bell_on_success,
                 config.bell_on_failure,
                 project_delete(config, args).await,
+            )
+        }
+
+        Commands::Section(SectionCommands::Create(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                section_create(config, args).await,
             )
         }
 
@@ -1149,6 +1186,18 @@ async fn project_empty(config: &Config, args: &ProjectEmpty) -> Result<String, E
     projects::empty(&mut config, &project).await
 }
 
+async fn section_create(config: Config, args: &SectionCreate) -> Result<String, Error> {
+    let SectionCreate { name, project } = args;
+    let name = fetch_string(name, &config, input::NAME)?;
+    let project = match fetch_project(project, &config).await? {
+        Flag::Project(project) => project,
+        _ => unreachable!(),
+    };
+
+    todoist::create_section(&config, name, &project, true).await?;
+    Ok(color::green_string("Section created successfully"))
+}
+
 // --- LIST ---
 
 async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
@@ -1357,7 +1406,7 @@ fn fetch_string(
     }
 }
 
-async fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag, Error> {
+async fn fetch_project(project_name: &Option<String>, config: &Config) -> Result<Flag, Error> {
     let projects = config.projects().await?;
     if projects.is_empty() {
         return Err(error::new("fetch_project", NO_PROJECTS_ERR));
@@ -1367,7 +1416,7 @@ async fn fetch_project(project: &Option<String>, config: &Config) -> Result<Flag
         return Ok(Flag::Project(projects.first().unwrap().clone()));
     }
 
-    match project {
+    match project_name {
         Some(project_name) => projects
             .iter()
             .find(|p| p.name == project_name.as_str())

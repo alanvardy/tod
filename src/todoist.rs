@@ -39,18 +39,27 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     println!("List projects");
     let _projects = all_projects(&config, Some(1)).await?;
 
+    println!("Creating section");
+    let section = create_section(&config, name.clone(), &project, false).await?;
+
     println!("Creating task with add_task");
     let task = create_task(
         &config,
         &name,
         &project,
-        None,
+        Some(section.clone()),
         priority.clone(),
         &name,
         &None,
         &[],
     )
     .await?;
+
+    println!("Getting sections for project");
+    let _sections = all_sections_by_project(&config, &project, Some(1)).await?;
+
+    println!("Moving task to section");
+    let _task = move_task_to_section(&config, &task, &section, false).await?;
 
     println!("Getting task with get_task");
     let task = get_task(&config, &task.id).await?;
@@ -93,8 +102,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
 
     println!("Updating task due with natural language");
     let _task =
-        update_task_due_natural_language(&config, task.clone(), "today".to_string(), None, false)
-            .await?;
+        update_task_due_natural_language(&config, &task, "today".to_string(), None, false).await?;
 
     println!("Moving task to project");
     let _task = move_task_to_project(&config, task.clone(), &project, false).await?;
@@ -114,9 +122,6 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     println!("Get user data");
     let _data = get_user_data(&config).await?;
 
-    // Still to be implemented:
-    // - sections_for_project
-    // - move_task_to_section
     Ok(color::green_string("Completed successfully"))
 }
 
@@ -364,12 +369,12 @@ pub async fn move_task_to_project(
 
 pub async fn move_task_to_section(
     config: &Config,
-    task: Task,
+    task: &Task,
     section: &Section,
     spinner: bool,
 ) -> Result<String, Error> {
     let section_id = section.id.clone();
-    let task_id = task.id;
+    let task_id = task.id.clone();
     let body = json!({"section_id": section_id});
     let url = format!("{TASKS_URL}{task_id}/move");
 
@@ -412,16 +417,21 @@ pub async fn add_task_label(
 /// Update due date for task using natural language
 pub async fn update_task_due_natural_language(
     config: &Config,
-    task: Task,
+    task: &Task,
     due_string: String,
     duration: Option<u32>,
     spinner: bool,
 ) -> Result<String, Error> {
-    let due_string = if task.is_recurring() {
-        format!("{} starting {due_string}", task.due.unwrap().string)
+    let due_string = if let Some(due) = &task.due {
+        if task.is_recurring() {
+            format!("{} starting {due_string}", due.string)
+        } else {
+            due_string
+        }
     } else {
         due_string
     };
+
     let body = if let Some(duration) = duration {
         json!({ "due_string": due_string, "duration": duration, "duration_unit": "minute" })
     } else {
@@ -526,6 +536,19 @@ pub async fn create_project(
 
     let json = request::post_todoist(config, url, body, spinner).await?;
     projects::json_to_project(json)
+}
+
+pub async fn create_section(
+    config: &Config,
+    name: String,
+    project: &Project,
+    spinner: bool,
+) -> Result<Section, Error> {
+    let url = SECTIONS_URL.to_string();
+    let body = json!({"name": name, "project_id": project.id});
+
+    let json = request::post_todoist(config, url, body, spinner).await?;
+    sections::json_to_section(json)
 }
 
 pub async fn create_comment(
@@ -692,6 +715,27 @@ mod tests {
         );
         mock.assert();
     }
+    #[tokio::test]
+    async fn test_create_section() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/api/v1/sections")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::section())
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+
+        let project = test::fixtures::project();
+
+        assert_eq!(
+            create_section(&config, String::from("New task"), &project, false).await,
+            Ok(test::fixtures::section())
+        );
+        mock.assert();
+    }
 
     #[tokio::test]
     async fn test_create_comment() {
@@ -795,7 +839,7 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let section = test::fixtures::section();
-        let response = move_task_to_section(&config, task, &section, false).await;
+        let response = move_task_to_section(&config, &task, &section, false).await;
 
         assert_eq!(response, Ok(String::from("✓")));
         mock.assert();
@@ -881,7 +925,7 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let response =
-            update_task_due_natural_language(&config, task, "today".to_string(), None, true).await;
+            update_task_due_natural_language(&config, &task, "today".to_string(), None, true).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }

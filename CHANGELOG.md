@@ -2,6 +2,9 @@
 
 ## Unreleased (on main branch only)
 
+- Add `section create`
+
+
 ## 2025-04-30 v0.7.1
 
 - Allow `task create` without selecting any attributes (thus editing content only)

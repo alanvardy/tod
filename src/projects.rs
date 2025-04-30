@@ -487,7 +487,7 @@ pub async fn move_task_to_project(
                 let config = config.clone();
                 Ok(tokio::spawn(async move {
                     if let Err(e) =
-                        todoist::move_task_to_section(&config, task, &section, false).await
+                        todoist::move_task_to_section(&config, &task, &section, false).await
                     {
                         config.tx().send(e).unwrap();
                     }

@@ -51,11 +51,16 @@ pub fn datetime(
     mock_select: Option<usize>,
     mock_string: Option<String>,
     natural_language_only: Option<bool>,
+    no_natural_language: bool,
     skip_or_complete: bool,
 ) -> Result<DateTimeInput, Error> {
     let selection = if natural_language_only.unwrap_or_default() {
         NAT_LANG
-    } else if skip_or_complete {
+    } else if no_natural_language && skip_or_complete {
+        let options = vec![SELECT_DATE, NO_DATE, SKIP, COMPLETE];
+        let description = DATE;
+        select(description, options, mock_select)?
+    } else if !no_natural_language && skip_or_complete {
         let options = vec![SELECT_DATE, NAT_LANG, NO_DATE, SKIP, COMPLETE];
         let description = DATE;
         select(description, options, mock_select)?

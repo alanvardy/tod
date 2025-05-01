@@ -4,6 +4,7 @@
 
 - Add `section create`
 - Modify some functions in `todoist` module to return structs instead of strings
+- Add `list deadline`
 
 
 ## 2025-04-30 v0.7.1

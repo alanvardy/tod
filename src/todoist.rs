@@ -32,6 +32,7 @@ pub const QUERY_LIMIT: u8 = 200;
 /// Used to sanity check all the Todoist API endpoints to make sure that we are able to process the JSON payloads they are sending back.
 pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let name = "TEST".to_string();
+    let date = time::today_string(&config)?;
     let priority = Priority::None;
     let labels = vec![String::from("one"), String::from("two")];
 
@@ -95,6 +96,9 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
 
     println!("Updating task description");
     let _task = update_task_description(&config, &task, name, false).await?;
+
+    println!("Updating task deadline");
+    let _task = update_task_deadline(&config, &task, Some(date), false).await?;
 
     println!("Updating task labels");
     let _task = update_task_labels(&config, &task, labels, false).await?;
@@ -455,6 +459,32 @@ pub async fn update_task_content(
     spinner: bool,
 ) -> Result<String, Error> {
     let body = json!({ "content": content});
+    let url = format!("{}{}", TASKS_URL, task.id);
+
+    request::post_todoist(config, url, body, spinner).await?;
+    // Does not pass back a task
+    Ok(String::from("✓"))
+}
+
+/// Update the content of a task by ID
+pub async fn update_task_deadline(
+    config: &Config,
+    task: &Task,
+    date: Option<String>,
+    spinner: bool,
+) -> Result<String, Error> {
+    let body = match date {
+        Some(date) => {
+            if !time::is_date(&date) {
+                return Err(Error {
+                    message: "Not a valid date in format YYYY-MM-DD, got: {date}".to_string(),
+                    source: "update_task_deadline".to_string(),
+                });
+            }
+            json!({"deadline_date": date, "deadline_lang": "en"})
+        }
+        None => json!({"deadline_date": null, "deadline_lang": null}),
+    };
     let url = format!("{}{}", TASKS_URL, task.id);
 
     request::post_todoist(config, url, body, spinner).await?;

@@ -5,6 +5,7 @@ use crate::{
     config::Config,
     errors::Error,
     input::{self},
+    projects::TaskFilter,
     tasks::{self, FormatType, Task},
     todoist,
 };
@@ -92,6 +93,38 @@ pub async fn schedule(config: &Config, filter: &String, sort: &SortOrder) -> Res
         future::join_all(handles).await;
         Ok(color::green_string(&format!(
             "Successfully scheduled tasks in '{filter}'"
+        )))
+    }
+}
+/// Put deadlines on all non-recurring tasks without deadlines
+pub async fn deadline(config: &Config, filter: &String, sort: &SortOrder) -> Result<String, Error> {
+    let tasks = todoist::all_tasks_by_filters(config, filter)
+        .await?
+        .into_iter()
+        .flat_map(|(_, tasks)| tasks.to_owned())
+        .collect::<Vec<Task>>();
+
+    let tasks = tasks::sort(tasks, config, sort);
+    let filtered_tasks: Vec<Task> = tasks
+        .into_iter()
+        .filter(|task| !task.filter(config, &TaskFilter::Recurring))
+        .collect::<Vec<Task>>();
+
+    if filtered_tasks.is_empty() {
+        Ok(color::green_string(&format!(
+            "No tasks to deadline in '{filter}'"
+        )))
+    } else {
+        let mut handles = Vec::new();
+        for task in filtered_tasks.iter() {
+            if let Some(handle) = tasks::spawn_deadline_task(config.clone(), task.clone()).await? {
+                handles.push(handle);
+            }
+        }
+
+        future::join_all(handles).await;
+        Ok(color::green_string(&format!(
+            "Successfully deadlined tasks in '{filter}'"
         )))
     }
 }
@@ -190,6 +223,52 @@ mod tests {
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'today'".to_string())
+        );
+
+        mock.expect(2);
+        mock2.expect(2);
+    }
+
+    #[tokio::test]
+    async fn test_deadline() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::today_tasks_response().await)
+            .create_async()
+            .await;
+
+        let mock2 = server
+            .mock("POST", "/api/v1/tasks/999999")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::today_task().await)
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config()
+            .await
+            .with_mock_url(server.url())
+            .mock_select(1)
+            .with_mock_string("tod");
+
+        let filter = String::from("today");
+        let sort = &SortOrder::Value;
+        let result = deadline(&config, &filter, sort);
+        assert_eq!(
+            result.await,
+            Ok("Successfully deadlined tasks in 'today'".to_string())
+        );
+
+        let config = config.mock_select(2);
+
+        let filter = String::from("today");
+        let result = deadline(&config, &filter, sort);
+        assert_eq!(
+            result.await,
+            Ok("Successfully deadlined tasks in 'today'".to_string())
         );
 
         mock.expect(2);

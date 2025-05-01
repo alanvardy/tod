@@ -56,7 +56,7 @@ pub mod fixtures {
             labels: vec![String::from("computer")],
             description: String::from(""),
             due: Some(DateInfo {
-                date: format!("{}T22:00:00Z", date),
+                date: format!("{}T12:00:00Z", date),
                 lang: String::from("en"),
                 is_recurring: false,
                 timezone: Some(String::from("America/Vancouver")),
@@ -263,7 +263,7 @@ pub mod responses {
                         \"completed_at\": null,
                         \"updated_at\": \"{}T22:32:46.415849Z\",
                         \"due\": {{
-                                \"date\": \"{}T22:00:00Z\",
+                                \"date\": \"{}T12:00:00Z\",
                                 \"timezone\": \"America/Vancouver\",
                                 \"string\": \"{} 15:00\",
                                 \"lang\": \"en\",

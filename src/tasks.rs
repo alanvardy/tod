@@ -664,6 +664,7 @@ pub async fn spawn_schedule_task(
         config.mock_select,
         config.mock_string.clone(),
         config.natural_language_only,
+        false,
         true,
     )?;
     match datetime_input {
@@ -685,6 +686,37 @@ pub async fn spawn_schedule_task(
                 "No date".to_string(),
                 None,
             );
+            Ok(Some(handle))
+        }
+    }
+}
+pub async fn spawn_deadline_task(
+    config: Config,
+    task: Task,
+) -> Result<Option<JoinHandle<()>>, Error> {
+    let text = task.fmt(&config, FormatType::Single, true, false).await?;
+    println!("{}", text);
+    let datetime_input = input::datetime(
+        config.mock_select,
+        config.mock_string.clone(),
+        config.natural_language_only,
+        true,
+        true,
+    )?;
+    match datetime_input {
+        input::DateTimeInput::Complete => {
+            let handle = tasks::spawn_complete_task(config.clone(), task.clone());
+            Ok(Some(handle))
+        }
+        DateTimeInput::Skip => Ok(None),
+
+        input::DateTimeInput::Text(date) => {
+            let handle =
+                tasks::spawn_update_task_deadline(config.clone(), task.clone(), Some(date));
+            Ok(Some(handle))
+        }
+        input::DateTimeInput::None => {
+            let handle = tasks::spawn_update_task_deadline(config.clone(), task.clone(), None);
             Ok(Some(handle))
         }
     }
@@ -720,6 +752,19 @@ pub fn spawn_update_task_due(
             todoist::update_task_due_natural_language(&config, &task, due_string, duration, false)
                 .await
         {
+            config.tx().send(e).unwrap();
+        }
+    })
+}
+
+/// Updates task inside another thread
+pub fn spawn_update_task_deadline(
+    config: Config,
+    task: Task,
+    date: Option<String>,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        if let Err(e) = todoist::update_task_deadline(&config, &task, date, false).await {
             config.tx().send(e).unwrap();
         }
     })

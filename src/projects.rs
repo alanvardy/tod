@@ -436,6 +436,39 @@ pub async fn schedule(
         )))
     }
 }
+pub async fn deadline(
+    config: &Config,
+    project: &Project,
+    sort: &SortOrder,
+) -> Result<String, Error> {
+    let tasks = todoist::all_tasks_by_project(config, project, None).await?;
+    let tasks = tasks::sort(tasks, config, sort);
+
+    let filtered_tasks: Vec<Task> = tasks
+        .into_iter()
+        .filter(|task| !task.filter(config, &TaskFilter::Recurring) && task.deadline.is_none())
+        .collect::<Vec<Task>>();
+
+    if filtered_tasks.is_empty() {
+        Ok(color::green_string(&format!(
+            "No tasks to deadline in '{}'",
+            project.name
+        )))
+    } else {
+        let mut handles = Vec::new();
+        for task in filtered_tasks.iter() {
+            if let Some(handle) = tasks::spawn_deadline_task(config.clone(), task.clone()).await? {
+                handles.push(handle);
+            }
+        }
+
+        future::join_all(handles).await;
+        Ok(color::green_string(&format!(
+            "Successfully deadlined tasks in '{}'",
+            project.name
+        )))
+    }
+}
 
 pub async fn move_task_to_project(
     config: &mut Config,
@@ -828,6 +861,67 @@ mod tests {
         assert_eq!(
             result.await,
             Ok("Successfully scheduled tasks in 'myproject'".to_string())
+        );
+        mock.expect(2);
+        mock2.expect(2);
+        mock3.expect(4);
+    }
+
+    #[tokio::test]
+    async fn test_deadline() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::unscheduled_tasks_response().await)
+            .create_async()
+            .await;
+
+        let mock2 = server
+            .mock("POST", "/rest/v2/tasks/999999")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::today_task().await)
+            .create_async()
+            .await;
+
+        let mock3 = server
+            .mock("GET", "/api/v1/id_mappings/projects/123")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::ids())
+            .create_async()
+            .await;
+        let config = test::fixtures::config()
+            .await
+            .with_mock_url(server.url())
+            .mock_select(1)
+            .with_mock_string("tod");
+
+        let binding = config.projects().await.unwrap();
+        let project = binding.first().unwrap();
+        let sort = &SortOrder::Value;
+        let result = deadline(&config, project, sort);
+        assert_eq!(
+            result.await,
+            Ok("Successfully deadlined tasks in 'myproject'".to_string())
+        );
+
+        let config = config.mock_select(3);
+
+        let binding = config.projects().await.unwrap();
+        let project = binding.first().unwrap();
+        let result = deadline(&config, project, sort);
+        assert_eq!(
+            result.await,
+            Ok("Successfully deadlined tasks in 'myproject'".to_string())
+        );
+
+        let result = deadline(&config, project, sort);
+        assert_eq!(
+            result.await,
+            Ok("Successfully deadlined tasks in 'myproject'".to_string())
         );
         mock.expect(2);
         mock2.expect(2);

@@ -356,6 +356,10 @@ enum ListCommands {
     /// (s) Assign dates to all tasks individually
     Schedule(ListSchedule),
 
+    #[clap(alias = "d")]
+    /// (d) Assign deadlines to all non-recurring tasks without deadlines individually
+    Deadline(ListDeadline),
+
     #[clap(alias = "i")]
     /// (i) Create tasks from a text file, one per line using natural language. Skips empty lines.
     Import(ListImport),
@@ -457,6 +461,21 @@ struct ListSchedule {
     #[arg(short, long, default_value_t = false)]
     /// Only schedule overdue tasks
     overdue: bool,
+
+    #[arg(short = 't', long, default_value_t = SortOrder::Value)]
+    /// Choose how results should be sorted
+    sort: SortOrder,
+}
+
+#[derive(Parser, Debug, Clone)]
+struct ListDeadline {
+    #[arg(short, long)]
+    /// The project containing the tasks
+    project: Option<String>,
+
+    #[arg(short, long)]
+    /// The filter containing the tasks. Can add multiple filters separated by commas.
+    filter: Option<String>,
 
     #[arg(short = 't', long, default_value_t = SortOrder::Value)]
     /// Choose how results should be sorted
@@ -800,6 +819,17 @@ async fn select_command(
                 list_schedule(config, args).await,
             )
         }
+        Commands::List(ListCommands::Deadline(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                list_deadline(config, args).await,
+            )
+        }
         Commands::List(ListCommands::Timebox(args)) => {
             let config = match fetch_config(&cli, &tx).await {
                 Ok(config) => config,
@@ -940,6 +970,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
                 config.mock_select,
                 config.mock_string.clone(),
                 config.natural_language_only,
+                false,
                 false,
             )?;
 
@@ -1317,6 +1348,18 @@ async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Er
 
             projects::schedule(&config, &project, task_filter, *skip_recurring, sort).await
         }
+    }
+}
+
+async fn list_deadline(config: Config, args: &ListDeadline) -> Result<String, Error> {
+    let ListDeadline {
+        project,
+        filter,
+        sort,
+    } = args;
+    match fetch_project_or_filter(project, filter, &config).await? {
+        Flag::Filter(filter) => filters::deadline(&config, &filter, sort).await,
+        Flag::Project(project) => projects::deadline(&config, &project, sort).await,
     }
 }
 

@@ -61,6 +61,7 @@ pub enum TaskAttribute {
     Priority,
     Due,
     Labels,
+    Deadline,
 }
 impl Display for TaskAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -70,6 +71,7 @@ impl Display for TaskAttribute {
             TaskAttribute::Priority => write!(f, "Priority"),
             TaskAttribute::Due => write!(f, "Due"),
             TaskAttribute::Labels => write!(f, "Labels"),
+            TaskAttribute::Deadline => write!(f, "Deadline"),
         }
     }
 }
@@ -82,6 +84,7 @@ pub fn edit_task_attributes() -> Vec<TaskAttribute> {
         TaskAttribute::Priority,
         TaskAttribute::Due,
         TaskAttribute::Labels,
+        TaskAttribute::Deadline,
     ]
 }
 
@@ -91,6 +94,7 @@ pub fn create_task_attributes() -> Vec<TaskAttribute> {
         TaskAttribute::Priority,
         TaskAttribute::Due,
         TaskAttribute::Labels,
+        TaskAttribute::Deadline,
     ]
 }
 
@@ -480,6 +484,7 @@ pub async fn update_task(
             }
         }
         TaskAttribute::Due => tasks::spawn_schedule_task(config.clone(), task.clone()).await,
+        TaskAttribute::Deadline => tasks::spawn_deadline_task(config.clone(), task.clone()).await,
         TaskAttribute::Labels => {
             let label_string = input::string(
                 "Enter labels separated by spaces:",

@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::{
     color,
     config::Config,
-    error::Error,
+    errors::Error,
     projects::Project,
     tasks::{self, FormatType, SortOrder, Task, priority::Priority},
     todoist,

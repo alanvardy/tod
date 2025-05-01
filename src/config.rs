@@ -1,5 +1,5 @@
 use crate::cargo::Version;
-use crate::error::{self, Error};
+use crate::errors::{self, Error};
 use crate::id::Resource;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
@@ -450,9 +450,9 @@ pub async fn get(
 
 pub async fn generate_path() -> Result<String, Error> {
     let config_directory = dirs::config_dir()
-        .ok_or_else(|| error::new("dirs", "Could not find config directory"))?
+        .ok_or_else(|| errors::new("dirs", "Could not find config directory"))?
         .to_str()
-        .ok_or_else(|| error::new("dirs", "Could not convert config directory to string"))?
+        .ok_or_else(|| errors::new("dirs", "Could not convert config directory to string"))?
         .to_owned();
     if cfg!(test) {
         _ = fs::create_dir(format!("{config_directory}/tod_test")).await;
@@ -466,12 +466,12 @@ pub async fn generate_path() -> Result<String, Error> {
 fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
     if path.starts_with('~') {
         let home =
-            homedir::my_home()?.ok_or_else(|| error::new("homedir", "Could not get homedir"))?;
+            homedir::my_home()?.ok_or_else(|| errors::new("homedir", "Could not get homedir"))?;
         let mut path = path;
         path.replace_range(
             ..1,
             home.to_str()
-                .ok_or_else(|| error::new("homedir", "Could not get homedir"))?,
+                .ok_or_else(|| errors::new("homedir", "Could not get homedir"))?,
         );
 
         Ok(path)

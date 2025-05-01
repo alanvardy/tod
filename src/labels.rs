@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{config::Config, error::Error, todoist};
+use crate::{config::Config, errors::Error, todoist};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]

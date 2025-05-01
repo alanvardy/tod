@@ -14,8 +14,8 @@ use uuid::Uuid;
 use crate::config::Args;
 use crate::config::Config;
 use crate::debug;
-use crate::error;
-use crate::error::Error;
+use crate::errors;
+use crate::errors::Error;
 
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
 const TODOIST_URL: &str = "https://api.todoist.com";
@@ -124,7 +124,7 @@ async fn handle_response(
         Ok(json_string)
     } else {
         let json_string = response.text().await?;
-        Err(error::new(
+        Err(errors::new(
             "reqwest",
             &format!(
                 "

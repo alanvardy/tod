@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::errors::Error;
 use inquire::{DateSelect, MultiSelect, Select, Text};
 use std::fmt::Display;
 use terminal_size::{Height, Width, terminal_size};

@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::fmt::Display;
 
-use crate::error::Error;
+use crate::errors::Error;
 
 #[derive(Clone)]
 pub enum Resource {

@@ -4,16 +4,18 @@ use std::collections::HashMap;
 use urlencoding::encode;
 mod request;
 
-use crate::comment::{Comment, CommentResponse};
+use crate::comments;
+use crate::comments::{Comment, CommentResponse};
 use crate::config::Config;
-use crate::error::Error;
+use crate::errors::Error;
 use crate::id::{self, Resource};
 use crate::labels::{self, Label, LabelResponse};
 use crate::projects::{Project, ProjectResponse};
 use crate::sections::{Section, SectionResponse};
 use crate::tasks::priority::Priority;
 use crate::tasks::{Task, TaskResponse};
-use crate::user::User;
+use crate::users;
+use crate::users::User;
 use crate::{color, projects, sections, tasks, time};
 
 // TODOIST URLS
@@ -105,7 +107,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
         update_task_due_natural_language(&config, &task, "today".to_string(), None, false).await?;
 
     println!("Moving task to project");
-    let _task = move_task_to_project(&config, task.clone(), &project, false).await?;
+    let task = move_task_to_project(&config, &task, &project, false).await?;
 
     println!("Completing task");
     let _task = complete_task(&config, &task, false).await?;
@@ -144,6 +146,7 @@ pub async fn get_v1_ids(
 /// Add a new task to the inbox with natural language support
 pub async fn quick_create_task(config: &Config, content: &str) -> Result<Task, Error> {
     let url = format!("{TASKS_URL}quick");
+    let content = encode(content);
     let body = json!({"text": content, "auto_reminder": true});
 
     let json = request::post_todoist(config, url, body, true).await?;
@@ -354,17 +357,17 @@ pub async fn all_labels(
 /// Move an task to a different project
 pub async fn move_task_to_project(
     config: &Config,
-    task: Task,
+    task: &Task,
     project: &Project,
     spinner: bool,
-) -> Result<String, Error> {
+) -> Result<Task, Error> {
     let project_id = project.id.clone();
-    let task_id = task.id;
+    let task_id = task.id.clone();
     let body = json!({"project_id": project_id});
     let url = format!("{TASKS_URL}{task_id}/move");
 
-    request::post_todoist(config, url, body, spinner).await?;
-    Ok(String::from("✓"))
+    let response = request::post_todoist(config, url, body, spinner).await?;
+    tasks::json_to_task(response)
 }
 
 pub async fn move_task_to_section(
@@ -372,14 +375,14 @@ pub async fn move_task_to_section(
     task: &Task,
     section: &Section,
     spinner: bool,
-) -> Result<String, Error> {
+) -> Result<Task, Error> {
     let section_id = section.id.clone();
     let task_id = task.id.clone();
     let body = json!({"section_id": section_id});
     let url = format!("{TASKS_URL}{task_id}/move");
 
-    request::post_todoist(config, url, body, spinner).await?;
-    Ok(String::from("✓"))
+    let response = request::post_todoist(config, url, body, spinner).await?;
+    tasks::json_to_task(response)
 }
 
 /// Update the priority of an task by ID
@@ -491,6 +494,7 @@ pub async fn update_task_labels(
 }
 
 /// Complete the last task returned by "next task"
+/// The API does not return any data, so we can't return a new task
 pub async fn complete_task(config: &Config, task: &Task, spinner: bool) -> Result<String, Error> {
     let task_id = task.id.clone();
     let url = format!("{TASKS_URL}{task_id}/close");
@@ -501,7 +505,7 @@ pub async fn complete_task(config: &Config, task: &Task, spinner: bool) -> Resul
         config.reload().await?.clear_next_task().save().await?;
     }
 
-    // Does not pass back a task
+    // API does not pass back a task
     Ok(String::from("✓"))
 }
 
@@ -556,20 +560,19 @@ pub async fn create_comment(
     task: &Task,
     content: String,
     spinner: bool,
-) -> Result<String, Error> {
+) -> Result<Comment, Error> {
     let task_id = task.id.clone();
     let body = json!({"task_id": task_id, "content": content});
     let url = COMMENTS_URL.to_string();
 
-    request::post_todoist(config, url, body, spinner).await?;
-    // Does not pass back a task
-    Ok(String::from("✓"))
+    let response = request::post_todoist(config, url, body, spinner).await?;
+    comments::json_to_comment(response)
 }
 
 pub async fn get_user_data(config: &Config) -> Result<User, Error> {
     let url = USER_URL.to_string();
     let json = request::get_todoist(config, url, true).await?;
-    json_to_user(json)
+    users::json_to_user(json)
 }
 
 pub async fn all_comments(
@@ -586,7 +589,7 @@ pub async fn all_comments(
         let CommentResponse {
             results,
             next_cursor,
-        } = json_to_comment_response(json)?;
+        } = comments::json_to_comment_response(json)?;
 
         comments.extend(results);
         match next_cursor {
@@ -600,22 +603,12 @@ pub async fn all_comments(
     Ok(comments)
 }
 
-pub fn json_to_user(json: String) -> Result<User, Error> {
-    let user: User = serde_json::from_str(&json)?;
-    Ok(user)
-}
-
-pub fn json_to_comment_response(json: String) -> Result<CommentResponse, Error> {
-    let response: CommentResponse = serde_json::from_str(&json)?;
-    Ok(response)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::tasks::priority::{self, Priority};
     use crate::test;
-    use crate::user::TzInfo;
+    use crate::users::TzInfo;
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
@@ -750,9 +743,10 @@ mod tests {
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
         let task = test::fixtures::today_task().await;
+        let comment = test::fixtures::comment();
         assert_eq!(
             create_comment(&config, &task, String::from("New comment"), true).await,
-            Ok(String::from("✓"))
+            Ok(comment)
         );
         mock.assert();
     }
@@ -796,9 +790,9 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let task = test::fixtures::today_task().await;
-        let response = complete_task(&config, &task, false).await;
+        let response = complete_task(&config, &task, false).await.unwrap();
         mock.assert();
-        assert_eq!(response, Ok(String::from("✓")));
+        assert_eq!(response, String::from("✓"));
     }
 
     #[tokio::test]
@@ -818,9 +812,11 @@ mod tests {
 
         let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap();
-        let response = move_task_to_project(&config, task, project, false).await;
+        let response = move_task_to_project(&config, &task, project, false)
+            .await
+            .unwrap();
 
-        assert_eq!(response, Ok(String::from("✓")));
+        assert_eq!(response, task);
         mock.assert();
     }
     #[tokio::test]
@@ -839,9 +835,11 @@ mod tests {
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let section = test::fixtures::section();
-        let response = move_task_to_section(&config, &task, &section, false).await;
+        let response = move_task_to_section(&config, &task, &section, false)
+            .await
+            .unwrap();
 
-        assert_eq!(response, Ok(String::from("✓")));
+        assert_eq!(response, task);
         mock.assert();
     }
 

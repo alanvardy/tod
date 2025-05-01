@@ -11,7 +11,7 @@ pub mod format;
 pub mod priority;
 use crate::config::Config;
 use crate::config::SortValue;
-use crate::error::Error;
+use crate::errors::Error;
 use crate::input::CONTENT;
 use crate::input::DateTimeInput;
 use crate::projects;

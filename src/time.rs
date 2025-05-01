@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::error::{self, Error};
+use crate::errors::{self, Error};
 use chrono::offset::Utc;
 use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use chrono_tz::Tz;
@@ -110,7 +110,7 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
     let split: Vec<&str> = gmt.split_whitespace().collect();
     let offset = split
         .get(1)
-        .ok_or_else(|| error::new("parse_timezone", "Could not get offset"))?;
+        .ok_or_else(|| errors::new("parse_timezone", "Could not get offset"))?;
     let offset = offset.replace(":00", "");
     let offset = offset.replace(':', "");
     let offset_num = offset.parse::<i32>()?;
@@ -139,7 +139,7 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
             .unwrap()
             .date_naive(),
         _ => {
-            return Err(error::new(
+            return Err(errors::new(
                 "date_from_str",
                 "cannot parse NaiveDate, unknown length: {str}",
             ));

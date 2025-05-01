@@ -1,8 +1,9 @@
 #[cfg(test)]
 pub mod fixtures {
 
+    use crate::comments::Comment;
     use crate::config::Config;
-    use crate::error::Error;
+    use crate::errors::Error;
     use crate::labels::Label;
     use crate::projects::Project;
     use crate::sections::Section;
@@ -111,6 +112,20 @@ pub mod fixtures {
             is_archived: false,
             is_deleted: false,
             is_collapsed: false,
+        }
+    }
+
+    pub fn comment() -> Comment {
+        Comment {
+            id: "2992679862".to_string(),
+            posted_uid: None,
+            content: "Need one bottle of milk".to_string(),
+            uids_to_notify: None,
+            posted_at: "2016-09-22T07:00:00.000000Z".to_string(),
+            reactions: None,
+            item_id: "123".to_string(),
+            is_deleted: false,
+            file_attachment: None,
         }
     }
 }

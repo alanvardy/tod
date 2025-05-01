@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, input, projects::Project, todoist};
+use crate::{config::Config, errors::Error, input, projects::Project, todoist};
 use futures::future;
 use serde::Deserialize;
 

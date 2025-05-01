@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, time};
+use crate::{config::Config, errors::Error, time};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -113,4 +113,13 @@ impl Comment {
             formatted_date, link, self.content
         ))
     }
+}
+
+pub fn json_to_comment_response(json: String) -> Result<CommentResponse, Error> {
+    let response: CommentResponse = serde_json::from_str(&json)?;
+    Ok(response)
+}
+pub fn json_to_comment(json: String) -> Result<Comment, Error> {
+    let comment: Comment = serde_json::from_str(&json)?;
+    Ok(comment)
 }

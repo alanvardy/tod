@@ -9,9 +9,9 @@ extern crate clap;
 use cargo::Version;
 use clap::{CommandFactory, Parser, Subcommand};
 use config::Config;
-use error::Error;
+use errors::Error;
 use input::DateTimeInput;
-use list::Flag;
+use lists::Flag;
 use std::fmt::Display;
 use std::io::{self, Write};
 use std::path::Path;
@@ -22,22 +22,22 @@ use walkdir::WalkDir;
 
 mod cargo;
 mod color;
-mod comment;
+mod comments;
 mod config;
 mod debug;
-mod error;
+mod errors;
 mod filters;
 mod id;
 mod input;
 mod labels;
-mod list;
+mod lists;
 mod projects;
 mod sections;
 mod tasks;
 mod test;
 mod time;
 mod todoist;
-mod user;
+mod users;
 
 const NAME: &str = "Tod";
 const LOWERCASE_NAME: &str = "tod";
@@ -1059,8 +1059,12 @@ async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {
 
 async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, Error> {
     match config.next_task() {
-        Some(task) => todoist::complete_task(&config, &task, true).await,
-        None => Err(error::new(
+        Some(task) => {
+            todoist::complete_task(&config, &task, true).await?;
+
+            Ok(color::green_string("Task completed successfully"))
+        }
+        None => Err(errors::new(
             "task_complete",
             "There is nothing to complete. A task must first be marked as 'next'.",
         )),
@@ -1072,9 +1076,10 @@ async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Erro
     match config.next_task() {
         Some(task) => {
             let content = fetch_string(content, &config, input::CONTENT)?;
-            todoist::create_comment(&config, &task, content, true).await
+            todoist::create_comment(&config, &task, content, true).await?;
+            Ok(color::green_string("Comment created successfully"))
         }
-        None => Err(error::new(
+        None => Err(errors::new(
             "task_comment",
             "There is nothing to comment on. A task must first be marked as 'next'.",
         )),
@@ -1122,7 +1127,7 @@ async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, 
                 return value;
             }
         },
-        (_, _) => Err(error::new("project_remove", "Incorrect flags provided")),
+        (_, _) => Err(errors::new("project_remove", "Incorrect flags provided")),
     }
 }
 
@@ -1210,7 +1215,7 @@ async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
     } = args;
 
     let flag = fetch_project_or_filter(project, filter, &config).await?;
-    list::view(&mut config, flag, sort).await
+    lists::view(&mut config, flag, sort).await
 }
 
 async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
@@ -1222,7 +1227,7 @@ async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
     } = args;
     let labels = maybe_fetch_labels(&config, labels).await?;
     let flag = fetch_project_or_filter(project, filter, &config).await?;
-    list::label(&config, flag, &labels, sort).await
+    lists::label(&config, flag, &labels, sort).await
 }
 
 async fn list_process(config: Config, args: &ListProcess) -> Result<String, Error> {
@@ -1232,7 +1237,7 @@ async fn list_process(config: Config, args: &ListProcess) -> Result<String, Erro
         sort,
     } = args;
     let flag = fetch_project_or_filter(project, filter, &config).await?;
-    list::process(&config, flag, sort).await
+    lists::process(&config, flag, sort).await
 }
 
 async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Error> {
@@ -1242,7 +1247,7 @@ async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Erro
         sort,
     } = args;
     let flag = fetch_project_or_filter(project, filter, &config).await?;
-    list::timebox(&config, flag, sort).await
+    lists::timebox(&config, flag, sort).await
 }
 
 async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String, Error> {
@@ -1252,13 +1257,13 @@ async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String
         sort,
     } = args;
     let flag = fetch_project_or_filter(project, filter, &config).await?;
-    list::prioritize(&config, flag, sort).await
+    lists::prioritize(&config, flag, sort).await
 }
 async fn list_import(config: Config, args: &ListImport) -> Result<String, Error> {
     let ListImport { path } = args;
     let path = fetch_string(path, &config, input::PATH)?;
     let file_path = select_file(path, &config)?;
-    list::import(&config, &file_path).await
+    lists::import(&config, &file_path).await
 }
 
 fn select_file(path_or_file: String, config: &Config) -> Result<String, Error> {
@@ -1320,7 +1325,7 @@ async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Er
 async fn config_check_version(_args: &ConfigCheckVersion) -> Result<String, Error> {
     match cargo::compare_versions(None).await {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
-        Ok(Version::Dated(version)) => Err(error::new(
+        Ok(Version::Dated(version)) => Err(errors::new(
             "cargo",
             &format!(
                 "Tod is out of date with version: {}, latest is:{}",
@@ -1338,7 +1343,7 @@ async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Err
 
     match fs::remove_file(path.clone()).await {
         Ok(_) => Ok(format!("{path} deleted successfully")),
-        Err(e) => Err(error::new(
+        Err(e) => Err(errors::new(
             "config_reset",
             &format!("Could not delete config at path: {path}, {e}"),
         )),
@@ -1348,7 +1353,7 @@ async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Err
 async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, Error> {
     match config.set_timezone().await {
         Ok(_) => Ok("Timezone set successfully.".to_string()),
-        Err(e) => Err(error::new(
+        Err(e) => Err(errors::new(
             "tz_reset",
             &format!("Could not reset timezone in config. {e}"),
         )),
@@ -1409,7 +1414,7 @@ fn fetch_string(
 async fn fetch_project(project_name: &Option<String>, config: &Config) -> Result<Flag, Error> {
     let projects = config.projects().await?;
     if projects.is_empty() {
-        return Err(error::new("fetch_project", NO_PROJECTS_ERR));
+        return Err(errors::new("fetch_project", NO_PROJECTS_ERR));
     }
 
     if projects.len() == 1 {
@@ -1422,7 +1427,7 @@ async fn fetch_project(project_name: &Option<String>, config: &Config) -> Result
             .find(|p| p.name == project_name.as_str())
             .map_or_else(
                 || {
-                    Err(error::new(
+                    Err(errors::new(
                         "fetch_project",
                         "Could not find project in config",
                     ))
@@ -1451,7 +1456,7 @@ async fn fetch_project_or_filter(
     match (project, filter) {
         (Some(_), None) => fetch_project(project, config).await,
         (None, Some(_)) => fetch_filter(filter, config),
-        (Some(_), Some(_)) => Err(error::new(
+        (Some(_), Some(_)) => Err(errors::new(
             "project_or_filter",
             "Must select project OR filter",
         )),

@@ -3,7 +3,7 @@ use futures::future;
 use crate::{
     SortOrder, color,
     config::Config,
-    error::Error,
+    errors::Error,
     input::{self},
     tasks::{self, FormatType, Task},
     todoist,

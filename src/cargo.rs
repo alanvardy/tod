@@ -3,7 +3,7 @@ use reqwest::header::USER_AGENT;
 use serde::Deserialize;
 
 use crate::VERSION;
-use crate::error::Error;
+use crate::errors::Error;
 
 // CRATES.IO URLS
 const VERSIONS_URL: &str = "/v1/crates/tod/versions";

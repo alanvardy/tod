@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use supports_hyperlinks::Stream;
 
 use super::{DateTimeInfo, Duration, Task, Unit, priority};
-use crate::{color, config::Config, error::Error, projects::Project, time, todoist};
+use crate::{color, config::Config, errors::Error, projects::Project, time, todoist};
 
 pub fn content(task: &Task, config: &Config) -> String {
     let content = match task.priority {

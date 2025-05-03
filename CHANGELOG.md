@@ -2,12 +2,13 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-05-03 v0.7.2
+
 - Add `section create`
 - Modify some functions in `todoist` module to return structs instead of strings
 - Add `list deadline`
 - Add deadline to `task edit`
 - Sort tasks based on deadline
-
 
 ## 2025-04-30 v0.7.1
 

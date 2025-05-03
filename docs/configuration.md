@@ -131,10 +131,24 @@ Tasks are ranked by points and the first is returned, the points are the sum of 
 - Priority 2: 3
 - Priority 3: 4
 
+
+The math for how much a deadline contributes in points is a little more involved. It is based on the number of days before the deadline (closer = more) and the value per day.
+
+The formula is `max(deadline_days - number of days until deadline, 0) * deadline_value`
+
+The default for deadline_days is 5, and deadline_value is 30. For example:
+
+- 6 days before the deadline it is 0
+- 4 days before deadline the value is 30
+- on the day of the deadline it is 150
+- 2 days after the deadline it is 210
+
 Defaults:
 
 ``` json
   {
+    "deadline_days": 5,
+    "deadline_value", 30,
     "no_due_date": 80,
     "not_recurring": 50,
     "now": 200,

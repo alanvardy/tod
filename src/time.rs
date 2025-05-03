@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::config::Config;
 use crate::errors::{self, Error};
 use chrono::offset::Utc;
@@ -5,7 +7,7 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use chrono_tz::Tz;
 use regex::Regex;
 
-const FORMAT_DATE: &str = "%Y-%m-%d";
+pub const FORMAT_DATE: &str = "%Y-%m-%d";
 const FORMAT_TIME: &str = "%H:%M";
 const FORMAT_DATETIME: &str = "%Y-%m-%dT%H:%M:%S";
 const FORMAT_DATETIME_ZULU: &str = "%Y-%m-%dT%H:%M:%SZ";
@@ -38,9 +40,19 @@ pub fn date_is_today(date: NaiveDate, config: &Config) -> Result<bool, Error> {
     Ok(date_string == today_string)
 }
 
+pub fn date_string_to_naive_date(date_string: &str) -> Result<NaiveDate, Error> {
+    let date = NaiveDate::from_str(date_string)?;
+    Ok(date)
+}
+
 pub fn is_date_in_past(date: NaiveDate, config: &Config) -> Result<bool, Error> {
-    let num_days = date.signed_duration_since(today_date(config)?).num_days();
-    Ok(num_days < 0)
+    Ok(num_days_from_today(date, config)? < 0)
+}
+
+/// Returns 0 if today, negative if date given is in the past
+pub fn num_days_from_today(date: NaiveDate, config: &Config) -> Result<i64, Error> {
+    let duration = date.signed_duration_since(today_date(config)?);
+    Ok(duration.num_days())
 }
 
 pub fn format_date(date: &NaiveDate, config: &Config) -> Result<String, Error> {

@@ -4,6 +4,7 @@ use chrono_tz::Tz;
 use futures::future;
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
+use std::cmp::max;
 use std::fmt::Display;
 use tokio::task::JoinHandle;
 
@@ -248,8 +249,15 @@ impl Task {
     fn value(&self, config: &Config) -> u32 {
         let date_value: u8 = self.date_value(config);
         let priority_value: u8 = self.priority_value(config);
+        let deadline_value: u32 = match self.deadline_value(config) {
+            Ok(value) => value,
+            Err(error) => {
+                config.clone().tx().send(error).unwrap();
+                0
+            }
+        };
 
-        date_value as u32 + priority_value as u32
+        date_value as u32 + priority_value as u32 + deadline_value
     }
 
     /// Return the value of the due field
@@ -342,6 +350,20 @@ impl Task {
             Priority::Low => priority_low,
             Priority::Medium => priority_medium,
             Priority::High => priority_high,
+        }
+    }
+
+    fn deadline_value(&self, config: &Config) -> Result<u32, Error> {
+        match &self.deadline {
+            None => Ok(0),
+            Some(Deadline { date, .. }) => {
+                let naive_date = time::date_string_to_naive_date(date)?;
+                let days_from_today = time::num_days_from_today(naive_date, config)?;
+                let deadline_days = config.deadline_days();
+                let day_multiplier = max(deadline_days as i64 - days_from_today, 0) as u32;
+                let day_value = config.deadline_value();
+                Ok(day_multiplier * day_value as u32)
+            }
         }
     }
 
@@ -1402,5 +1424,40 @@ mod tests {
         let task = test::fixtures::today_task().await;
         let string = String::from("TEST");
         assert_eq!(string, task.to_string())
+    }
+
+    #[tokio::test]
+    async fn test_deadline_value_when_today() {
+        let config = test::fixtures::config().await;
+        let task = test::fixtures::today_task().await;
+
+        let value = task.deadline_value(&config).unwrap();
+        assert_eq!(value, 150);
+    }
+
+    #[tokio::test]
+    async fn test_deadline_value_when_tomorrow() {
+        let config = test::fixtures::config().await;
+        let task = test::fixtures::task(1).await;
+
+        let value = task.deadline_value(&config).unwrap();
+        assert_eq!(value, 120);
+    }
+
+    #[tokio::test]
+    async fn test_deadline_value_when_in_six_days() {
+        let config = test::fixtures::config().await;
+        let task = test::fixtures::task(6).await;
+
+        let value = task.deadline_value(&config).unwrap();
+        assert_eq!(value, 0);
+    }
+    #[tokio::test]
+    async fn test_deadline_value_when_yesterday() {
+        let config = test::fixtures::config().await;
+        let task = test::fixtures::task(-1).await;
+
+        let value = task.deadline_value(&config).unwrap();
+        assert_eq!(value, 180);
     }
 }

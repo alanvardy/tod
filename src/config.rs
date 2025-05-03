@@ -12,6 +12,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
 
 const MAX_COMMENT_LENGTH: u32 = 500;
+pub const DEFAULT_DEADLINE_VALUE: u8 = 30;
+pub const DEFAULT_DEADLINE_DAYS: u8 = 5;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Completed {
@@ -102,6 +104,8 @@ pub struct SortValue {
     pub overdue: u8,
     /// Happens now plus or minus 15min
     pub now: u8,
+    pub deadline_value: Option<u8>,
+    pub deadline_days: Option<u8>,
 }
 
 impl Default for SortValue {
@@ -116,6 +120,8 @@ impl Default for SortValue {
             not_recurring: 50,
             today: 100,
             now: 200,
+            deadline_value: Some(DEFAULT_DEADLINE_VALUE),
+            deadline_days: Some(DEFAULT_DEADLINE_DAYS),
         }
     }
 }
@@ -401,8 +407,26 @@ impl Config {
     pub fn next_task(&self) -> Option<Task> {
         self.next_task.clone()
     }
+
+    pub(crate) fn deadline_days(&self) -> u8 {
+        self.sort_value
+            .clone()
+            .unwrap_or_default()
+            .deadline_days
+            .unwrap_or(DEFAULT_DEADLINE_DAYS)
+    }
+
+    pub(crate) fn deadline_value(&self) -> u8 {
+        self.sort_value
+            .clone()
+            .unwrap_or_default()
+            .deadline_value
+            .unwrap_or(DEFAULT_DEADLINE_VALUE)
+    }
 }
 
+/// Fetches config from from disk and creates it if it doesn't exist
+/// Prompts for Todoist API token
 pub async fn get_or_create(
     config_path: Option<String>,
     verbose: bool,

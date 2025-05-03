@@ -9,7 +9,8 @@ pub mod fixtures {
     use crate::sections::Section;
     use crate::tasks::priority::Priority;
     use crate::tasks::{DateInfo, Deadline, Duration, Task, Unit};
-    use crate::time;
+    use crate::time::{self, FORMAT_DATE};
+    use chrono::Duration as ChronoDuration;
 
     pub fn label() -> Label {
         Label {
@@ -20,13 +21,56 @@ pub mod fixtures {
             is_favorite: false,
         }
     }
-    async fn today_date() -> String {
+    async fn adjusted_date(days: i64) -> String {
         let config = config().await.with_timezone("America/Vancouver");
-        time::today_string(&config).unwrap()
+        let tomorrow = time::now(&config).unwrap() + ChronoDuration::days(days);
+        tomorrow.format(FORMAT_DATE).to_string()
     }
 
     pub async fn today_task() -> Task {
-        let date = today_date().await;
+        let date = adjusted_date(0).await;
+        Task {
+            id: String::from("6Xqhv4cwxgjwG9w8"),
+            section_id: None,
+            added_by_uid: Some("633166".to_string()),
+            added_at: Some(format!("{}T22:29:34.404051Z", date)),
+            child_order: 1,
+            day_order: -1,
+            responsible_uid: None,
+            assigned_by_uid: None,
+            updated_at: Some(format!("{}T22:32:46.415849Z", date)),
+            deadline: Some(Deadline {
+                lang: "en".to_string(),
+                date: date.clone(),
+            }),
+            completed_at: None,
+            is_collapsed: false,
+            user_id: String::from("910"),
+            content: String::from("TEST"),
+            checked: false,
+            duration: Some(Duration {
+                amount: 15,
+                unit: Unit::Minute,
+            }),
+            parent_id: None,
+            note_count: 0,
+            project_id: String::from("6VRRxv8CM6GVmmgf"),
+            labels: vec![String::from("computer")],
+            description: String::from(""),
+            due: Some(DateInfo {
+                date: format!("{}T12:00:00Z", date),
+                lang: String::from("en"),
+                is_recurring: false,
+                timezone: Some(String::from("America/Vancouver")),
+                string: format!("{} 15:00", date),
+            }),
+            priority: Priority::Medium,
+            is_deleted: false,
+        }
+    }
+
+    pub async fn task(days_in_future: i64) -> Task {
+        let date = adjusted_date(days_in_future).await;
         Task {
             id: String::from("6Xqhv4cwxgjwG9w8"),
             section_id: None,

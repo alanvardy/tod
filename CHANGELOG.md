@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Handle Workspace projects by making `inbox_project` field optional on Project struct
+- Fetch comments every time when processing tasks as `note_count` does not reliably show comment count
 
 ## 2025-05-03 v0.7.3
 

@@ -587,6 +587,17 @@ mod tests {
             .create_async()
             .await;
 
+        let mock2 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
@@ -605,6 +616,7 @@ mod tests {
         assert!(response.contains("TEST"));
         assert!(response.contains("1 task(s) remaining"));
         mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]
@@ -720,6 +732,17 @@ mod tests {
             .with_body(test::responses::ids())
             .create_async()
             .await;
+        let mock5 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+
         let mut config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -734,11 +757,26 @@ mod tests {
         mock2.assert();
         mock3.assert();
         mock4.expect(2);
+        mock5.expect(2);
     }
 
     #[tokio::test]
     async fn test_move_task_to_project() {
-        let mut config = test::fixtures::config().await.mock_select(2);
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+        let mut config = test::fixtures::config()
+            .await
+            .with_mock_url(server.url())
+            .mock_select(2);
         let task = test::fixtures::today_task().await;
         let sections: Vec<Section> = Vec::new();
 
@@ -747,6 +785,7 @@ mod tests {
             .unwrap()
             .await
             .unwrap();
+        mock.assert();
     }
 
     #[tokio::test]
@@ -822,6 +861,13 @@ mod tests {
             .with_body(test::responses::ids())
             .create_async()
             .await;
+        let mock4 = server
+            .mock("GET", "/api/v1/comments/?task_id=999999&limit=200")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -865,6 +911,7 @@ mod tests {
         mock.expect(2);
         mock2.expect(2);
         mock3.expect(4);
+        mock4.expect(4);
     }
 
     #[tokio::test]
@@ -899,6 +946,13 @@ mod tests {
             .mock_select(1)
             .with_mock_string("tod");
 
+        let mock4 = server
+            .mock("GET", "/api/v1/comments/?task_id=999999&limit=200")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
         let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap();
         let sort = &SortOrder::Value;
@@ -926,5 +980,6 @@ mod tests {
         mock.expect(2);
         mock2.expect(2);
         mock3.expect(4);
+        mock4.expect(4);
     }
 }

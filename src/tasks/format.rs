@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use supports_hyperlinks::Stream;
 
 use super::{DateTimeInfo, Duration, Task, Unit, priority};
-use crate::{color, config::Config, errors::Error, projects::Project, time, todoist};
+use crate::{color, comments::Comment, config::Config, errors::Error, projects::Project, time};
 
 pub fn content(task: &Task, config: &Config) -> String {
     let content = match task.priority {
@@ -122,19 +122,17 @@ fn create_links(content: &str) -> String {
     result.into_owned()
 }
 
-pub fn number_comments(task: &Task) -> String {
+pub fn number_comments(quantity: usize) -> String {
     let comment_icon = color::purple_string("★");
-    let num_comments = task.note_count;
-    if num_comments == 1 {
+    if quantity == 1 {
         return format!("\n{comment_icon} 1 comment");
     }
 
-    format!("\n{comment_icon} {num_comments} comments")
+    format!("\n{comment_icon} {quantity} comments")
 }
 
-pub async fn comments(config: &Config, task: &Task) -> Result<String, Error> {
+pub async fn render_comments(config: &Config, comments: Vec<Comment>) -> Result<String, Error> {
     let comment_icon = color::purple_string("★");
-    let comments = todoist::all_comments(config, task, None).await?;
     let mut comments = comments
         .iter()
         .map(|c| {
@@ -195,9 +193,9 @@ mod tests {
             .await;
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
-        let task = test::fixtures::today_task().await;
 
-        let comments = comments(&config, &task).await.unwrap();
+        let comments = vec![test::fixtures::comment()];
+        let comments = render_comments(&config, comments).await.unwrap();
 
         assert_matches!(
             comments.as_str(),

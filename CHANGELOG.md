@@ -2,6 +2,10 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-05-03 v0.7.3
+
+- Remove URL encoding for quick add task
+
 ## 2025-05-03 v0.7.2
 
 - Add `section create`

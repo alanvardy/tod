@@ -150,7 +150,6 @@ pub async fn get_v1_ids(
 /// Add a new task to the inbox with natural language support
 pub async fn quick_create_task(config: &Config, content: &str) -> Result<Task, Error> {
     let url = format!("{TASKS_URL}quick");
-    let content = encode(content);
     let body = json!({"text": content, "auto_reminder": true});
 
     let json = request::post_todoist(config, url, body, true).await?;

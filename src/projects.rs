@@ -48,7 +48,7 @@ pub struct Project {
     pub default_order: u32,
     pub description: String,
     pub parent_id: Option<String>,
-    pub inbox_project: bool,
+    pub inbox_project: Option<bool>,
     pub is_collapsed: bool,
     pub is_shared: bool,
 }

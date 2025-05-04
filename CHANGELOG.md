@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Handle Workspace projects by making `inbox_project` field optional on Project struct
+
 ## 2025-05-03 v0.7.3
 
 - Remove URL encoding for quick add task

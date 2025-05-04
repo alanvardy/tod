@@ -158,11 +158,22 @@ mod tests {
     #[tokio::test]
     async fn test_get_next_task() {
         let mut server = mockito::Server::new_async().await;
-        let _mock = server
+        let mock = server
             .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
+            .create_async()
+            .await;
+
+        let mock2 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -181,6 +192,8 @@ mod tests {
 
         assert!(task.contains("TEST"));
         assert!(task.contains("for 15 min"));
+        mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]
@@ -202,6 +215,17 @@ mod tests {
             .create_async()
             .await;
 
+        let mock3 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -227,6 +251,7 @@ mod tests {
 
         mock.expect(2);
         mock2.expect(2);
+        mock3.expect(2);
     }
 
     #[tokio::test]
@@ -248,6 +273,17 @@ mod tests {
             .create_async()
             .await;
 
+        let mock3 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -273,5 +309,6 @@ mod tests {
 
         mock.expect(2);
         mock2.expect(2);
+        mock3.expect(2);
     }
 }

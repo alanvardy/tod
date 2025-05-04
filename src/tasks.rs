@@ -44,6 +44,7 @@ pub struct Task {
     pub child_order: i16,
     pub content: String,
     pub description: String,
+    /// This doesn't seem to be updated by the API
     pub note_count: u32,
     pub day_order: i16,
 }
@@ -227,21 +228,20 @@ impl Task {
             format::labels(self)
         };
 
-        let comment_count = self.note_count;
-
-        let comment_number = match comment_count {
+        let comments = todoist::all_comments(config, self, None).await?;
+        let comment_number = match comments.len() {
             0 => String::new(),
-            _ => format::number_comments(self),
+            quantity => format::number_comments(quantity),
         };
 
-        let comments = if with_comments && comment_count > 0 {
-            format::comments(config, self).await?
+        let comments = if with_comments && !comments.is_empty() {
+            format::render_comments(config, comments).await?
         } else {
             String::new()
         };
 
         Ok(format!(
-            "{prefix}{content}{description}{due}{labels}{comment_number}{project} {url}{comments}\n"
+            "{prefix}{content}{description}{due}{labels}{comment_number}{project} {url}{comments}\n\n"
         ))
     }
 
@@ -1037,7 +1037,18 @@ mod tests {
 
     #[tokio::test]
     async fn can_format_task_with_a_date() {
-        let config = test::fixtures::config().await;
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+        let config = test::fixtures::config().await.with_mock_url(server.url());
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
@@ -1054,11 +1065,23 @@ mod tests {
 
         assert!(task.contains("Get gifts for the twins"));
         assert!(task.contains("2021-08-13"));
+        mock.assert();
     }
 
     #[tokio::test]
     async fn can_format_task_with_today() {
-        let config = test::fixtures::config().await;
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+        let config = test::fixtures::config().await.with_mock_url(server.url());
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
@@ -1074,6 +1097,7 @@ mod tests {
             .unwrap();
 
         assert!(task_text.contains("Today @ computer"));
+        mock.assert();
     }
 
     #[tokio::test]
@@ -1378,6 +1402,16 @@ mod tests {
             .with_body(test::responses::today_task().await)
             .create_async()
             .await;
+        let mock2 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
         let config = test::fixtures::config()
             .await
             .mock_select(1)
@@ -1387,6 +1421,7 @@ mod tests {
 
         tokio::join!(future).0.unwrap();
         mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]
@@ -1397,6 +1432,16 @@ mod tests {
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_task().await)
+            .create_async()
+            .await;
+        let mock2 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -1417,6 +1462,7 @@ mod tests {
             .await
             .unwrap();
         mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]

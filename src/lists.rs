@@ -255,6 +255,17 @@ mod tests {
             .create_async()
             .await;
 
+        let mock3 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -266,6 +277,7 @@ mod tests {
         assert_eq!(result, Ok(String::from("Successfully prioritized 'today'")));
         mock.assert();
         mock2.assert();
+        mock3.assert();
     }
     #[tokio::test]
     async fn test_timebox() {
@@ -293,6 +305,18 @@ mod tests {
             .with_body(test::responses::ids())
             .create_async()
             .await;
+
+        let mock4 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
+
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -327,6 +351,7 @@ mod tests {
         mock.expect(2);
         mock2.expect(2);
         mock3.expect(1);
+        mock4.expect(1);
     }
 
     #[tokio::test]
@@ -374,6 +399,16 @@ mod tests {
             .create_async()
             .await;
 
+        let mock3 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -388,6 +423,7 @@ mod tests {
         assert_eq!(result, Ok("Successfully processed 'today'".to_string()));
         mock.assert();
         mock2.assert();
+        mock3.assert();
     }
 
     #[tokio::test]
@@ -406,6 +442,17 @@ mod tests {
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_task().await)
+            .create_async()
+            .await;
+
+        let mock3 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -431,6 +478,7 @@ mod tests {
         );
         mock.assert();
         mock2.assert();
+        mock3.assert();
     }
     #[tokio::test]
     async fn test_label() {
@@ -448,6 +496,17 @@ mod tests {
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
+            .create_async()
+            .await;
+
+        let mock3 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -473,6 +532,7 @@ mod tests {
         );
         mock.assert();
         mock2.assert();
+        mock3.assert();
     }
 
     #[tokio::test]
@@ -486,6 +546,16 @@ mod tests {
             .create_async()
             .await;
 
+        let mock2 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
+            .create_async()
+            .await;
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let mut config_with_timezone = config
@@ -500,6 +570,7 @@ mod tests {
 
         assert!(tasks.contains("Tasks for today"));
         mock.assert();
+        mock2.assert();
     }
 
     #[tokio::test]
@@ -510,6 +581,17 @@ mod tests {
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
+            .create_async()
+            .await;
+
+        let mock2 = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -530,5 +612,6 @@ mod tests {
         assert!(tasks.contains("Tasks for"));
         assert!(tasks.contains("- TEST\n"));
         mock.assert();
+        mock2.assert();
     }
 }

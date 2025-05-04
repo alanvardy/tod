@@ -137,7 +137,7 @@ pub mod fixtures {
             default_order: 0,
             description: "Something".to_string(),
             parent_id: None,
-            inbox_project: false,
+            inbox_project: None,
             is_collapsed: false,
             is_shared: false,
         }

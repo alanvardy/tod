@@ -30,6 +30,7 @@ pub enum Attachment {
     Url(UrlAttachment),
     ShortUrl(ShortUrlAttachment),
     Video(VideoAttachment),
+    Image(ImageAttachment),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
@@ -69,6 +70,23 @@ pub struct VideoAttachment {
     site_name: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct ImageAttachment {
+    pub resource_type: String,
+    pub url: String,
+    pub image: String,
+    pub image_height: u32,
+    pub image_width: u32,
+    pub site_name: Option<String>,
+    pub title: Option<String>,
+    #[serde(default)]
+    pub tn_s: Option<serde_json::Value>,
+    #[serde(default)]
+    pub tn_m: Option<serde_json::Value>,
+    #[serde(default)]
+    pub tn_l: Option<serde_json::Value>,
+}
+
 impl Comment {
     pub fn fmt(&self, config: &Config) -> Result<String, Error> {
         let timezone = time::timezone_from_str(&config.timezone)?;
@@ -82,36 +100,41 @@ impl Comment {
                 site_name,
                 title,
                 ..
-            })) => {
-                format!("\nAttachment \x1B]8;;{url}\x1B\\[{site_name}: {title}]\x1B]8;;\x1B\\")
-            }
-            Some(Attachment::ShortUrl(ShortUrlAttachment {
-                url,
-                title,
-                resource_type: _resource_type,
-            })) => {
-                format!("\nAttachment \x1B]8;;{url}\x1B\\[{title}]\x1B]8;;\x1B\\")
+            })) => Self::render_link(url, &format!("{site_name}: {title}")),
+            Some(Attachment::ShortUrl(ShortUrlAttachment { url, title, .. })) => {
+                Self::render_link(url, title)
             }
             Some(Attachment::Video(VideoAttachment {
                 url,
                 site_name,
                 title,
                 ..
-            })) => {
-                format!("\nAttachment \x1B]8;;{url}\x1B\\[{site_name}: {title}]\x1B]8;;\x1B\\")
-            }
+            })) => Self::render_link(url, &format!("{site_name}: {title}")),
             Some(Attachment::File(FileAttachment {
-                file_name,
                 file_url,
+                file_name,
+                ..
+            })) => Self::render_link(file_url, file_name),
+            Some(Attachment::Image(ImageAttachment {
+                url,
+                site_name,
+                title,
                 ..
             })) => {
-                format!("\nAttachment \x1B]8;;{file_url}\x1B\\[{file_name}]\x1B]8;;\x1B\\")
+                let site = site_name.as_deref().unwrap_or("Image");
+                let title = title.as_deref().unwrap_or(url);
+                Self::render_link(url, &format!("{site}: {title}"))
             }
         };
+
         Ok(format!(
             "Posted {}{}\n{}",
             formatted_date, link, self.content
         ))
+    }
+
+    fn render_link(url: &str, label: &str) -> String {
+        format!("\nAttachment \x1B]8;;{url}\x1B\\[{label}]\x1B]8;;\x1B\\")
     }
 }
 
@@ -119,6 +142,7 @@ pub fn json_to_comment_response(json: String) -> Result<CommentResponse, Error> 
     let response: CommentResponse = serde_json::from_str(&json)?;
     Ok(response)
 }
+
 pub fn json_to_comment(json: String) -> Result<Comment, Error> {
     let comment: Comment = serde_json::from_str(&json)?;
     Ok(comment)

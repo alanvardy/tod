@@ -2,6 +2,10 @@
 
 ## Unreleased (on main branch only)
 
+- Handle `ImageAttachment` comment/file format
+- Reject invalid config file with error message
+- Ignore `is_deleted: true` attachments/comments
+
 ## 2025-05-04 v0.7.4
 
 - Handle Workspace projects by making `inbox_project` field optional on Project struct

@@ -613,6 +613,7 @@ pub async fn all_comments(
     let limit = limit.unwrap_or(QUERY_LIMIT);
     let mut url = format!("{COMMENTS_URL}?task_id={task_id}&limit={limit}");
     let mut comments: Vec<Comment> = Vec::new();
+
     loop {
         let json = request::get_todoist(config, url, true).await?;
         let CommentResponse {
@@ -620,15 +621,18 @@ pub async fn all_comments(
             next_cursor,
         } = comments::json_to_comment_response(json)?;
 
-        comments.extend(results);
+        // Filter out deleted comments before extending
+        comments.extend(results.into_iter().filter(|c| !c.is_deleted));
+
         match next_cursor {
             None => break,
-            Some(string) => {
+            Some(cursor) => {
                 url =
-                    format!("{COMMENTS_URL}?task_id={task_id}&limit={QUERY_LIMIT}&cursor={string}");
+                    format!("{COMMENTS_URL}?task_id={task_id}&limit={QUERY_LIMIT}&cursor={cursor}");
             }
         };
     }
+
     Ok(comments)
 }
 

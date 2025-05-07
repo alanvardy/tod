@@ -613,6 +613,7 @@ pub async fn all_comments(
     let limit = limit.unwrap_or(QUERY_LIMIT);
     let mut url = format!("{COMMENTS_URL}?task_id={task_id}&limit={limit}");
     let mut comments: Vec<Comment> = Vec::new();
+
     loop {
         let json = request::get_todoist(config, url, true).await?;
         let CommentResponse {
@@ -620,15 +621,18 @@ pub async fn all_comments(
             next_cursor,
         } = comments::json_to_comment_response(json)?;
 
-        comments.extend(results);
+        // Filter out deleted comments before extending
+        comments.extend(results.into_iter().filter(|c| !c.is_deleted));
+
         match next_cursor {
             None => break,
-            Some(string) => {
+            Some(cursor) => {
                 url =
-                    format!("{COMMENTS_URL}?task_id={task_id}&limit={QUERY_LIMIT}&cursor={string}");
+                    format!("{COMMENTS_URL}?task_id={task_id}&limit={QUERY_LIMIT}&cursor={cursor}");
             }
         };
     }
+
     Ok(comments)
 }
 
@@ -955,5 +959,32 @@ mod tests {
             update_task_due_natural_language(&config, &task, "today".to_string(), None, true).await;
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
+    }
+
+    #[tokio::test]
+    async fn test_all_comments_filters_deleted() {
+        let mut server = mockito::Server::new_async().await;
+
+        let body = std::fs::read_to_string("tests/fixtures/comments_all_types.json").unwrap();
+
+        let mock = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let task = test::fixtures::today_task().await;
+
+        let comments = all_comments(&config, &task, None).await.unwrap();
+        mock.assert();
+
+        assert_eq!(comments.len(), 7); // One comment in the JSON is_deleted = true
+        assert!(comments.iter().all(|c| !c.is_deleted));
     }
 }

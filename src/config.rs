@@ -284,15 +284,37 @@ impl Config {
             .await?
             .read_to_string(&mut json)
             .await?;
-        let config = serde_json::from_str::<Config>(&json)?;
 
-        match config.sort_value {
-            None => Ok(Config {
+        let config: Config = match serde_json::from_str(&json) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "\n{}",
+                    color::red_string(&format!(
+                        "Error loading config file '{}':\n{}\n\
+                    \nYour config may contain an invalid value (e.g., a number over 255 in a `u8` field like `sort_value`).\n\
+                    Please manually fix or delete the file.",
+                        path, e
+                    ))
+                );
+                if cfg!(test) {
+                    return Err(e.into());
+                } else {
+                    std::process::exit(1);
+                }
+            }
+        };
+
+        let config = if config.sort_value.is_none() {
+            Config {
                 sort_value: Some(SortValue::default()),
                 ..config
-            }),
-            Some(_) => Ok(config),
-        }
+            }
+        } else {
+            config
+        };
+
+        Ok(config)
     }
 
     pub async fn new(token: &str, tx: Option<UnboundedSender<Error>>) -> Result<Config, Error> {
@@ -624,53 +646,59 @@ mod tests {
     #[tokio::test]
     async fn config_tests() {
         // These need to be run sequentially as they write to the filesystem.
-
         let server = mockito::Server::new_async().await;
 
-        // create
-
+        // --- CREATE ---
         let new_config = test::fixtures::config().await;
-        Config {
+        let created_config = Config {
             token: String::from("created"),
             ..new_config.clone()
-        }
-        .create()
-        .await
-        .unwrap();
+        };
+        created_config.create().await.unwrap();
 
-        // load
-
+        // --- LOAD ---
         let loaded_config = Config::load(&new_config.path).await.unwrap();
-        assert_matches!(loaded_config.token.as_str(), "created");
+        assert_eq!(loaded_config.token, "created");
 
-        // get_or_create (create)
-        let config = get_or_create(None, false, None, &tx())
+        // --- GET_OR_CREATE (create) ---
+        let config_created = get_or_create(None, false, None, &tx())
             .await
-            .expect("Could not get or create");
-        delete_config(&config.path).await;
+            .expect("Could not get or create config (create)");
+        delete_config(&config_created.path).await;
 
-        // get_or_create (load)
-        test::fixtures::config()
+        // --- GET_OR_CREATE (load) ---
+        let test_config = test::fixtures::config().await.with_mock_url(server.url());
+        test_config.create().await.unwrap();
+
+        let config_loaded = get_or_create(None, false, None, &tx())
             .await
-            .with_mock_url(server.url())
-            .create()
-            .await
-            .unwrap();
+            .expect("Could not get or create config (load)");
 
-        let config = get_or_create(None, false, None, &tx()).await;
-
-        assert_matches!(
-            config,
-            Ok(Config {
-                internal: Internal { tx: Some(_) },
-                ..
-            })
-        );
-
-        delete_config(&config.unwrap().path).await;
+        assert!(config_loaded.internal.tx.is_some());
     }
 
     async fn delete_config(path: &str) {
         assert_matches!(fs::remove_file(path).await, Ok(_));
+    }
+
+    #[tokio::test]
+    async fn load_should_fail_on_invalid_u8_value() {
+        use tokio::fs::write;
+
+        let bad_config_path = "tests/bad_config_invalid_u8.cfg";
+        let contents = r#"{
+        "token": "abc123",
+        "path": "tests/bad_config_invalid_u8.cfg",
+        "sort_value": {
+            "priority_none": 500
+        }
+    }"#;
+
+        write(bad_config_path, contents).await.unwrap();
+
+        let result = Config::load(bad_config_path).await;
+        assert!(result.is_err(), "Expected error from invalid u8");
+
+        fs::remove_file(bad_config_path).await.unwrap();
     }
 }

@@ -960,4 +960,31 @@ mod tests {
         mock.assert();
         assert_eq!(response, Ok(String::from("✓")));
     }
+
+    #[tokio::test]
+    async fn test_all_comments_filters_deleted() {
+        let mut server = mockito::Server::new_async().await;
+
+        let body = std::fs::read_to_string("tests/fixtures/comments_all_types.json").unwrap();
+
+        let mock = server
+            .mock(
+                "GET",
+                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(body)
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let task = test::fixtures::today_task().await;
+
+        let comments = all_comments(&config, &task, None).await.unwrap();
+        mock.assert();
+
+        assert_eq!(comments.len(), 7); // One comment in the JSON is_deleted = true
+        assert!(comments.iter().all(|c| !c.is_deleted));
+    }
 }

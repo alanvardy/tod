@@ -21,6 +21,7 @@ pub mod fixtures {
             is_favorite: false,
         }
     }
+
     async fn adjusted_date(days: i64) -> String {
         let config = config().await.with_timezone("America/Vancouver");
         let tomorrow = time::now(&config).unwrap() + ChronoDuration::days(days);

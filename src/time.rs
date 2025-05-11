@@ -27,10 +27,6 @@ impl TimeProvider for SystemTimeProvider {
     fn now(&self, tz: Tz) -> DateTime<Tz> {
         Utc::now().with_timezone(&tz)
     }
-
-    fn today(&self, tz: Tz) -> NaiveDate {
-        self.now(tz).date_naive()
-    }
 }
 /// Returns the current time in the given timezone
 /// If no timezone is given, it defaults to UTC
@@ -261,5 +257,14 @@ mod tests {
         let result = today_date_from_tz(tz).unwrap();
         let expected = chrono::Utc::now().with_timezone(&tz).date_naive();
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn trait_default_today_is_used() {
+        let provider = SystemTimeProvider;
+        let tz: Tz = "UTC".parse().unwrap();
+        let expected = provider.now(tz).date_naive();
+        let today = provider.today(tz);
+        assert_eq!(today, expected);
     }
 }

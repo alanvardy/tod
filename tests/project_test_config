@@ -11,7 +11,7 @@
   "update_check_interval": 86400,
   "sort_value": {
     "deadline_days": 5,
-    "deadline_value", 30,
+    "deadline_value": 30,
     "no_due_date": 80,
     "not_recurring": 50,
     "now": 200,
@@ -21,5 +21,5 @@
     "priority_medium": 3,
     "priority_none": 2,
     "today": 100
-  },
+  }
 }

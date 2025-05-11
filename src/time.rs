@@ -48,7 +48,7 @@ pub fn today_date(config: &Config) -> Result<NaiveDate, Error> {
     Ok(now(config)?.date_naive())
 }
 
-/// Returns today's date in given timezone for testing
+/// Returns today's date in given timezone for testing. Only used in tests currently but included for completeness.
 pub fn today_date_from_tz(tz: Tz) -> Result<NaiveDate, Error> {
     Ok(chrono::Utc::now().with_timezone(&tz).date_naive())
 }

@@ -35,6 +35,7 @@ mod projects;
 mod sections;
 mod tasks;
 mod test;
+mod test_time;
 mod time;
 mod todoist;
 mod users;

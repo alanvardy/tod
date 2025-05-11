@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use crate::config::Config;
 use crate::errors::{self, Error};
-use chrono::offset::Utc;
 use chrono::{DateTime, NaiveDate, NaiveDateTime};
 use chrono_tz::Tz;
 use regex::Regex;
@@ -15,9 +14,28 @@ const FORMAT_DATETIME_LONG: &str = "%Y-%m-%dT%H:%M:%S%.fZ";
 
 pub const FORMAT_DATE_AND_TIME: &str = "%Y-%m-%d %H:%M";
 
+#[cfg(test)]
+pub trait TimeProvider {
+    fn now(&self, tz: Tz) -> DateTime<Tz>;
+    fn today(&self, tz: Tz) -> NaiveDate;
+}
+
 pub fn now(config: &Config) -> Result<DateTime<Tz>, Error> {
     let tz = timezone_from_str(&config.timezone)?;
-    Ok(Utc::now().with_timezone(&tz))
+
+    let now = {
+        #[cfg(test)]
+        {
+            crate::test_time::FixedTimeProvider.now(tz)
+        }
+
+        #[cfg(not(test))]
+        {
+            chrono::Utc::now().with_timezone(&tz)
+        }
+    };
+
+    Ok(now)
 }
 
 /// Return today's date in format 2021-09-16
@@ -30,21 +48,26 @@ pub fn today_date(config: &Config) -> Result<NaiveDate, Error> {
     Ok(now(config)?.date_naive())
 }
 
+/// Returns today's date in given timezone for testing
+pub fn today_date_from_tz(tz: Tz) -> Result<NaiveDate, Error> {
+    Ok(chrono::Utc::now().with_timezone(&tz).date_naive())
+}
+// Checks if datetime is today
 pub fn datetime_is_today(datetime: DateTime<Tz>, config: &Config) -> Result<bool, Error> {
     date_is_today(datetime.date_naive(), config)
 }
-
+// Check if date is today
 pub fn date_is_today(date: NaiveDate, config: &Config) -> Result<bool, Error> {
     let date_string = date.format(FORMAT_DATE).to_string();
     let today_string = today_string(config)?;
     Ok(date_string == today_string)
 }
-
+// Converts a date string to a NaiveDate
 pub fn date_string_to_naive_date(date_string: &str) -> Result<NaiveDate, Error> {
     let date = NaiveDate::from_str(date_string)?;
     Ok(date)
 }
-
+// / Check if date is in the past
 pub fn is_date_in_past(date: NaiveDate, config: &Config) -> Result<bool, Error> {
     Ok(num_days_from_today(date, config)? < 0)
 }
@@ -54,7 +77,7 @@ pub fn num_days_from_today(date: NaiveDate, config: &Config) -> Result<i64, Erro
     let duration = date.signed_duration_since(today_date(config)?);
     Ok(duration.num_days())
 }
-
+// Formats a date to a string
 pub fn format_date(date: &NaiveDate, config: &Config) -> Result<String, Error> {
     if date_is_today(*date, config)? {
         Ok(String::from("Today"))
@@ -62,7 +85,7 @@ pub fn format_date(date: &NaiveDate, config: &Config) -> Result<String, Error> {
         Ok(date.format(FORMAT_DATE).to_string())
     }
 }
-
+// Formats a datetime to a string
 pub fn format_datetime(datetime: &DateTime<Tz>, config: &Config) -> Result<String, Error> {
     let tz = timezone_from_str(&config.timezone)?;
     if datetime_is_today(*datetime, config)? {
@@ -176,6 +199,7 @@ pub fn is_datetime(string: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono_tz::Tz;
 
     #[test]
     fn test_is_date() {
@@ -204,5 +228,21 @@ mod tests {
             timezone_from_str(&Some("GMT -7:00".to_string())),
             Ok(Tz::Etc__GMTPlus7),
         );
+    }
+
+    #[test]
+    fn test_today_date_from_tz_utc() {
+        let tz = Tz::UTC;
+        let result = today_date_from_tz(tz).unwrap();
+        let expected = chrono::Utc::now().with_timezone(&tz).date_naive();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_today_date_from_tz_pacific() {
+        let tz = Tz::America__Los_Angeles;
+        let result = today_date_from_tz(tz).unwrap();
+        let expected = chrono::Utc::now().with_timezone(&tz).date_naive();
+        assert_eq!(result, expected);
     }
 }

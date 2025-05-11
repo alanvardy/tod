@@ -7,6 +7,8 @@ use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::fmt;
+use std::sync::Arc;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
@@ -22,7 +24,7 @@ pub struct Completed {
 }
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
     /// The Todoist Api token
     pub token: String,
@@ -73,6 +75,41 @@ pub struct Config {
     /// For storing arguments from the commandline
     #[serde(skip)]
     pub internal: Internal,
+    /// Optional TimeProvider for testing only
+    #[serde(skip)]
+    pub time_provider: Option<std::sync::Arc<dyn crate::time::TimeProvider>>,
+}
+
+// Manually implement Debug for Config to address specific issues.
+impl fmt::Debug for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Config")
+            .field("token", &self.token)
+            .field("projects", &self.projects)
+            .field("legacy_projects", &self.legacy_projects)
+            .field("path", &self.path)
+            .field("next_id", &self.next_id)
+            .field("next_task", &self.next_task)
+            .field("bell_on_success", &self.bell_on_success)
+            .field("bell_on_failure", &self.bell_on_failure)
+            .field("timezone", &self.timezone)
+            .field("timeout", &self.timeout)
+            .field("last_version_check", &self.last_version_check)
+            .field("mock_url", &self.mock_url)
+            .field("mock_string", &self.mock_string)
+            .field("mock_select", &self.mock_select)
+            .field("spinners", &self.spinners)
+            .field("disable_links", &self.disable_links)
+            .field("completed", &self.completed)
+            .field("max_comment_length", &self.max_comment_length)
+            .field("verbose", &self.verbose)
+            .field("no_sections", &self.no_sections)
+            .field("natural_language_only", &self.natural_language_only)
+            .field("sort_value", &self.sort_value)
+            .field("args", &self.args)
+            .field("internal", &self.internal)
+            .finish()
+    }
 }
 
 fn bell_on_failure() -> bool {
@@ -345,6 +382,7 @@ impl Config {
                 timeout: None,
             },
             legacy_projects: Some(Vec::new()),
+            time_provider: Some(Arc::new(crate::time::SystemTimeProvider)),
             projects: Some(Vec::new()),
         })
     }
@@ -352,6 +390,7 @@ impl Config {
     pub async fn reload(&self) -> Result<Self, Error> {
         Config::load(&self.path).await.map(|config| Config {
             internal: self.internal.clone(),
+            time_provider: self.time_provider.clone(),
             ..config
         })
     }
@@ -490,10 +529,12 @@ pub async fn get(
         internal: Internal {
             tx: Some(tx.clone()),
         },
+        time_provider: Some(Arc::new(crate::time::SystemTimeProvider)),
         ..config
     })
 }
-
+/// Generates the path to the config file
+///
 pub async fn generate_path() -> Result<String, Error> {
     let config_directory = dirs::config_dir()
         .ok_or_else(|| errors::new("dirs", "Could not find config directory"))?
@@ -566,6 +607,12 @@ mod tests {
             Config {
                 projects: Some(projects),
                 ..self.clone()
+            }
+        }
+        pub fn with_time_provider(self, provider: Arc<dyn crate::time::TimeProvider>) -> Self {
+            Config {
+                time_provider: Some(provider),
+                ..self
             }
         }
     }

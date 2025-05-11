@@ -1,10 +1,10 @@
-use std::str::FromStr;
-
 use crate::config::Config;
 use crate::errors::{self, Error};
-use chrono::{DateTime, NaiveDate, NaiveDateTime};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use regex::Regex;
+use std::str::FromStr;
+use std::sync::Arc;
 
 pub const FORMAT_DATE: &str = "%Y-%m-%d";
 const FORMAT_TIME: &str = "%H:%M";
@@ -14,38 +14,54 @@ const FORMAT_DATETIME_LONG: &str = "%Y-%m-%dT%H:%M:%S%.fZ";
 
 pub const FORMAT_DATE_AND_TIME: &str = "%Y-%m-%d %H:%M";
 
-#[cfg(test)]
-pub trait TimeProvider {
+pub trait TimeProvider: Send + Sync {
     fn now(&self, tz: Tz) -> DateTime<Tz>;
-    fn today(&self, tz: Tz) -> NaiveDate;
+    fn today(&self, tz: Tz) -> NaiveDate {
+        self.now(tz).date_naive()
+    }
 }
 
+pub struct SystemTimeProvider;
+
+impl TimeProvider for SystemTimeProvider {
+    fn now(&self, tz: Tz) -> DateTime<Tz> {
+        Utc::now().with_timezone(&tz)
+    }
+
+    fn today(&self, tz: Tz) -> NaiveDate {
+        self.now(tz).date_naive()
+    }
+}
+/// Returns the current time in the given timezone
+/// If no timezone is given, it defaults to UTC
 pub fn now(config: &Config) -> Result<DateTime<Tz>, Error> {
     let tz = timezone_from_str(&config.timezone)?;
 
-    let now = {
-        #[cfg(test)]
-        {
-            crate::test_time::FixedTimeProvider.now(tz)
-        }
+    let provider = config
+        .time_provider
+        .as_ref()
+        .map(|arc| arc.clone())
+        .unwrap_or_else(|| Arc::new(SystemTimeProvider));
 
-        #[cfg(not(test))]
-        {
-            chrono::Utc::now().with_timezone(&tz)
-        }
-    };
-
-    Ok(now)
+    Ok(provider.now(tz))
 }
 
 /// Return today's date in format 2021-09-16
 pub fn today_string(config: &Config) -> Result<String, Error> {
-    Ok(now(config)?.format(FORMAT_DATE).to_string())
+    let tz = timezone_from_str(&config.timezone)?;
+    let today = config.time_provider.as_ref().unwrap().today(tz);
+
+    Ok(today.format(FORMAT_DATE).to_string())
 }
 
 /// Return today's date in Utc
 pub fn today_date(config: &Config) -> Result<NaiveDate, Error> {
-    Ok(now(config)?.date_naive())
+    let tz = timezone_from_str(&config.timezone)?;
+    Ok(config
+        .time_provider
+        .as_ref()
+        .map(|p| p.today(tz))
+        .unwrap_or_else(|| Utc::now().with_timezone(&tz).date_naive()))
 }
 
 /// Returns today's date in given timezone for testing. Only used in tests currently but included for completeness.

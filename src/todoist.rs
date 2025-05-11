@@ -638,6 +638,8 @@ pub async fn all_comments(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use crate::tasks::priority::{self, Priority};
     use crate::test;
@@ -679,7 +681,10 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let config = test::fixtures::config()
+            .await
+            .with_mock_url(server.url())
+            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
 
         assert_eq!(
             quick_create_task(&config, "testy test").await,
@@ -719,7 +724,10 @@ mod tests {
             .create_async()
             .await;
 
-        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let config = test::fixtures::config()
+            .await
+            .with_mock_url(server.url())
+            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
 
         let project = test::fixtures::project();
 
@@ -841,7 +849,10 @@ mod tests {
             .await;
 
         let task = test::fixtures::today_task().await;
-        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let config = test::fixtures::config()
+            .await
+            .with_mock_url(server.url())
+            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
 
         let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap();
@@ -865,7 +876,10 @@ mod tests {
             .await;
 
         let task = test::fixtures::today_task().await;
-        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let config = test::fixtures::config()
+            .await
+            .with_mock_url(server.url())
+            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
 
         let section = test::fixtures::section();
         let response = move_task_to_section(&config, &task, &section, false)
@@ -979,6 +993,7 @@ mod tests {
             .await;
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
+
         let task = test::fixtures::today_task().await;
 
         let comments = all_comments(&config, &task, None).await.unwrap();

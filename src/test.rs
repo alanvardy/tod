@@ -9,8 +9,9 @@ pub mod fixtures {
     use crate::sections::Section;
     use crate::tasks::priority::Priority;
     use crate::tasks::{DateInfo, Deadline, Duration, Task, Unit};
-    use crate::time::{self, FORMAT_DATE};
-    use chrono::Duration as ChronoDuration;
+    use crate::time::{self, FORMAT_DATE, TimeProvider};
+    use chrono::{DateTime, Duration as ChronoDuration, NaiveDate};
+    use chrono_tz::Tz;
 
     pub fn label() -> Label {
         Label {
@@ -24,8 +25,9 @@ pub mod fixtures {
 
     async fn adjusted_date(days: i64) -> String {
         let config = config().await.with_timezone("America/Vancouver");
-        let tomorrow = time::now(&config).unwrap() + ChronoDuration::days(days);
-        tomorrow.format(FORMAT_DATE).to_string()
+        let base_date = time::today_date(&config).unwrap();
+        let adjusted = base_date + ChronoDuration::days(days);
+        adjusted.format(FORMAT_DATE).to_string()
     }
 
     pub async fn today_task() -> Task {
@@ -113,12 +115,16 @@ pub mod fixtures {
     }
 
     pub async fn config() -> Config {
-        let (tx, mut _rx) = tokio::sync::mpsc::unbounded_channel::<Error>();
+        use crate::test_time::FixedTimeProvider;
+        use std::sync::Arc;
+
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel::<Error>();
 
         Config::new("alreadycreated", Some(tx))
             .await
             .expect("Could not generate directory")
             .with_projects(vec![project()])
+            .with_time_provider(Arc::new(FixedTimeProvider))
     }
 
     pub fn project() -> Project {
@@ -173,11 +179,31 @@ pub mod fixtures {
             file_attachment: None,
         }
     }
+    /// / Used for testing where a fixed time is needed for the "now" and "today" functions.
+    /// Returns a fixed time (10:28 AM UTC) for "today", using the system's local date.
+    pub struct FixedTimeProvider;
+
+    impl TimeProvider for FixedTimeProvider {
+        fn now(&self, tz: Tz) -> DateTime<Tz> {
+            let today = crate::time::today_date_from_tz(tz)
+                .unwrap_or_else(|_| chrono::Utc::now().date_naive());
+            today
+                .and_hms_opt(10, 28, 0)
+                .unwrap()
+                .and_local_timezone(tz)
+                .unwrap()
+        }
+
+        fn today(&self, tz: Tz) -> NaiveDate {
+            crate::time::today_date_from_tz(tz).unwrap_or_else(|_| chrono::Utc::now().date_naive())
+        }
+    }
 }
 #[cfg(test)]
 pub mod responses {
-    use crate::test::fixtures;
     use crate::{VERSION, time};
+
+    use super::fixtures::config;
 
     pub fn sync() -> String {
         String::from(
@@ -725,7 +751,7 @@ pub mod responses {
     }
 
     async fn today_date() -> String {
-        let config = fixtures::config().await.with_timezone("America/Vancouver");
+        let config = config().await.with_timezone("America/Vancouver");
         time::today_string(&config).unwrap()
     }
 }

@@ -5,6 +5,8 @@
 - Handle `ImageAttachment` comment/file format
 - Reject invalid config file with error message
 - Ignore `is_deleted: true` attachments/comments
+- Handle blank `token` value in Config
+- Print timezone output when running `config set-timezone`
 
 ## 2025-05-04 v0.7.4
 

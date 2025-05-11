@@ -523,7 +523,7 @@ impl Default for Config {
     }
 }
 /// Fetches config from from disk and creates it if it doesn't exist
-/// Prompts for Todoist API token if file not present
+/// Prompts for Todoist API token
 pub async fn get_or_create(
     config_path: Option<String>,
     verbose: bool,
@@ -536,59 +536,22 @@ pub async fn get_or_create(
             // File not found or unreadable — prompt for token
             let desc =
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
-            return prompt_and_set_token(desc, tx).await;
+            return set_token(desc, tx).await;
         }
     };
 
     // 🧠 Config loaded successfully — but check if token is blank
     if config.token.trim().is_empty() {
         let desc = "Your configuration file exists but the Todoist API token is empty.\nPlease enter your Todoist API token from https://todoist.com/prefs/integrations ";
-        return prompt_and_set_token(desc, tx).await;
+        return set_token(desc, tx).await;
     }
 
     Ok(config)
 }
-// Function to prompt user for token to set
-pub async fn prompt_and_set_token(
-    desc: &str,
-    tx: &UnboundedSender<Error>,
-) -> Result<Config, Error> {
-    let token = input::string(desc, None)?;
-    set_token(token, tx).await
-}
-
 //Fn to set token
-pub async fn set_token(token: String, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
-    let config = match crate::config::get(None, false, None, tx).await {
-        Ok(mut cfg) => {
-            // If the config file exists, update the token
-            cfg.token = token;
-            cfg.internal = Internal {
-                tx: Some(tx.clone()),
-            };
-            cfg.save().await?;
-            cfg
-        }
-        Err(e) => {
-            if e.message.to_lowercase().contains("does not exist")
-                || e.message.to_lowercase().contains("no such file")
-            {
-                let cfg = Config {
-                    path: generate_path().await?,
-                    token,
-                    internal: Internal {
-                        tx: Some(tx.clone()),
-                    },
-                    ..Config::default()
-                };
-                return cfg.create().await;
-            } else {
-                return Err(e);
-            }
-        }
-    };
-
-    Ok(config)
+pub async fn set_token(desc: &str, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
+    let token = input::string(desc, Some(String::new()))?;
+    Config::new(&token, Some(tx.clone())).await?.create().await
 }
 
 pub async fn get(
@@ -614,6 +577,7 @@ pub async fn get(
         internal: Internal {
             tx: Some(tx.clone()),
         },
+        time_provider: Some(Arc::new(crate::time::SystemTimeProvider)),
         ..config
     })
 }
@@ -741,18 +705,12 @@ mod tests {
 
     use super::*;
     use pretty_assertions::assert_eq;
-    use tokio::sync::mpsc::unbounded_channel;
 
     fn tx() -> UnboundedSender<Error> {
         let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
         tx
     }
-    #[tokio::test]
-    async fn uses_config_new() {
-        let (tx, _) = unbounded_channel();
-        let cfg = Config::new("test-token", Some(tx)).await.unwrap();
-        assert_eq!(cfg.token, "test-token");
-    }
+
     #[tokio::test]
     async fn new_should_generate_config() {
         let config = Config::new("something", None).await.unwrap();

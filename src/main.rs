@@ -505,9 +505,6 @@ enum ConfigCommands {
     #[clap(alias = "tz")]
     /// (tz) Change the timezone in the configuration file
     SetTimezone(ConfigSetTimezone),
-    #[clap(alias = "key")]
-    /// (key) Set the Todoist API token in the configuration file
-    SetToken(ConfigSetToken),
 }
 
 #[derive(Subcommand, Debug, Clone)]
@@ -538,12 +535,6 @@ struct ConfigSetTimezone {
     #[arg(short, long)]
     /// TimeZone to add, i.e. "Canada/Pacific"
     timezone: Option<String>,
-}
-#[derive(Debug, Clone, clap::Args)]
-pub struct ConfigSetToken {
-    /// Optional Todoist API token to set directly
-    #[arg(long)]
-    pub token: Option<String>,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -887,17 +878,6 @@ async fn select_command(
                 config.bell_on_success,
                 config.bell_on_failure,
                 tz_reset(config, args).await,
-            )
-        }
-        Commands::Config(ConfigCommands::SetToken(args)) => {
-            let config = match fetch_config(&cli, &tx).await {
-                Ok(config) => config,
-                Err(e) => return (true, true, Err(e)),
-            };
-            (
-                config.bell_on_success,
-                config.bell_on_failure,
-                token_reset(config, args, tx.clone()).await,
             )
         }
 
@@ -1427,25 +1407,6 @@ async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, E
             &format!("Could not reset timezone in config. {e}"),
         )),
     }
-}
-
-async fn token_reset(
-    _config: Config,
-    args: &ConfigSetToken,
-    tx: UnboundedSender<Error>,
-) -> Result<String, Error> {
-    let token = match &args.token {
-        Some(t) => t.clone(),
-        None => {
-            let desc =
-                "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
-            input::string(desc, None)?
-        }
-    };
-
-    crate::config::set_token(token, &tx).await?;
-
-    Ok("Token set successfully.".to_string())
 }
 
 // --- VALUE HELPERS ---

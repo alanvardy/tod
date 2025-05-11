@@ -211,7 +211,10 @@ pub fn is_datetime(string: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::time;
+
     use super::*;
+    use chrono::Datelike;
     use chrono_tz::Tz;
 
     #[test]
@@ -266,5 +269,32 @@ mod tests {
         let expected = provider.now(tz).date_naive();
         let today = provider.today(tz);
         assert_eq!(today, expected);
+    }
+
+    #[tokio::test]
+    async fn config_uses_default_system_time_provider() {
+        let mut config = Config::new("test-token", None).await.unwrap();
+        config.time_provider = None;
+
+        let now = crate::time::now(&config).unwrap();
+        assert!(now.year() >= 2024); // or any sanity check
+    }
+
+    #[test]
+    fn fallback_to_utc_now_when_today_date_from_tz_fails() {
+        let tz: Tz = chrono_tz::UTC;
+
+        let result = time::today_date_from_tz(tz)
+            .unwrap_or_else(|_| Utc::now().with_timezone(&tz).date_naive());
+
+        let expected = Utc::now().with_timezone(&tz).date_naive();
+
+        // Allow for edge-of-day differences
+        assert!(
+            result == expected || (result - expected).num_days().abs() <= 1,
+            "Got {}, expected ~{}",
+            result,
+            expected
+        );
     }
 }

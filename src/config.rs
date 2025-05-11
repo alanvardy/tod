@@ -3,6 +3,7 @@ use crate::errors::{self, Error};
 use crate::id::Resource;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
+use crate::time::TimeProvider;
 use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
@@ -77,7 +78,7 @@ pub struct Config {
     pub internal: Internal,
     /// Optional TimeProvider for testing only
     #[serde(skip)]
-    pub time_provider: Option<std::sync::Arc<dyn crate::time::TimeProvider>>,
+    pub time_provider: Option<Arc<dyn TimeProvider>>,
 }
 
 // Manually implement Debug for Config to address specific issues.
@@ -487,6 +488,40 @@ impl Config {
     }
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            token: String::new(),
+            path: String::new(),
+            next_id: None,
+            next_task: None,
+            last_version_check: None,
+            timeout: None,
+            bell_on_success: false,
+            bell_on_failure: true,
+            sort_value: Some(SortValue::default()),
+            timezone: None,
+            completed: None,
+            disable_links: false,
+            spinners: Some(true),
+            mock_url: None,
+            no_sections: None,
+            natural_language_only: None,
+            mock_string: None,
+            mock_select: None,
+            max_comment_length: None,
+            verbose: None,
+            internal: Internal { tx: None },
+            args: Args {
+                verbose: false,
+                timeout: None,
+            },
+            legacy_projects: Some(Vec::new()),
+            time_provider: Some(Arc::new(crate::time::SystemTimeProvider)),
+            projects: Some(Vec::new()),
+        }
+    }
+}
 /// Fetches config from from disk and creates it if it doesn't exist
 /// Prompts for Todoist API token
 pub async fn get_or_create(
@@ -495,16 +530,28 @@ pub async fn get_or_create(
     timeout: Option<u64>,
     tx: &UnboundedSender<Error>,
 ) -> Result<Config, Error> {
-    match get(config_path, verbose, timeout, tx).await {
-        Ok(config) => Ok(config),
+    let config = match get(config_path.clone(), verbose, timeout, tx).await {
+        Ok(config) => config,
         Err(_) => {
+            // File not found or unreadable — prompt for token
             let desc =
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
-
-            let token = input::string(desc, Some(String::new()))?;
-            Config::new(&token, Some(tx.clone())).await?.create().await
+            return set_token(desc, tx).await;
         }
+    };
+
+    // 🧠 Config loaded successfully — but check if token is blank
+    if config.token.trim().is_empty() {
+        let desc = "Your configuration file exists but the Todoist API token is empty.\nPlease enter your Todoist API token from https://todoist.com/prefs/integrations ";
+        return set_token(desc, tx).await;
     }
+
+    Ok(config)
+}
+//Fn to set token
+pub async fn set_token(desc: &str, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
+    let token = input::string(desc, Some(String::new()))?;
+    Config::new(&token, Some(tx.clone())).await?.create().await
 }
 
 pub async fn get(
@@ -654,7 +701,6 @@ mod tests {
             }
         }
     }
-
     use crate::test;
 
     use super::*;
@@ -921,12 +967,13 @@ mod tests {
     }
 
     #[test]
+    // Test function to check the debug output of Config
     fn test_config_debug_with_time_provider() {
         use crate::config::Config;
         use crate::test_time::FixedTimeProvider;
         use std::sync::Arc;
 
-        let config = Config::default_test() // or a test helper like fixtures::config().await in async test
+        let config = Config::default_test()
             .with_time_provider(Arc::new(FixedTimeProvider))
             .with_path("/tmp/test.cfg".to_string());
 

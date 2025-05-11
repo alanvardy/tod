@@ -225,3 +225,21 @@ mod tests {
         assert_eq!(result, expected);
     }
 }
+#[cfg(test)]
+pub mod mock {
+    use std::cell::RefCell;
+
+    thread_local! {
+        static MOCK_STRING_RESPONSE: RefCell<Option<String>> = const { RefCell::new(None) };
+    }
+
+    pub struct MockInputGuard;
+
+    impl Drop for MockInputGuard {
+        fn drop(&mut self) {
+            MOCK_STRING_RESPONSE.with(|mock| {
+                *mock.borrow_mut() = None;
+            });
+        }
+    }
+}

@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-05-12 v0.7.5
+
 - Handle `ImageAttachment` comment/file format
 - Reject invalid config file with error message
 - Ignore `is_deleted: true` attachments/comments

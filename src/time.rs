@@ -56,8 +56,9 @@ pub trait TimeProvider: Send + Sync + Clone {
     fn today(&self, tz: Tz) -> NaiveDate {
         self.now(tz).date_naive()
     }
-    //Only currently used for testing
-    #[cfg(test)]
+
+    #[allow(dead_code)]
+    /// Returns a string representation of the current time in the given timezone. If no timezone is given, it defaults to UTC. Currently only used in tests
     fn now_string(&self, tz: Tz) -> String {
         self.now(tz).to_rfc3339()
     }
@@ -89,7 +90,9 @@ pub fn today_string(config: &Config) -> Result<String, Error> {
     Ok(today.format(FORMAT_DATE).to_string())
 }
 
-/// Return today's date in Utc
+/// Return today's date in Utc from the config timezone (defaults to UTC)
+/// This is used for the "today" command
+/// and for the "due" command to check if a date is today
 pub fn today_date(config: &Config) -> Result<NaiveDate, Error> {
     let tz = timezone_from_str(&config.timezone)?;
     Ok(config.time_provider.today(tz))
@@ -193,7 +196,7 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
     let split: Vec<&str> = gmt.split_whitespace().collect();
     let offset = split
         .get(1)
-        .ok_or_else(|| errors::new("parse_timezone", "Could not get offset"))?;
+        .ok_or_else(|| errors::new("parse_timezone", "Invalid GMT format: missing offset"))?;
     let offset = offset.replace(":00", "");
     let offset = offset.replace(':', "");
     let offset_num = offset.parse::<i32>()?;
@@ -209,7 +212,7 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
     tz_string.parse().map_err(Error::from)
 }
 
-/// Parse Date
+/// Parses a date string into a `NaiveDate` - The string can be in the format YYYY-MM-DD or YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM:SS or YYYY-MM-DDTHH:MM:SSZ. Timezone is used to convert the date to UTC. If the string is not in one of these formats, an error is returned.
 pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
     let date = match str.len() {
         10 => NaiveDate::parse_from_str(str, FORMAT_DATE)?,
@@ -224,7 +227,7 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
         _ => {
             return Err(errors::new(
                 "date_from_str",
-                "cannot parse NaiveDate, unknown length: {str}",
+                &format!("Cannot parse NaiveDate, unknown length: {}", str),
             ));
         }
     };

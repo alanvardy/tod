@@ -11,6 +11,7 @@ use chrono_tz::Tz;
 
 /// A fixed time provider for testing purposes.
 /// This provider returns a fixed date and time (2025-05-10 10:28:00)
+#[derive(Clone, Debug)]
 pub struct FixedTimeProvider;
 
 impl TimeProvider for FixedTimeProvider {
@@ -25,37 +26,31 @@ impl TimeProvider for FixedTimeProvider {
     fn today(&self, tz: Tz) -> NaiveDate {
         self.now(tz).date_naive() // Guarantees alignment
     }
-}
-/// A fixed UTC timestamp string (corresponding to 2025-05-10 10:00 AM America/Vancouver)
-pub fn fixed_test_utc_string() -> String {
-    let tz = chrono_tz::UTC;
-    let dt = tz.with_ymd_and_hms(2025, 5, 10, 10, 0, 0).unwrap();
-    dt.to_rfc3339()
+    // Returns a fixed UTC string for testing purposes corresponding to the fixed time
+    fn now_string(&self, tz: Tz) -> String {
+        self.now(tz).to_rfc3339()
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::time::TimeProvider;
 
     use super::*;
 
     #[test]
-    fn fixed_time_provider_returns_fixed_utc_time() {
+    fn fixed_time_provider_returns_fixed_times() {
         let tz = chrono_tz::UTC;
         let provider = FixedTimeProvider;
         let fixed_time = provider.now(tz);
+        let fixed_string = provider.now_string(tz);
 
         // This is what the fixed time is set to in fixed_test_utc_string
         let expected = tz.with_ymd_and_hms(2025, 5, 10, 10, 0, 0).unwrap();
+        let expected_string = "2025-05-10T10:00:00+00:00".to_string();
 
         // Make sure the datetime is exactly as expected
         assert_eq!(fixed_time, expected);
-        assert_eq!(fixed_time.date_naive(), expected.date_naive()); // This is the line that failed before
-    }
-
-    #[test]
-    fn fixed_test_utc_string_outputs_expected_format() {
-        let expected = "2025-05-10T10:00:00+00:00";
-        assert_eq!(fixed_test_utc_string(), expected);
+        assert_eq!(fixed_time.date_naive(), expected.date_naive());
+        assert_eq!(fixed_string, expected_string);
     }
 }

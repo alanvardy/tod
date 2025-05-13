@@ -1,10 +1,10 @@
 use crate::config::Config;
 use crate::errors::{self, Error};
+
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use regex::Regex;
 use std::str::FromStr;
-use std::sync::Arc;
 
 pub const FORMAT_DATE: &str = "%Y-%m-%d";
 const FORMAT_TIME: &str = "%H:%M";
@@ -14,13 +14,56 @@ const FORMAT_DATETIME_LONG: &str = "%Y-%m-%dT%H:%M:%S%.fZ";
 
 pub const FORMAT_DATE_AND_TIME: &str = "%Y-%m-%d %H:%M";
 
-pub trait TimeProvider: Send + Sync {
+#[cfg(test)] //Fixed Time Provider for Testing
+use crate::test_time::FixedTimeProvider;
+
+/// Enum for selecting Time Provider
+#[derive(Clone, Debug)]
+pub enum TimeProviderEnum {
+    // Default to System Time Provider
+    System(SystemTimeProvider),
+    /// Fixed time provider for testing
+    #[cfg(test)]
+    Fixed(FixedTimeProvider),
+}
+//Default to SystemTimeProvider for TimeProviderEnum
+impl Default for TimeProviderEnum {
+    fn default() -> Self {
+        TimeProviderEnum::System(SystemTimeProvider)
+    }
+}
+
+impl TimeProvider for TimeProviderEnum {
+    fn now(&self, tz: Tz) -> DateTime<Tz> {
+        match self {
+            TimeProviderEnum::System(provider) => provider.now(tz),
+            #[cfg(test)]
+            TimeProviderEnum::Fixed(provider) => provider.now(tz),
+        }
+    }
+    fn today(&self, tz: Tz) -> NaiveDate {
+        match self {
+            TimeProviderEnum::System(provider) => provider.today(tz),
+            #[cfg(test)]
+            TimeProviderEnum::Fixed(provider) => provider.today(tz),
+        }
+    }
+}
+
+/// Trait for Time Provider
+pub trait TimeProvider: Send + Sync + Clone {
     fn now(&self, tz: Tz) -> DateTime<Tz>;
     fn today(&self, tz: Tz) -> NaiveDate {
         self.now(tz).date_naive()
     }
+    //Only currently used for testing
+    #[cfg(test)]
+    fn now_string(&self, tz: Tz) -> String {
+        self.now(tz).to_rfc3339()
+    }
 }
 
+#[derive(Clone, Debug)]
 pub struct SystemTimeProvider;
 
 impl TimeProvider for SystemTimeProvider {
@@ -33,11 +76,7 @@ impl TimeProvider for SystemTimeProvider {
 pub fn now(config: &Config) -> Result<DateTime<Tz>, Error> {
     let tz = timezone_from_str(&config.timezone)?;
 
-    let provider = config
-        .time_provider
-        .as_ref()
-        .map(|arc| arc.clone())
-        .unwrap_or_else(|| Arc::new(SystemTimeProvider));
+    let provider = config.time_provider.clone();
 
     Ok(provider.now(tz))
 }
@@ -45,7 +84,7 @@ pub fn now(config: &Config) -> Result<DateTime<Tz>, Error> {
 /// Return today's date in format 2021-09-16
 pub fn today_string(config: &Config) -> Result<String, Error> {
     let tz = timezone_from_str(&config.timezone)?;
-    let today = config.time_provider.as_ref().unwrap().today(tz);
+    let today = config.time_provider.today(tz);
 
     Ok(today.format(FORMAT_DATE).to_string())
 }
@@ -53,11 +92,7 @@ pub fn today_string(config: &Config) -> Result<String, Error> {
 /// Return today's date in Utc
 pub fn today_date(config: &Config) -> Result<NaiveDate, Error> {
     let tz = timezone_from_str(&config.timezone)?;
-    Ok(config
-        .time_provider
-        .as_ref()
-        .map(|p| p.today(tz))
-        .unwrap_or_else(|| Utc::now().with_timezone(&tz).date_naive()))
+    Ok(config.time_provider.today(tz))
 }
 
 /// Returns today's date in given timezone for testing. Only used in tests currently but included for completeness.
@@ -274,8 +309,7 @@ mod tests {
     #[tokio::test]
     async fn config_uses_default_system_time_provider() {
         let mut config = Config::new("test-token", None).await.unwrap();
-        config.time_provider = None;
-
+        config.timezone = Some("UTC".to_string());
         let now = crate::time::now(&config).unwrap();
         assert!(now.year() >= 2024); // or any sanity check
     }
@@ -296,5 +330,23 @@ mod tests {
             result,
             expected
         );
+    }
+    #[tokio::test]
+    async fn test_default_config_uses_system_time_provider() {
+        // Create a default config
+        let config = Config::default();
+
+        // Parse a timezone (e.g., UTC)
+        let tz: Tz = "UTC".parse().unwrap();
+
+        // Call the `today` method via the `time_provider`
+        let today_from_provider = config.time_provider.today(tz);
+
+        // Get today's date directly from `SystemTimeProvider` for comparison
+        let system_provider = SystemTimeProvider;
+        let today_from_system = system_provider.today(tz);
+
+        // Assert that the `time_provider` in the default config behaves like `SystemTimeProvider`
+        assert_eq!(today_from_provider, today_from_system)
     }
 }

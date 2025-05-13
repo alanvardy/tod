@@ -638,11 +638,11 @@ pub async fn all_comments(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use super::*;
     use crate::tasks::priority::{self, Priority};
     use crate::test;
+    use crate::test_time::FixedTimeProvider;
+    use crate::time::TimeProviderEnum;
     use crate::users::TzInfo;
     use pretty_assertions::assert_eq;
 
@@ -684,7 +684,7 @@ mod tests {
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
-            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
+            .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider));
 
         assert_eq!(
             quick_create_task(&config, "testy test").await,
@@ -727,7 +727,7 @@ mod tests {
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
-            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
+            .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider));
 
         let project = test::fixtures::project();
 
@@ -852,7 +852,7 @@ mod tests {
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
-            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
+            .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider));
 
         let binding = config.projects().await.unwrap();
         let project = binding.first().unwrap();
@@ -879,7 +879,7 @@ mod tests {
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
-            .with_time_provider(Arc::new(crate::test_time::FixedTimeProvider));
+            .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider));
 
         let section = test::fixtures::section();
         let response = move_task_to_section(&config, &task, &section, false)

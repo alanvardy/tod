@@ -9,9 +9,9 @@ pub mod fixtures {
     use crate::sections::Section;
     use crate::tasks::priority::Priority;
     use crate::tasks::{DateInfo, Deadline, Duration, Task, Unit};
-    use crate::time::{self, FORMAT_DATE, TimeProvider};
-    use chrono::{DateTime, Duration as ChronoDuration, NaiveDate};
-    use chrono_tz::Tz;
+    use crate::test_time::FixedTimeProvider;
+    use crate::time::{self, FORMAT_DATE};
+    use chrono::Duration as ChronoDuration;
 
     pub fn label() -> Label {
         Label {
@@ -115,16 +115,14 @@ pub mod fixtures {
     }
 
     pub async fn config() -> Config {
-        use crate::test_time::FixedTimeProvider;
-        use std::sync::Arc;
-
         let (tx, _rx) = tokio::sync::mpsc::unbounded_channel::<Error>();
 
         Config::new("alreadycreated", Some(tx))
             .await
             .expect("Could not generate directory")
             .with_projects(vec![project()])
-            .with_time_provider(Arc::new(FixedTimeProvider))
+            .with_time_provider(time::TimeProviderEnum::Fixed(FixedTimeProvider))
+            .with_timezone("America/Vancouver")
     }
 
     pub fn project() -> Project {
@@ -177,25 +175,6 @@ pub mod fixtures {
             item_id: "123".to_string(),
             is_deleted: false,
             file_attachment: None,
-        }
-    }
-    /// / Used for testing where a fixed time is needed for the "now" and "today" functions.
-    /// Returns a fixed time (10:28 AM UTC) for "today", using the system's local date.
-    pub struct FixedTimeProvider;
-
-    impl TimeProvider for FixedTimeProvider {
-        fn now(&self, tz: Tz) -> DateTime<Tz> {
-            let today = crate::time::today_date_from_tz(tz)
-                .unwrap_or_else(|_| chrono::Utc::now().date_naive());
-            today
-                .and_hms_opt(10, 28, 0)
-                .unwrap()
-                .and_local_timezone(tz)
-                .unwrap()
-        }
-
-        fn today(&self, tz: Tz) -> NaiveDate {
-            crate::time::today_date_from_tz(tz).unwrap_or_else(|_| chrono::Utc::now().date_naive())
         }
     }
 }

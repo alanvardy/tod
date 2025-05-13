@@ -3,16 +3,18 @@ use crate::errors::{self, Error};
 use crate::id::Resource;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
-use crate::time::TimeProvider;
+use crate::time::{SystemTimeProvider, TimeProviderEnum};
 use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt;
-use std::sync::Arc;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
+
+#[cfg(test)]
+use crate::test_time::FixedTimeProvider;
 
 const MAX_COMMENT_LENGTH: u32 = 500;
 pub const DEFAULT_DEADLINE_VALUE: u8 = 30;
@@ -76,9 +78,9 @@ pub struct Config {
     /// For storing arguments from the commandline
     #[serde(skip)]
     pub internal: Internal,
-    /// Optional TimeProvider for testing only
+    /// Optional TimeProvider for testing, defaults to SystemTimeProvider
     #[serde(skip)]
-    pub time_provider: Option<Arc<dyn TimeProvider>>,
+    pub time_provider: TimeProviderEnum,
 }
 
 // Manually implement Debug for Config to address specific issues.
@@ -384,7 +386,7 @@ impl Config {
                 timeout: None,
             },
             legacy_projects: Some(Vec::new()),
-            time_provider: Some(Arc::new(crate::time::SystemTimeProvider)),
+            time_provider: TimeProviderEnum::System(SystemTimeProvider),
             projects: Some(Vec::new()),
         })
     }
@@ -517,7 +519,7 @@ impl Default for Config {
                 timeout: None,
             },
             legacy_projects: Some(Vec::new()),
-            time_provider: Some(Arc::new(crate::time::SystemTimeProvider)),
+            time_provider: TimeProviderEnum::System(SystemTimeProvider),
             projects: Some(Vec::new()),
         }
     }
@@ -577,7 +579,6 @@ pub async fn get(
         internal: Internal {
             tx: Some(tx.clone()),
         },
-        time_provider: Some(Arc::new(crate::time::SystemTimeProvider)),
         ..config
     })
 }
@@ -617,17 +618,13 @@ fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
-
     impl Config {
         //Method for default testing
         pub fn default_test() -> Self {
-            use crate::time::SystemTimeProvider;
-            use std::sync::Arc;
-
             Config {
                 token: "default-token".to_string(),
                 path: "/tmp/test.cfg".to_string(),
-                time_provider: Some(Arc::new(SystemTimeProvider)),
+                time_provider: TimeProviderEnum::Fixed(FixedTimeProvider),
                 args: Args {
                     verbose: false,
                     timeout: None,
@@ -694,11 +691,9 @@ mod tests {
                 ..self.clone()
             }
         }
-        pub fn with_time_provider(self, provider: Arc<dyn crate::time::TimeProvider>) -> Self {
-            Config {
-                time_provider: Some(provider),
-                ..self
-            }
+        pub fn with_time_provider(mut self, provider_type: TimeProviderEnum) -> Self {
+            self.time_provider = provider_type;
+            self
         }
     }
     use crate::test;
@@ -962,19 +957,14 @@ mod tests {
             projects: Some(projects.clone()),
             ..base_config.clone()
         };
-
         assert!(project_config.projects.is_some());
     }
 
     #[test]
     // Test function to check the debug output of Config
     fn test_config_debug_with_time_provider() {
-        use crate::config::Config;
-        use crate::test_time::FixedTimeProvider;
-        use std::sync::Arc;
-
         let config = Config::default_test()
-            .with_time_provider(Arc::new(FixedTimeProvider))
+            .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider))
             .with_path("/tmp/test.cfg".to_string());
 
         let debug_output = format!("{:?}", config);

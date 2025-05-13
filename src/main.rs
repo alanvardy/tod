@@ -1397,9 +1397,10 @@ async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Err
 async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, Error> {
     match config.set_timezone().await {
         Ok(updated_config) => {
-            let tz = updated_config
-                .timezone
-                .unwrap_or_else(|| "unknown".to_string());
+            let tz = match updated_config.timezone {
+                None => "None".to_string(),
+                Some(tstr) => tstr,
+            };
             Ok(format!("Timezone set successfully to: {tz}"))
         }
         Err(e) => Err(errors::new(

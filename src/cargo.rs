@@ -23,27 +23,26 @@ pub enum Version {
     Latest,
     Dated(String),
 }
-pub async fn compare_versions(mock_url: Option<String>) -> Result<Version, Error> {
-    match get_latest_version(mock_url).await {
+pub async fn compare_versions(_mock_url: Option<String>) -> Result<Version, Error> {
+    match get_latest_version(_mock_url).await {
         Ok(version) if version.as_str() != VERSION => Ok(Version::Dated(version)),
         Ok(_) => Ok(Version::Latest),
         Err(err) => Err(err),
     }
 }
 /// Get latest version number from Cargo.io
-#[allow(unused_variables)]
-pub async fn get_latest_version(mock_url: Option<String>) -> Result<String, Error> {
+pub async fn get_latest_version(_mock_url: Option<String>) -> Result<String, Error> {
     #[cfg(not(test))]
     let cargo_url: String = "https://crates.io/api".to_string();
 
     #[cfg(test)]
-    let cargo_url: String = mock_url.expect("Mock URL not set");
+    let cargo_url: String = _mock_url.expect("Mock URL not set");
 
     let request_url = format!("{cargo_url}{VERSIONS_URL}");
 
     let response = Client::new()
         .get(request_url)
-        .header(USER_AGENT, "Tod")
+        .header(USER_AGENT, format!("Tod/{}", VERSION))
         .send()
         .await?;
 

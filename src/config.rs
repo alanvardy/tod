@@ -8,7 +8,6 @@ use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::fmt;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
@@ -27,7 +26,7 @@ pub struct Completed {
 }
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
     /// The Todoist Api token
     pub token: String,
@@ -81,38 +80,6 @@ pub struct Config {
     /// Optional TimeProvider for testing, defaults to SystemTimeProvider
     #[serde(skip)]
     pub time_provider: TimeProviderEnum,
-}
-
-// Manually implement Debug for Config to address specific issues.
-impl fmt::Debug for Config {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Config")
-            .field("token", &self.token)
-            .field("projects", &self.projects)
-            .field("legacy_projects", &self.legacy_projects)
-            .field("path", &self.path)
-            .field("next_id", &self.next_id)
-            .field("next_task", &self.next_task)
-            .field("bell_on_success", &self.bell_on_success)
-            .field("bell_on_failure", &self.bell_on_failure)
-            .field("timezone", &self.timezone)
-            .field("timeout", &self.timeout)
-            .field("last_version_check", &self.last_version_check)
-            .field("mock_url", &self.mock_url)
-            .field("mock_string", &self.mock_string)
-            .field("mock_select", &self.mock_select)
-            .field("spinners", &self.spinners)
-            .field("disable_links", &self.disable_links)
-            .field("completed", &self.completed)
-            .field("max_comment_length", &self.max_comment_length)
-            .field("verbose", &self.verbose)
-            .field("no_sections", &self.no_sections)
-            .field("natural_language_only", &self.natural_language_only)
-            .field("sort_value", &self.sort_value)
-            .field("args", &self.args)
-            .field("internal", &self.internal)
-            .finish()
-    }
 }
 
 fn bell_on_failure() -> bool {

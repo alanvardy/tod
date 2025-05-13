@@ -14,19 +14,18 @@ Create `tod-bin` directory for pushing to AUR
 2. Update the version number in this file
 3. Create PR with
 
-```fish
-VERSION=0.7.5 ./scripts/create_pr.sh
-```
+    ```fish
+    VERSION=0.7.5 ./scripts/create_pr.sh
+    ```
 
 4. Wait for it to pass, then merge and pull in latest changes
 
-```fish
-merge
-```
+    ```fish
+    merge
+    ```
 
 5. Release it to all the places
 
-```fish
-VERSION=0.7.5 NAME=tod ./scripts/release.sh
-```
-
+    ```fish
+    VERSION=0.7.5 NAME=tod ./scripts/release.sh
+    ```

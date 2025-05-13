@@ -199,7 +199,7 @@ mod tests {
 
         assert_matches!(
             comments.as_str(),
-            "\n\n★ Comments ★\n\nPosted 2016-09-22 07:00:00 UTC\nNeed one bottle of milk"
+            "\n\n★ Comments ★\n\nPosted 2016-09-22 00:00:00 PDT\nNeed one bottle of milk"
         );
         mock.expect(1);
     }

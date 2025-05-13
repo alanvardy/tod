@@ -15,4 +15,6 @@ echo "=== TODOS ===" &&
 ./scripts/lint_string.sh "fixme " &&
 ./scripts/lint_string.sh "fixme:" &&
 ./scripts/lint_string.sh "dbg!" &&
+./scripts/lint_string.sh "DEBUG:" &&
+./scripts/lint_string.sh "FIXTURE:" &&
 echo "=== SUCCESS ==="

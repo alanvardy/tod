@@ -3,6 +3,7 @@ use crate::errors::{self, Error};
 use crate::id::Resource;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
+use crate::time::{SystemTimeProvider, TimeProviderEnum};
 use crate::{VERSION, cargo, color, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
@@ -10,6 +11,9 @@ use serde_json::json;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
+
+#[cfg(test)]
+use crate::test_time::FixedTimeProvider;
 
 const MAX_COMMENT_LENGTH: u32 = 500;
 pub const DEFAULT_DEADLINE_VALUE: u8 = 30;
@@ -73,6 +77,9 @@ pub struct Config {
     /// For storing arguments from the commandline
     #[serde(skip)]
     pub internal: Internal,
+    /// Optional TimeProvider for testing, defaults to SystemTimeProvider
+    #[serde(skip)]
+    pub time_provider: TimeProviderEnum,
 }
 
 fn bell_on_failure() -> bool {
@@ -125,6 +132,7 @@ impl Default for SortValue {
         }
     }
 }
+
 impl Config {
     /// Set timezone on Config struct only
     pub fn with_timezone(self: &Config, timezone: &str) -> Config {
@@ -345,6 +353,7 @@ impl Config {
                 timeout: None,
             },
             legacy_projects: Some(Vec::new()),
+            time_provider: TimeProviderEnum::System(SystemTimeProvider),
             projects: Some(Vec::new()),
         })
     }
@@ -352,6 +361,7 @@ impl Config {
     pub async fn reload(&self) -> Result<Self, Error> {
         Config::load(&self.path).await.map(|config| Config {
             internal: self.internal.clone(),
+            time_provider: self.time_provider.clone(),
             ..config
         })
     }
@@ -447,6 +457,40 @@ impl Config {
     }
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            token: String::new(),
+            path: String::new(),
+            next_id: None,
+            next_task: None,
+            last_version_check: None,
+            timeout: None,
+            bell_on_success: false,
+            bell_on_failure: true,
+            sort_value: Some(SortValue::default()),
+            timezone: None,
+            completed: None,
+            disable_links: false,
+            spinners: Some(true),
+            mock_url: None,
+            no_sections: None,
+            natural_language_only: None,
+            mock_string: None,
+            mock_select: None,
+            max_comment_length: None,
+            verbose: None,
+            internal: Internal { tx: None },
+            args: Args {
+                verbose: false,
+                timeout: None,
+            },
+            legacy_projects: Some(Vec::new()),
+            time_provider: TimeProviderEnum::System(SystemTimeProvider),
+            projects: Some(Vec::new()),
+        }
+    }
+}
 /// Fetches config from from disk and creates it if it doesn't exist
 /// Prompts for Todoist API token
 pub async fn get_or_create(
@@ -455,16 +499,28 @@ pub async fn get_or_create(
     timeout: Option<u64>,
     tx: &UnboundedSender<Error>,
 ) -> Result<Config, Error> {
-    match get(config_path, verbose, timeout, tx).await {
-        Ok(config) => Ok(config),
+    let config = match get(config_path.clone(), verbose, timeout, tx).await {
+        Ok(config) => config,
         Err(_) => {
+            // File not found or unreadable — prompt for token
             let desc =
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
-
-            let token = input::string(desc, Some(String::new()))?;
-            Config::new(&token, Some(tx.clone())).await?.create().await
+            return set_token(desc, tx).await;
         }
+    };
+
+    // 🧠 Config loaded successfully — but check if token is blank
+    if config.token.trim().is_empty() {
+        let desc = "Your configuration file exists but the Todoist API token is empty.\nPlease enter your Todoist API token from https://todoist.com/prefs/integrations ";
+        return set_token(desc, tx).await;
     }
+
+    Ok(config)
+}
+//Fn to set token
+pub async fn set_token(desc: &str, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
+    let token = input::string(desc, Some(String::new()))?;
+    Config::new(&token, Some(tx.clone())).await?.create().await
 }
 
 pub async fn get(
@@ -493,7 +549,8 @@ pub async fn get(
         ..config
     })
 }
-
+/// Generates the path to the config file
+///
 pub async fn generate_path() -> Result<String, Error> {
     let config_directory = dirs::config_dir()
         .ok_or_else(|| errors::new("dirs", "Could not find config directory"))?
@@ -528,8 +585,41 @@ fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
-
     impl Config {
+        //Method for default testing
+        pub fn default_test() -> Self {
+            Config {
+                token: "default-token".to_string(),
+                path: "/tmp/test.cfg".to_string(),
+                time_provider: TimeProviderEnum::Fixed(FixedTimeProvider),
+                args: Args {
+                    verbose: false,
+                    timeout: None,
+                },
+                internal: Internal { tx: None },
+                sort_value: Some(SortValue::default()),
+
+                projects: Some(vec![]),
+                legacy_projects: Some(vec![]),
+                next_id: None,
+                next_task: None,
+                bell_on_success: false,
+                bell_on_failure: true,
+                timezone: Some("UTC".to_string()),
+                timeout: None,
+                last_version_check: None,
+                mock_url: None,
+                mock_string: None,
+                mock_select: None,
+                spinners: None,
+                disable_links: false,
+                completed: None,
+                max_comment_length: None,
+                verbose: None,
+                no_sections: None,
+                natural_language_only: None,
+            }
+        }
         /// add the url of the mockito server
         pub fn with_mock_url(self, url: String) -> Config {
             Config {
@@ -568,8 +658,11 @@ mod tests {
                 ..self.clone()
             }
         }
+        pub fn with_time_provider(mut self, provider_type: TimeProviderEnum) -> Self {
+            self.time_provider = provider_type;
+            self
+        }
     }
-
     use crate::test;
 
     use super::*;
@@ -700,5 +793,151 @@ mod tests {
         assert!(result.is_err(), "Expected error from invalid u8");
 
         fs::remove_file(bad_config_path).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn debug_impl_for_config_should_work() {
+        let config = test::fixtures::config().await;
+        let debug_output = format!("{:?}", config);
+
+        // You can assert that it contains expected fields just to be thorough
+        assert!(debug_output.contains("Config"));
+        assert!(debug_output.contains("token"));
+        assert!(debug_output.contains(&config.token));
+    }
+    #[test]
+    fn debug_impls_for_config_components_should_work() {
+        use tokio::sync::mpsc::unbounded_channel;
+
+        let args = Args {
+            verbose: true,
+            timeout: Some(42),
+        };
+        let args_debug = format!("{:?}", args);
+        assert!(args_debug.contains("Args"));
+        assert!(args_debug.contains("verbose"));
+        assert!(args_debug.contains("timeout"));
+
+        let (tx, _rx) = unbounded_channel::<Error>();
+        let internal = Internal { tx: Some(tx) };
+        let internal_debug = format!("{:?}", internal);
+        assert!(internal_debug.contains("Internal"));
+
+        let sort_value = SortValue::default();
+        let sort_value_debug = format!("{:?}", sort_value);
+        assert!(sort_value_debug.contains("SortValue"));
+        assert!(sort_value_debug.contains("priority_none"));
+        assert!(sort_value_debug.contains("deadline_value"));
+    }
+    #[test]
+    fn trait_impls_for_config_components_should_work() {
+        // Clone
+        let args = Args {
+            verbose: true,
+            timeout: Some(10),
+        };
+        let args_clone = args.clone();
+        assert_eq!(args, args_clone);
+
+        let internal = Internal { tx: None };
+        let internal_clone = internal.clone();
+        assert_eq!(internal.tx.is_none(), internal_clone.tx.is_none());
+
+        let sort_value = SortValue::default();
+        let sort_value_clone = sort_value.clone();
+        assert_eq!(sort_value, sort_value_clone);
+
+        // PartialEq
+        assert_eq!(
+            args,
+            Args {
+                verbose: true,
+                timeout: Some(10)
+            }
+        );
+        assert_ne!(
+            args,
+            Args {
+                verbose: false,
+                timeout: Some(5)
+            }
+        );
+
+        // Default
+        let default_args = Args::default();
+        assert_eq!(default_args.verbose, false);
+        assert_eq!(default_args.timeout, None);
+
+        let default_internal = Internal::default();
+        assert!(default_internal.tx.is_none());
+
+        let default_sort = SortValue::default();
+        assert_eq!(default_sort.priority_none, 2);
+        assert_eq!(default_sort.deadline_value, Some(DEFAULT_DEADLINE_VALUE));
+    }
+    #[tokio::test]
+    async fn test_config_with_methods() {
+        let base_config = Config::new("token_value", None)
+            .await
+            .expect("Failed to create base config");
+
+        let tz_config = base_config.with_timezone("America/New_York");
+        assert_eq!(tz_config.timezone, Some("America/New_York".to_string()));
+
+        let mock_url = "http://localhost:1234";
+        let mock_config = base_config.clone().with_mock_url(mock_url.to_string());
+        assert_eq!(mock_config.mock_url, Some(mock_url.to_string()));
+
+        let mock_str_config = base_config.clone().with_mock_string("mock response");
+        assert_eq!(
+            mock_str_config.mock_string,
+            Some("mock response".to_string())
+        );
+
+        let select_config = base_config.clone().mock_select(2);
+        assert_eq!(select_config.mock_select, Some(2));
+
+        let path_config = base_config.with_path("some/test/path.cfg".to_string());
+        assert_eq!(path_config.path, "some/test/path.cfg".to_string());
+
+        let projects = vec![Project {
+            id: "test123".to_string(),
+            can_assign_tasks: true,
+            child_order: 0,
+            color: "blue".to_string(),
+            created_at: None,
+            is_archived: false,
+            is_deleted: false,
+            is_favorite: false,
+            is_frozen: false,
+            name: "Test Project".to_string(),
+            updated_at: None,
+            view_style: "list".to_string(),
+            default_order: 0,
+            description: "desc".to_string(),
+            parent_id: None,
+            inbox_project: None,
+            is_collapsed: false,
+            is_shared: false,
+        }];
+        let project_config = Config {
+            projects: Some(projects.clone()),
+            ..base_config.clone()
+        };
+        assert!(project_config.projects.is_some());
+    }
+
+    #[test]
+    // Test function to check the debug output of Config
+    fn test_config_debug_with_time_provider() {
+        let config = Config::default_test()
+            .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider))
+            .with_path("/tmp/test.cfg".to_string());
+
+        let debug_output = format!("{:?}", config);
+
+        // Check some expected fields are present in the debug output
+        assert!(debug_output.contains("Config"));
+        assert!(debug_output.contains("/tmp/test.cfg"));
     }
 }

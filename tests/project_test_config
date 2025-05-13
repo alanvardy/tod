@@ -6,5 +6,20 @@
   "projects": {},
   "spinners": true,
   "timezone": null,
-  "token": "123123"
+  "token": "123123",
+  "update_check": true,
+  "update_check_interval": 86400,
+  "sort_value": {
+    "deadline_days": 5,
+    "deadline_value": 30,
+    "no_due_date": 80,
+    "not_recurring": 50,
+    "now": 200,
+    "overdue": 150,
+    "priority_high": 4,
+    "priority_low": 1,
+    "priority_medium": 3,
+    "priority_none": 2,
+    "today": 100
+  }
 }

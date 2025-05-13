@@ -1471,12 +1471,10 @@ mod tests {
         let string = String::from("TEST");
         assert_eq!(string, task.to_string())
     }
-
     #[tokio::test]
     async fn test_deadline_value_when_today() {
         let config = test::fixtures::config().await;
         let task = test::fixtures::today_task().await;
-
         let value = task.deadline_value(&config).unwrap();
         assert_eq!(value, 150);
     }

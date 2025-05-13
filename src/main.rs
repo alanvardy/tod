@@ -35,6 +35,7 @@ mod projects;
 mod sections;
 mod tasks;
 mod test;
+mod test_time;
 mod time;
 mod todoist;
 mod users;
@@ -1395,7 +1396,13 @@ async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Err
 
 async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, Error> {
     match config.set_timezone().await {
-        Ok(_) => Ok("Timezone set successfully.".to_string()),
+        Ok(updated_config) => {
+            let tz = match updated_config.timezone {
+                None => "None".to_string(),
+                Some(tstr) => tstr,
+            };
+            Ok(format!("Timezone set successfully to: {tz}"))
+        }
         Err(e) => Err(errors::new(
             "tz_reset",
             &format!("Could not reset timezone in config. {e}"),

@@ -17,7 +17,7 @@ echo "=== TODOS ===" &&
 ./scripts/lint_string.sh "dbg!" &&
 ./scripts/lint_string.sh "DEBUG:" &&
 ./scripts/lint_string.sh "FIXTURE:" &&
-echo "=== SUCCESS ==="
+echo "=== SUCCESS ===" &&
 echo "=== CLEANING FILES ===" &&
-./scripts/test_cfg_cleanup.sh &&
+./scripts/testcfg_clean.sh &&
 echo "=== Done ===."

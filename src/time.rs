@@ -76,7 +76,7 @@ impl TimeProvider for SystemTimeProvider {
 pub fn now(config: &Config) -> Result<DateTime<Tz>, Error> {
     let tz = timezone_from_str(&config.timezone)?;
 
-    let provider = config.time_provider.clone();
+    let provider = &config.time_provider;
 
     Ok(provider.now(tz))
 }

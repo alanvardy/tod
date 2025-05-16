@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-# Does not cover the complete functions, but run it manually to ensure that we didn't break clap
+# 
+# This script is used to run manual tests for the tod CLI application.
+# It executes a series of commands and checks if they run successfully.
+# Does not cover the complete functions, but run it manually to ensure that we didn't break clap 
+# Usage: ./scripts/manual_test.sh
+# This script assumes that the user has a project named "⭐  Tasks" in their tod setup.
+
 
 commands=(
 "cargo run -- -h"

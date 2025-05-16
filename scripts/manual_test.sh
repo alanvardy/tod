@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Does not cover the complete function
-# Run it manually to ensure that we didn't break clap
+# Does not cover the complete functions, but run it manually to ensure that we didn't break clap
 
 commands=(
 "cargo run -- -h"

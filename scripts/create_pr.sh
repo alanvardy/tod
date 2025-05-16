@@ -1,27 +1,82 @@
 #!/usr/bin/env bash
+# Purpose: This script automates the process of creating a pull request for a new version of a Rust project.
+# Usage: VERSION=0.6.15 ./create_pr.sh
+# This script assumes that the following tools are installed:
+# - ambr: A tool for editing Cargo.toml files (install with 'cargo install amber')
+# - gt: A tool for creating and managing GitHub pull requests
+# - gh: GitHub CLI for interacting with GitHub
+# - cargo: Rust's package manager and build system
+# - play: A command-line audio player for playing notification sounds
+
+# Exits immediately if a command exits with a non-zero status
+set -euo pipefail
+
+# Logging functions for consistent output
+log() {
+    echo "[INFO] $1"
+}
+
+error() {
+    echo "[ERROR] $1" >&2
+    exit 1
+}
+
 # Check if the VERSION environment variable is set
-if [ -z "${VERSION}" ]; then
-  echo "Error: VERSION environment variable is not set."
-  echo "Usage: VERSION=0.6.15 ./publish.sh"
-  exit 1
+if [ -z "${VERSION:-}" ]; then
+    error "VERSION environment variable is not set. Usage: VERSION=0.6.15 ./create_pr.sh"
 fi
 
-echo "=== VERSION IS $VERSION ===" &&
-echo "=== EDITING CARGO.TOML TO NEW VERSION ===" &&
-ambr --regex "^version = \"\d+\.\d+\.\d+\"" "version = \"$VERSION\"" Cargo.toml &&
-echo "=== CARGO UPDATE ===" &&
-cargo update &&
-echo "=== FORMAT ===" &&
-cargo fmt &&
-echo "=== CLIPPY ===" &&
-cargo clippy -- -D warnings &&
-echo "=== TEST ===" &&
-cargo test &&
-echo "=== CREATING PR ===" &&
-gt create "v$VERSION" -a -m "v$VERSION" --no-interactive &&
-gt submit --no-interactive &&
-gh pr ready &&
-sleep 5 &&
-gh pr checks --watch -i 5;
-afplay /System/Library/Sounds/Ping.aiff;
+log "VERSION is set to $VERSION"
 
+# Check if required tools are installed
+command -v ambr >/dev/null 2>&1 || error "ambr is not installed. Please install it before running this script."
+command -v gt >/dev/null 2>&1 || error "gt is not installed. Please install it before running this script."
+command -v gh >/dev/null 2>&1 || error "gh is not installed. Please install it before running this script."
+
+# Update Cargo.toml with the new version
+log "Editing Cargo.toml to set version to $VERSION"
+ambr --regex "^version = \"\\d+\\.\\d+\\.\\d+\"" "version = \"$VERSION\"" Cargo.toml
+
+# Update dependencies
+log "Running cargo update"
+cargo update
+
+# Format the code
+log "Running cargo fmt"
+cargo fmt
+
+# Run Clippy to lint the code
+log "Running cargo clippy"
+cargo clippy -- -D warnings
+
+# Run tests
+log "Running cargo test"
+cargo test
+
+# Create a pull request
+log "Creating a pull request for version $VERSION"
+gt create "v$VERSION" -a -m "v$VERSION" --no-interactive || error "Failed to create pull request."
+gt submit --no-interactive || error "Failed to submit pull request."
+
+# Mark the pull request as ready for review
+log "Marking the pull request as ready for review"
+gh pr ready || error "Failed to mark the pull request as ready."
+
+# Wait for checks to complete
+log "Waiting for pull request checks to complete"
+sleep 5
+gh pr checks --watch -i 5 || error "Pull request checks failed."
+
+# Play a notification sound (cross-platform support)
+log "Playing notification sound"
+if command -v afplay >/dev/null 2>&1; then
+    afplay /System/Library/Sounds/Ping.aiff
+elif command -v paplay >/dev/null 2>&1; then
+    paplay /usr/share/sounds/freedesktop/stereo/complete.oga
+elif command -v play >/dev/null 2>&1; then
+    play /usr/share/sounds/freedesktop/stereo/complete.oga
+else
+    log "No sound player found. Skipping notification sound."
+fi
+
+log "Pull request creation process completed successfully!"

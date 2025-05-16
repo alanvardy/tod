@@ -14,7 +14,6 @@ if [ -z "${NAME}" ]; then
   exit 1
 fi
 
-  echo "Error: NAME environment variable must be alphanumeric and contain no spaces."
 if [[ ! "${NAME}" =~ ^[a-zA-Z0-9_]+$ ]]; then
   echo "Error: NAME environment variable contains invalid characters. Only alphanumeric characters and underscores are allowed."
   exit 1
@@ -25,12 +24,11 @@ if [ -z "${NAME}" ]; then
   echo "Usage: NAME=tod VERSION=0.6.15 ./release.sh"
   exit 1
 fi
-cd target/release || { echo "Error: target/release directory does not exist. Ensure the build step completed successfully."; exit 1; }
+cd ./target/release || { echo "Error: target/release directory does not exist. Ensure the build step completed successfully."; exit 1; }
 
 echo "=== BUILDING RELEASE ===" &&
 cargo build --release &&
 echo "=== GZIPPING ===" &&
-cd target/release || exit
 tar -czf "$NAME-mac.tar.gz" "$NAME"
 cd ../..
 echo "=== CREATING GITHUB RELEASE ===" &&

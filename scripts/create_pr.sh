@@ -3,10 +3,9 @@
 # Usage: VERSION=0.6.15 ./create_pr.sh
 # This script assumes that the following tools are installed:
 # - ambr: A tool for editing Cargo.toml files (install with 'cargo install amber')
-# - gt: A tool for creating and managing GitHub pull requests
-# - gh: GitHub CLI for interacting with GitHub
-# - cargo: Rust's package manager and build system
-# - play: A command-line audio player for playing notification sounds
+# - gt: the Graphite Dev tool for creating and managing GitHub pull requests - this requires Graphite.dev to be installed/configured/active on the branch
+# - gh: GitHub CLI for interacting with GitHub repositories
+# - cargo: Rust's package manager and build system (install using rustup)
 
 # Exits immediately if a command exits with a non-zero status
 set -euo pipefail
@@ -29,7 +28,7 @@ fi
 log "VERSION is set to $VERSION"
 
 # Check if required tools are installed
-command -v ambr >/dev/null 2>&1 || error "ambr is not installed. Please install it before running this script."
+command -v ambr >/dev/null 2>&1 || error "ambr is not installed. Please install with 'cargo install ambr' before running this script."
 command -v gt >/dev/null 2>&1 || error "gt is not installed. Please install it before running this script."
 command -v gh >/dev/null 2>&1 || error "gh is not installed. Please install it before running this script."
 
@@ -50,7 +49,7 @@ log "Running cargo clippy"
 cargo clippy -- -D warnings
 
 # Run tests
-log "Running cargo test"
+log "Running cargo tests"
 cargo test
 
 # Create a pull request

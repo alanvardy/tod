@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     color,
+    comments::Comment,
     config::Config,
     errors::Error,
     projects::Project,
@@ -9,7 +10,7 @@ use crate::{
     todoist,
 };
 use futures::future;
-use tokio::{fs, io::AsyncReadExt};
+use tokio::{fs, io::AsyncReadExt, task::JoinError};
 
 #[derive(Clone)]
 pub enum Flag {
@@ -44,7 +45,8 @@ pub async fn view(config: &mut Config, flag: Flag, sort: &SortOrder) -> Result<S
         buffer.push_str(&color::green_string(&title));
         buffer.push('\n');
         for task in tasks::sort(tasks, config, sort) {
-            let text = task.fmt(config, FormatType::List, true, false).await?;
+            let comments = Vec::new();
+            let text = task.fmt(comments, config, FormatType::List, true).await?;
             buffer.push('\n');
             buffer.push_str(&text);
         }
@@ -147,16 +149,68 @@ pub async fn process(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
 
     let tasks = tasks::sort(tasks, config, sort);
     let mut task_count = tasks.len() as i32;
+    let tasks_with_comments = fetch_comments_for_tasks(tasks, config).await;
     let mut handles = Vec::new();
-    for task in tasks {
-        println!();
-        match tasks::process_task(&config.reload().await?, task, &mut task_count, false).await? {
-            Some(handle) => handles.push(handle),
-            None => return Ok(color::green_string("Exited")),
+    for task_with_comments in tasks_with_comments {
+        match task_with_comments {
+            Ok((task, Ok(comments))) => {
+                println!();
+                match tasks::process_task(
+                    comments,
+                    &config.reload().await?,
+                    task,
+                    &mut task_count,
+                    false,
+                )
+                .await?
+                {
+                    Some(handle) => handles.push(handle),
+                    None => return Ok(color::green_string("Exited")),
+                }
+            }
+            Ok((task, Err(Error { message, source }))) => {
+                println!("Could not fetch comments from {source}: {message}");
+                let comments = Vec::new();
+                println!();
+                match tasks::process_task(
+                    comments,
+                    &config.reload().await?,
+                    task,
+                    &mut task_count,
+                    false,
+                )
+                .await?
+                {
+                    Some(handle) => handles.push(handle),
+                    None => return Ok(color::green_string("Exited")),
+                }
+            }
+            Err(JoinError { .. }) => {
+                println!("JoinError");
+            }
         }
     }
     future::join_all(handles).await;
     Ok(color::green_string(&success))
+}
+
+async fn fetch_comments_for_tasks(
+    tasks: Vec<Task>,
+    config: &Config,
+) -> Vec<Result<(Task, Result<Vec<Comment>, Error>), JoinError>> {
+    let mut handles = Vec::new();
+
+    for task in tasks {
+        let config = config.clone();
+        let handle = tokio::spawn(async move {
+            (
+                task.clone(),
+                todoist::all_comments(&config, &task, None).await,
+            )
+        });
+        handles.push(handle);
+    }
+    future::join_all(handles).await
 }
 
 /// Puts labels on tasks
@@ -255,17 +309,6 @@ mod tests {
             .create_async()
             .await;
 
-        let mock3 = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
-            .create_async()
-            .await;
-
         let config = test::fixtures::config()
             .await
             .with_mock_url(server.url())
@@ -277,7 +320,6 @@ mod tests {
         assert_eq!(result, Ok(String::from("Successfully prioritized 'today'")));
         mock.assert();
         mock2.assert();
-        mock3.assert();
     }
     #[tokio::test]
     async fn test_timebox() {
@@ -499,17 +541,6 @@ mod tests {
             .create_async()
             .await;
 
-        let mock3 = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
-            .create_async()
-            .await;
-
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
@@ -532,7 +563,6 @@ mod tests {
         );
         mock.assert();
         mock2.assert();
-        mock3.assert();
     }
 
     #[tokio::test]
@@ -546,16 +576,6 @@ mod tests {
             .create_async()
             .await;
 
-        let mock2 = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
-            .create_async()
-            .await;
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
         let mut config_with_timezone = config
@@ -570,7 +590,6 @@ mod tests {
 
         assert!(tasks.contains("Tasks for today"));
         mock.assert();
-        mock2.assert();
     }
 
     #[tokio::test]
@@ -581,17 +600,6 @@ mod tests {
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_tasks_response().await)
-            .create_async()
-            .await;
-
-        let mock2 = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -612,6 +620,5 @@ mod tests {
         assert!(tasks.contains("Tasks for"));
         assert!(tasks.contains("- TEST\n"));
         mock.assert();
-        mock2.assert();
     }
 }

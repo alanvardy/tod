@@ -10,6 +10,7 @@ use tokio::task::JoinHandle;
 
 pub mod format;
 pub mod priority;
+use crate::comments::Comment;
 use crate::config::Config;
 use crate::config::SortValue;
 use crate::errors::Error;
@@ -188,10 +189,10 @@ impl std::fmt::Display for SortOrder {
 impl Task {
     pub async fn fmt(
         &self,
+        comments: Vec<Comment>,
         config: &Config,
         format: FormatType,
         with_project: bool,
-        with_comments: bool,
     ) -> Result<String, Error> {
         let content = format::content(self, config);
         let buffer = match format {
@@ -228,13 +229,12 @@ impl Task {
             format::labels(self)
         };
 
-        let comments = todoist::all_comments(config, self, None).await?;
         let comment_number = match comments.len() {
             0 => String::new(),
             quantity => format::number_comments(quantity),
         };
 
-        let comments = if with_comments && !comments.is_empty() {
+        let comments = if !comments.is_empty() {
             format::render_comments(config, comments).await?
         } else {
             String::new()
@@ -529,7 +529,8 @@ pub async fn label_task(
     task: Task,
     labels: &Vec<String>,
 ) -> Result<JoinHandle<()>, Error> {
-    let text = task.fmt(config, FormatType::Single, true, false).await?;
+    let comments = Vec::new();
+    let text = task.fmt(comments, config, FormatType::Single, true).await?;
     println!("{}", text);
     let mut options = labels.to_owned();
     options.push(String::from(input::SKIP));
@@ -545,6 +546,7 @@ pub async fn label_task(
 }
 
 pub async fn process_task(
+    comments: Vec<Comment>,
     config: &Config,
     task: Task,
     task_count: &mut i32,
@@ -562,7 +564,7 @@ pub async fn process_task(
     .map(|s| s.to_string())
     .collect();
     let formatted_task = task
-        .fmt(config, FormatType::Single, with_project, true)
+        .fmt(comments, config, FormatType::Single, with_project)
         .await?;
     let mut reloaded_config = config.reload().await?.increment_completed()?;
     let tasks_completed = reloaded_config.tasks_completed()?;
@@ -617,8 +619,9 @@ pub async fn timebox_task(
     .iter()
     .map(|s| s.to_string())
     .collect();
+    let comments = Vec::new();
     let formatted_task = task
-        .fmt(config, FormatType::Single, with_project, false)
+        .fmt(comments, config, FormatType::Single, with_project)
         .await?;
     println!("{formatted_task}{task_count} task(s) remaining");
     *task_count -= 1;
@@ -685,7 +688,10 @@ pub async fn spawn_schedule_task(
     config: Config,
     task: Task,
 ) -> Result<Option<JoinHandle<()>>, Error> {
-    let text = task.fmt(&config, FormatType::Single, true, false).await?;
+    let comments = Vec::new();
+    let text = task
+        .fmt(comments, &config, FormatType::Single, true)
+        .await?;
     println!("{}", text);
     let datetime_input = input::datetime(
         config.mock_select,
@@ -721,7 +727,10 @@ pub async fn spawn_deadline_task(
     config: Config,
     task: Task,
 ) -> Result<Option<JoinHandle<()>>, Error> {
-    let text = task.fmt(&config, FormatType::Single, true, false).await?;
+    let comments = Vec::new();
+    let text = task
+        .fmt(comments, &config, FormatType::Single, true)
+        .await?;
     println!("{}", text);
     let datetime_input = input::datetime(
         config.mock_select,
@@ -960,8 +969,9 @@ pub async fn set_priority(
     task: Task,
     with_project: bool,
 ) -> Result<JoinHandle<()>, Error> {
+    let comments = Vec::new();
     let text = task
-        .fmt(config, FormatType::Single, with_project, false)
+        .fmt(comments, config, FormatType::Single, with_project)
         .await?;
     println!("{}", text);
 
@@ -1037,18 +1047,7 @@ mod tests {
 
     #[tokio::test]
     async fn can_format_task_with_a_date() {
-        let mut server = mockito::Server::new_async().await;
-        let mock = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
-            .create_async()
-            .await;
-        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let config = test::fixtures::config().await;
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
@@ -1057,31 +1056,20 @@ mod tests {
             }),
             ..test::fixtures::today_task().await
         };
+        let comments = Vec::new();
 
         let task = task
-            .fmt(&config, FormatType::Single, false, false)
+            .fmt(comments, &config, FormatType::Single, false)
             .await
             .unwrap();
 
         assert!(task.contains("Get gifts for the twins"));
         assert!(task.contains("2021-08-13"));
-        mock.assert();
     }
 
     #[tokio::test]
     async fn can_format_task_with_today() {
-        let mut server = mockito::Server::new_async().await;
-        let mock = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
-            .create_async()
-            .await;
-        let config = test::fixtures::config().await.with_mock_url(server.url());
+        let config = test::fixtures::config().await;
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
@@ -1090,14 +1078,14 @@ mod tests {
             }),
             ..test::fixtures::today_task().await
         };
+        let comments = vec![test::fixtures::comment()];
 
         let task_text = task
-            .fmt(&config, FormatType::Single, true, true)
+            .fmt(comments, &config, FormatType::Single, true)
             .await
             .unwrap();
 
         assert!(task_text.contains("Today @ computer"));
-        mock.assert();
     }
 
     #[tokio::test]
@@ -1402,16 +1390,6 @@ mod tests {
             .with_body(test::responses::today_task().await)
             .create_async()
             .await;
-        let mock2 = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
-            .create_async()
-            .await;
         let config = test::fixtures::config()
             .await
             .mock_select(1)
@@ -1421,7 +1399,6 @@ mod tests {
 
         tokio::join!(future).0.unwrap();
         mock.assert();
-        mock2.assert();
     }
 
     #[tokio::test]
@@ -1432,16 +1409,6 @@ mod tests {
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(test::responses::today_task().await)
-            .create_async()
-            .await;
-        let mock2 = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
             .create_async()
             .await;
 
@@ -1455,14 +1422,14 @@ mod tests {
             .unwrap();
 
         let mut task_count = 3;
-        process_task(&config, task, &mut task_count, true)
+        let comments = Vec::new();
+        process_task(comments, &config, task, &mut task_count, true)
             .await
             .unwrap()
             .unwrap()
             .await
             .unwrap();
         mock.assert();
-        mock2.assert();
     }
 
     #[tokio::test]

@@ -186,8 +186,11 @@ pub async fn rename(config: Config, project: &Project) -> Result<String, Error> 
 pub async fn next_task(config: Config, project: &Project) -> Result<String, Error> {
     match fetch_next_task(&config, project).await {
         Ok(Some((task, remaining))) => {
+            let comments = todoist::all_comments(&config, &task, None).await?;
             config.set_next_task(task.clone()).save().await?;
-            let task_string = task.fmt(&config, FormatType::Single, false, true).await?;
+            let task_string = task
+                .fmt(comments, &config, FormatType::Single, false)
+                .await?;
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
         Ok(None) => Ok(color::green_string("No tasks on list")),
@@ -475,7 +478,10 @@ pub async fn move_task_to_project(
     task: Task,
     sections: &[Section],
 ) -> Result<JoinHandle<()>, Error> {
-    let text = task.fmt(config, FormatType::Single, false, false).await?;
+    let comments = Vec::new();
+    let text = task
+        .fmt(comments, config, FormatType::Single, false)
+        .await?;
     println!("{}", text);
 
     let options = ["Pick project", "Complete", "Skip", "Delete"]
@@ -762,21 +768,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_move_task_to_project() {
-        let mut server = mockito::Server::new_async().await;
-        let mock = server
-            .mock(
-                "GET",
-                "/api/v1/comments/?task_id=6Xqhv4cwxgjwG9w8&limit=200",
-            )
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
-            .create_async()
-            .await;
-        let mut config = test::fixtures::config()
-            .await
-            .with_mock_url(server.url())
-            .mock_select(2);
+        let mut config = test::fixtures::config().await.mock_select(2);
         let task = test::fixtures::today_task().await;
         let sections: Vec<Section> = Vec::new();
 
@@ -785,7 +777,6 @@ mod tests {
             .unwrap()
             .await
             .unwrap();
-        mock.assert();
     }
 
     #[tokio::test]

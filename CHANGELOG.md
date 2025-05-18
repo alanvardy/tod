@@ -2,13 +2,15 @@
 
 ## Unreleased (on main branch only)
 
+- Parallelize fetching of comments
+
 ## 2025-05-12 v0.7.5
 
 - Handle `ImageAttachment` comment/file format
 - Reject invalid config file with error message
 - Ignore `is_deleted: true` attachments/comments
 - Handle blank `token` value in Config
-- Fix testCases to be non timezone-dependent using FixedTimeProvider
+- Fix test cases to be non-timezone-dependent using `FixedTimeProvider`
 
 ## 2025-05-04 v0.7.4
 

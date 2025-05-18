@@ -47,8 +47,9 @@ pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error>
 pub async fn next_task(config: &Config, filter: &str) -> Result<String, Error> {
     match fetch_next_task(config, filter).await {
         Ok(Some((task, remaining))) => {
+            let comments = todoist::all_comments(config, &task, None).await?;
             config.set_next_task(task.clone()).save().await?;
-            let task_string = task.fmt(config, FormatType::Single, true, true).await?;
+            let task_string = task.fmt(comments, config, FormatType::Single, true).await?;
             Ok(format!("{task_string}\n{remaining} task(s) remaining"))
         }
         Ok(None) => Ok(color::green_string("No tasks on list")),

@@ -4,7 +4,7 @@ use crate::id::Resource;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
 use crate::time::{SystemTimeProvider, TimeProviderEnum};
-use crate::{VERSION, cargo, color, input, time, todoist};
+use crate::{VERSION, cargo, color, debug, input, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -534,7 +534,7 @@ pub async fn get(
         Some(path) => maybe_expand_home_dir(path)?,
     };
 
-    match fs::File::open(&path).await {
+    let config = match fs::File::open(&path).await {
         Ok(_) => Config::load(&path).await,
         Err(_) => Err(Error {
             message: format!("Configuration file does not exist at {path}"),
@@ -547,7 +547,14 @@ pub async fn get(
             tx: Some(tx.clone()),
         },
         ..config
-    })
+    })?;
+
+    let redacted_config = Config {
+        token: "REDACTED".to_string(),
+        ..config.clone()
+    };
+    debug::print(&config, format!("{:#?}", redacted_config));
+    Ok(config)
 }
 /// Generates the path to the config file
 ///
@@ -768,6 +775,12 @@ mod tests {
             .expect("Could not get or create config (load)");
 
         assert!(config_loaded.internal.tx.is_some());
+
+        // --- GET_OR_CREATE (get) ---
+
+        let fetched_config = get(Some(config_loaded.path), false, None, &tx()).await;
+        assert_matches!(fetched_config, Ok(Config { .. }));
+        delete_config(&fetched_config.unwrap().path).await;
     }
 
     async fn delete_config(path: &str) {

@@ -4,6 +4,7 @@
 
 - Parallelize fetching of comments
 - Add task sort value to verbose output
+- Add config to verbose output with token redacted
 
 ## 2025-05-12 v0.7.5
 

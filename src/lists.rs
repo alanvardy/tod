@@ -138,6 +138,11 @@ pub async fn process(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
             .flat_map(|(_, tasks)| tasks.to_owned())
             .collect::<Vec<Task>>(),
     };
+
+    let with_project = match flag.clone() {
+        Flag::Project(..) => false,
+        Flag::Filter(..) => true,
+    };
     let tasks = tasks::reject_parent_tasks(tasks, config).await;
 
     let empty_text = format!("No tasks for {flag}");
@@ -160,7 +165,7 @@ pub async fn process(config: &Config, flag: Flag, sort: &SortOrder) -> Result<St
                     &config.reload().await?,
                     task,
                     &mut task_count,
-                    false,
+                    with_project,
                 )
                 .await?
                 {

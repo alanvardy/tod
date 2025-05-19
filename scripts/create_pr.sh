@@ -53,11 +53,6 @@ log "Running cargo tests"
 cargo test
 
 # Create a pull request
-# Ensure the branch is up-to-date and has no uncommitted changes
-log "Checking if the branch is ready for creating a pull request"
-if ! git diff-index --quiet HEAD --; then
-    error "There are uncommitted changes in the working directory. Please commit or stash them before proceeding."
-fi
 
 if ! git fetch origin && git status | grep -q "Your branch is up to date with"; then
     error "The branch is not up-to-date with the remote. Please pull the latest changes before proceeding."

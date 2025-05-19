@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Fix regression where project was not being shown while processing by filter
+
 ## 2025-05-12 v0.7.6
 
 - Parallelize fetching of comments

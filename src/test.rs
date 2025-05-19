@@ -25,7 +25,7 @@ pub mod fixtures {
 
     async fn adjusted_date(days: i64) -> String {
         let config = config().await.with_timezone("America/Vancouver");
-        let base_date = time::today_date(&config).unwrap();
+        let base_date = time::naive_date_today(&config).unwrap();
         let adjusted = base_date + ChronoDuration::days(days);
         adjusted.format(FORMAT_DATE).to_string()
     }
@@ -731,6 +731,6 @@ pub mod responses {
 
     async fn today_date() -> String {
         let config = config().await.with_timezone("America/Vancouver");
-        time::today_string(&config).unwrap()
+        time::date_string_today(&config).unwrap()
     }
 }

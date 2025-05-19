@@ -282,7 +282,7 @@ impl Task {
             Ok(DateTimeInfo::Date {
                 date, is_recurring, ..
             }) => {
-                let today_value = if *date == time::today_date(config).unwrap_or_default() {
+                let today_value = if *date == time::naive_date_today(config).unwrap_or_default() {
                     today
                 } else {
                     0
@@ -310,7 +310,7 @@ impl Task {
                     not_recurring
                 };
 
-                let duration = match time::now(config) {
+                let duration = match time::datetime_now(config) {
                     Ok(tz) => (*datetime - tz).num_minutes(),
                     _ => 0,
                 };
@@ -331,7 +331,7 @@ impl Task {
             Ok(DateTimeInfo::Date { date, .. }) => {
                 let naive_datetime = date.and_hms_opt(23, 59, 00)?;
 
-                let now = time::now(config).ok()?;
+                let now = time::datetime_now(config).ok()?;
 
                 Some(DateTime::from_naive_utc_and_offset(
                     naive_datetime,
@@ -364,7 +364,7 @@ impl Task {
             None => Ok(0),
             Some(Deadline { date, .. }) => {
                 let naive_date = time::date_string_to_naive_date(date)?;
-                let days_from_today = time::num_days_from_today(naive_date, config)?;
+                let days_from_today = time::naive_date_days_in_future(naive_date, config)?;
                 let deadline_days = config.deadline_days();
                 let day_multiplier = max(deadline_days as i64 - days_from_today, 0) as u32;
                 let day_value = config.deadline_value();
@@ -429,7 +429,7 @@ impl Task {
     fn is_today(&self, config: &Config) -> Result<bool, Error> {
         let boolean = match self.datetimeinfo(config) {
             Ok(DateTimeInfo::NoDateTime) => false,
-            Ok(DateTimeInfo::Date { date, .. }) => date == time::today_date(config)?,
+            Ok(DateTimeInfo::Date { date, .. }) => date == time::naive_date_today(config)?,
             Ok(DateTimeInfo::DateTime { datetime, .. }) => {
                 time::datetime_is_today(datetime, config)?
             }
@@ -1079,7 +1079,7 @@ mod tests {
         let task = Task {
             content: String::from("Get gifts for the twins"),
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 ..test::fixtures::today_task().await.due.unwrap()
             }),
             ..test::fixtures::today_task().await
@@ -1113,7 +1113,7 @@ mod tests {
         let config = test::fixtures::config().await;
         let task = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 ..test::fixtures::today_task().await.due.unwrap()
             }),
             ..test::fixtures::today_task().await
@@ -1134,7 +1134,7 @@ mod tests {
 
         let task_today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 ..test::fixtures::today_task().await.due.unwrap()
             }),
             ..test::fixtures::today_task().await
@@ -1154,7 +1154,7 @@ mod tests {
 
         let task_today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 lang: String::from("en"),
                 is_recurring: false,
                 string: String::from("Every 2 weeks"),
@@ -1182,7 +1182,7 @@ mod tests {
         let config = test::fixtures::config().await;
         let today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 lang: String::from("en"),
                 is_recurring: false,
                 timezone: None,
@@ -1193,7 +1193,7 @@ mod tests {
 
         let today_recurring = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 is_recurring: false,
                 lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
@@ -1254,7 +1254,7 @@ mod tests {
 
         let date_not_datetime = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 is_recurring: false,
                 lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
@@ -1342,7 +1342,7 @@ mod tests {
 
         let task_today = Task {
             due: Some(DateInfo {
-                date: time::today_string(&config).unwrap(),
+                date: time::date_string_today(&config).unwrap(),
                 lang: String::from("en"),
                 string: String::from("Every 2 weeks"),
                 is_recurring: false,

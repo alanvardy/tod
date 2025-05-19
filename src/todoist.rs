@@ -32,7 +32,7 @@ pub const QUERY_LIMIT: u8 = 200;
 /// Used to sanity check all the Todoist API endpoints to make sure that we are able to process the JSON payloads they are sending back.
 pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let name = "TEST".to_string();
-    let date = time::today_string(&config)?;
+    let date = time::date_string_today(&config)?;
     let priority = Priority::None;
     let labels = vec![String::from("one"), String::from("two")];
 

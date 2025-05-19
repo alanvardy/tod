@@ -91,7 +91,7 @@ impl Comment {
     pub fn fmt(&self, config: &Config) -> Result<String, Error> {
         let timezone = time::timezone_from_str(&config.timezone)?;
         let datetime = time::datetime_from_str(&self.posted_at, timezone)?;
-        let formatted_date = time::format_datetime(&datetime, config)?;
+        let formatted_date = time::datetime_to_string(&datetime, config)?;
 
         let link = match &self.file_attachment {
             None => String::new(),

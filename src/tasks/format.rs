@@ -64,7 +64,7 @@ pub fn due(task: &Task, config: &Config, buffer: &String) -> String {
             } else {
                 String::new()
             };
-            let date_string = time::format_date(date, config).unwrap_or_default();
+            let date_string = time::date_to_string(date, config).unwrap_or_default();
 
             format!("\n{buffer}{due_icon} {date_string}{recurring_icon}")
         }
@@ -78,7 +78,7 @@ pub fn due(task: &Task, config: &Config, buffer: &String) -> String {
             } else {
                 String::new()
             };
-            let datetime_string = time::format_datetime(datetime, config).unwrap_or_default();
+            let datetime_string = time::datetime_to_string(datetime, config).unwrap_or_default();
 
             let duration_string = match task.duration {
                 None => String::new(),

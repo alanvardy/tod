@@ -199,11 +199,11 @@ impl Config {
     pub async fn check_for_latest_version(self: Config) -> Result<(), Error> {
         let last_version = self.clone().last_version_check;
         let new_config = Config {
-            last_version_check: Some(time::today_string(&self)?),
+            last_version_check: Some(time::date_string_today(&self)?),
             ..self.clone()
         };
 
-        if last_version != Some(time::today_string(&self)?) {
+        if last_version != Some(time::date_string_today(&self)?) {
             match cargo::compare_versions(None).await {
                 Ok(Version::Dated(version)) => {
                     let message = format!(
@@ -256,7 +256,7 @@ impl Config {
 
     /// Increase the completed count for today
     pub fn increment_completed(&self) -> Result<Config, Error> {
-        let date = time::today_date(self)?.to_string();
+        let date = time::naive_date_today(self)?.to_string();
         let completed = match &self.completed {
             None => Some(Completed { date, count: 1 }),
             Some(completed) => {
@@ -423,7 +423,7 @@ impl Config {
     }
 
     pub fn tasks_completed(&self) -> Result<u32, Error> {
-        let date = time::today_date(self)?.to_string();
+        let date = time::naive_date_today(self)?.to_string();
         match &self.completed {
             None => Ok(0),
             Some(completed) => {

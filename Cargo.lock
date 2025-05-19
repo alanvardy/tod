@@ -1967,6 +1967,7 @@ dependencies = [
  "inquire",
  "matches",
  "mockito",
+ "once_cell",
  "pad",
  "pretty_assertions",
  "rand 0.9.1",

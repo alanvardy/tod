@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Parallelize fetching of comments
+- Add task sort value to verbose output
 
 ## 2025-05-12 v0.7.5
 

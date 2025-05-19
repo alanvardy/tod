@@ -13,6 +13,7 @@ pub mod priority;
 use crate::comments::Comment;
 use crate::config::Config;
 use crate::config::SortValue;
+use crate::debug;
 use crate::errors::Error;
 use crate::input::CONTENT;
 use crate::input::DateTimeInput;
@@ -257,7 +258,12 @@ impl Task {
             }
         };
 
-        date_value as u32 + priority_value as u32 + deadline_value
+        let value = date_value as u32 + priority_value as u32 + deadline_value;
+
+        let content = self.content.clone();
+        let debug_text = format!("Value: {value}, Content: {content}");
+        debug::print(config, debug_text);
+        value
     }
 
     /// Return the value of the due field

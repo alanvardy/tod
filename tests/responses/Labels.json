@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "id": "123",
+      "name": "345",
+      "is_favorite": false,
+      "order": null,
+      "color": "red"
+    }
+  ],
+  "next_cursor": null
+}

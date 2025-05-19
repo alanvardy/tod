@@ -1,0 +1,26 @@
+{
+  "results": [
+    {
+      "can_assign_tasks": false,
+      "child_order": 1,
+      "color": "blue",
+      "created_at": null,
+      "default_order": 1,
+      "description": "Bad guy",
+      "id": "890",
+      "inbox_project": false,
+      "is_archived": false,
+      "is_collapsed": false,
+      "is_deleted": false,
+      "is_favorite": false,
+      "is_frozen": false,
+      "is_shared": false,
+      "is_team_inbox": false,
+      "name": "Doomsday",
+      "parent_id": "5678",
+      "updated_at": null,
+      "view_style": "list"
+    }
+  ],
+  "next_cursor": null
+}

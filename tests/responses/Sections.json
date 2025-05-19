@@ -1,0 +1,18 @@
+{
+  "results": [
+    {
+      "id": "1234",
+      "project_id": "5678",
+      "user_id": "910",
+      "section_order": 1,
+      "name": "Bread",
+      "added_at": "2020-06-11T14:51:08.056500Z",
+      "updated_at": null,
+      "archived_at": null,
+      "is_archived": false,
+      "is_deleted": false,
+      "is_collapsed": false
+    }
+  ],
+  "next_cursor": null
+}

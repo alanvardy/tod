@@ -70,11 +70,11 @@ pub async fn select_section(config: &Config, project: &Project) -> Result<Option
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test;
+    use crate::test::{self, responses::ResponseFromFile};
     use pretty_assertions::assert_eq;
 
-    #[test]
-    fn should_convert_json_to_sections() {
+    #[tokio::test]
+    async fn should_convert_json_to_sections() {
         let sections = vec![Section {
             id: "1234".to_string(),
             added_at: "2020-06-11T14:51:08.056500Z".to_string(),
@@ -88,7 +88,7 @@ mod tests {
             is_deleted: false,
             is_collapsed: false,
         }];
-        let result = json_to_sections_response(test::responses::sections_response())
+        let result = json_to_sections_response(ResponseFromFile::Sections.read().await)
             .unwrap()
             .results;
         assert_eq!(result, sections);
@@ -101,7 +101,7 @@ mod tests {
             .mock("GET", "/api/v1/sections?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::sections_response())
+            .with_body(ResponseFromFile::Sections.read().await)
             .create_async()
             .await;
 

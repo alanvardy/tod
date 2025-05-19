@@ -275,6 +275,7 @@ pub async fn import(config: &Config, file_path: &String) -> Result<String, Error
 mod tests {
     use super::*;
     use crate::test;
+    use crate::test::responses::ResponseFromFile;
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
@@ -284,7 +285,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/quick")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_task().await)
+            .with_body(ResponseFromFile::TodayTask.read().await)
             .create_async()
             .await;
 
@@ -303,14 +304,14 @@ mod tests {
             .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
         let mock2 = server
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 
@@ -333,7 +334,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::tasks_without_duration_response().await)
+            .with_body(ResponseFromFile::TodayTasksWithoutDuration.read().await)
             .create_async()
             .await;
 
@@ -341,7 +342,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/999999")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_task().await)
+            .with_body(ResponseFromFile::TodayTask.read().await)
             .create_async()
             .await;
 
@@ -349,7 +350,7 @@ mod tests {
             .mock("GET", "/api/v1/id_mappings/projects/123")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::ids())
+            .with_body(ResponseFromFile::Ids.read().await)
             .create_async()
             .await;
 
@@ -360,7 +361,7 @@ mod tests {
             )
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
+            .with_body(ResponseFromFile::CommentsAllTypes.read().await)
             .create_async()
             .await;
 
@@ -408,7 +409,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 
@@ -434,7 +435,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 
@@ -442,7 +443,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8/close")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_task().await)
+            .with_body(ResponseFromFile::TodayTask.read().await)
             .create_async()
             .await;
 
@@ -453,7 +454,7 @@ mod tests {
             )
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
+            .with_body(ResponseFromFile::CommentsAllTypes.read().await)
             .create_async()
             .await;
         let config = test::fixtures::config()
@@ -480,7 +481,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 
@@ -488,7 +489,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8/close")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_task().await)
+            .with_body(ResponseFromFile::TodayTask.read().await)
             .create_async()
             .await;
 
@@ -499,7 +500,7 @@ mod tests {
             )
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
+            .with_body(ResponseFromFile::CommentsAllTypes.read().await)
             .create_async()
             .await;
 
@@ -534,7 +535,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 
@@ -542,7 +543,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 
@@ -577,7 +578,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/filter?query=today&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 
@@ -604,7 +605,7 @@ mod tests {
             .mock("GET", "/api/v1/tasks/?project_id=123&limit=200")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_tasks_response().await)
+            .with_body(ResponseFromFile::TodayTasks.read().await)
             .create_async()
             .await;
 

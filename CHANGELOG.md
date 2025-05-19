@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Fix regression where project was not being shown while processing by filter
+- Move all mock response bodies to `json` files
 
 ## 2025-05-12 v0.7.6
 

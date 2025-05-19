@@ -31,12 +31,12 @@ pub async fn compare_versions(_mock_url: Option<String>) -> Result<Version, Erro
     }
 }
 /// Get latest version number from Cargo.io
-pub async fn get_latest_version(_mock_url: Option<String>) -> Result<String, Error> {
-    #[cfg(not(test))]
-    let cargo_url: String = "https://crates.io/api".to_string();
-
-    #[cfg(test)]
-    let cargo_url: String = _mock_url.expect("Mock URL not set");
+pub async fn get_latest_version(mock_url: Option<String>) -> Result<String, Error> {
+    let cargo_url = if cfg!(test) {
+        mock_url.expect("Mock URL not set")
+    } else {
+        "https://crates.io/api".to_string()
+    };
 
     let request_url = format!("{cargo_url}{VERSIONS_URL}");
 
@@ -58,7 +58,7 @@ pub async fn get_latest_version(_mock_url: Option<String>) -> Result<String, Err
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{VERSION, test};
+    use crate::{VERSION, test::responses::ResponseFromFile};
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
@@ -68,7 +68,7 @@ mod tests {
             .mock("GET", "/v1/crates/tod/versions")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::versions())
+            .with_body(ResponseFromFile::Versions.read().await)
             .create_async()
             .await;
 
@@ -85,7 +85,7 @@ mod tests {
             .mock("GET", "/v1/crates/tod/versions")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::versions())
+            .with_body(ResponseFromFile::Versions.read().await)
             .create_async()
             .await;
 

@@ -157,6 +157,7 @@ pub async fn render_comments(config: &Config, comments: Vec<Comment>) -> Result<
 #[cfg(test)]
 mod tests {
     use crate::test;
+    use crate::test::responses::ResponseFromFile;
 
     use super::*;
     use pretty_assertions::assert_eq;
@@ -188,7 +189,7 @@ mod tests {
             )
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::comments_response())
+            .with_body(ResponseFromFile::CommentsAllTypes.read().await)
             .create_async()
             .await;
 

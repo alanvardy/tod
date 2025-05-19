@@ -151,11 +151,11 @@ pub fn json_to_comment(json: String) -> Result<Comment, Error> {
 mod tests {
     use super::*;
     use crate::comments::json_to_comment_response;
-    use crate::test::fixtures; // 👈 access fixtures::config()
-    use std::fs;
+    use crate::test::fixtures;
+    use crate::test::responses::ResponseFromFile;
 
     async fn load_comments() -> Vec<Comment> {
-        let json = fs::read_to_string("tests/fixtures/comments_all_types.json").unwrap();
+        let json = ResponseFromFile::CommentsAllTypes.read().await;
         let response = json_to_comment_response(json).unwrap();
         response
             .results

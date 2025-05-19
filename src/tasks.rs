@@ -1000,7 +1000,7 @@ pub async fn set_priority(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test;
+    use crate::test::{self, responses::ResponseFromFile};
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
@@ -1393,7 +1393,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_task().await)
+            .with_body(ResponseFromFile::TodayTask.read().await)
             .create_async()
             .await;
         let config = test::fixtures::config()
@@ -1414,7 +1414,7 @@ mod tests {
             .mock("POST", "/api/v1/tasks/6Xqhv4cwxgjwG9w8/close")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(test::responses::today_task().await)
+            .with_body(ResponseFromFile::TodayTask.read().await)
             .create_async()
             .await;
 

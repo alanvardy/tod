@@ -2,10 +2,12 @@
 
 ## Unreleased (on main branch only)
 
+## 2025-05-19 v0.7.7
+
 - Fix regression where project was not being shown while processing by filter
 - Move all mock response bodies to `json` files
 
-## 2025-05-12 v0.7.6
+## 2025-05-18 v0.7.6
 
 - Parallelize fetching of comments
 - Add task sort value to verbose output

@@ -13,7 +13,7 @@ pub fn content(task: &Task, config: &Config) -> String {
         priority::Priority::None => color::normal_string(&task.content),
     };
 
-    if disable_links(config) {
+    if hyperlinks_disabled(config) {
         content
     } else {
         create_links(&content)
@@ -41,7 +41,7 @@ pub async fn project(task: &Task, config: &Config, buffer: &String) -> Result<St
     Ok(text)
 }
 
-pub fn disable_links(config: &Config) -> bool {
+pub fn hyperlinks_disabled(config: &Config) -> bool {
     config.disable_links || !supports_hyperlinks::on(Stream::Stdout)
 }
 

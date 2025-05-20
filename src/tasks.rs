@@ -212,7 +212,7 @@ impl Task {
             String::new()
         };
 
-        let url = if format::disable_links(config) {
+        let url = if format::hyperlinks_disabled(config) {
             String::new()
         } else {
             format::task_url(&self.id)
@@ -262,7 +262,7 @@ impl Task {
 
         let content = self.content.clone();
         let debug_text = format!("Value: {value}, Content: {content}");
-        debug::print(config, debug_text);
+        debug::maybe_print(config, debug_text);
         value
     }
 

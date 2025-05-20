@@ -1198,7 +1198,7 @@ async fn project_rename(config: Config, args: &ProjectRename) -> Result<String, 
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
-    debug::print(
+    debug::maybe_print(
         &config,
         format!("Calling projects::rename with project:\n{project}"),
     );

@@ -553,7 +553,7 @@ pub async fn get(
         token: "REDACTED".to_string(),
         ..config.clone()
     };
-    debug::print(&config, format!("{:#?}", redacted_config));
+    debug::maybe_print(&config, format!("{:#?}", redacted_config));
     Ok(config)
 }
 /// Generates the path to the config file

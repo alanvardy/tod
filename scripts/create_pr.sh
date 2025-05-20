@@ -36,6 +36,12 @@ command -v gh >/dev/null 2>&1 || error "gh is not installed. Please install it b
 log "Editing Cargo.toml to set version to $VERSION"
 ambr --regex "^version = \"\\d+\\.\\d+\\.\\d+\"" "version = \"$VERSION\"" Cargo.toml
 
+CURRENT_DATE=$(date +"%Y-%m-%d")
+
+# Update CHANGELOG with the new version
+log "Adding version $VERSION to CHANGELOG.md"
+ambr "## Unreleased (on main branch only)" "## Unreleased (on main branch only)\n\n## $CURRENT_DATE $VERSION" CHANGELOG.md
+
 # Update dependencies
 log "Running cargo update"
 cargo update

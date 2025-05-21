@@ -33,6 +33,7 @@ mod labels;
 mod lists;
 mod projects;
 mod sections;
+mod shell;
 mod tasks;
 mod test;
 mod test_time;
@@ -1198,7 +1199,7 @@ async fn project_rename(config: Config, args: &ProjectRename) -> Result<String, 
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
-    debug::print(
+    debug::maybe_print(
         &config,
         format!("Calling projects::rename with project:\n{project}"),
     );

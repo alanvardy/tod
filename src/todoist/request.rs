@@ -39,7 +39,7 @@ pub async fn post_todoist(
     let authorization: &str = &format!("Bearer {token}");
     let spinner = maybe_start_spinner(config, spinner);
 
-    debug::print(config, format!("POST {request_url}\nbody: {body}"));
+    debug::maybe_print(config, format!("POST {request_url}\nbody: {body}"));
 
     let client = Client::new()
         .post(request_url.clone())
@@ -70,7 +70,7 @@ pub async fn delete_todoist(
     let authorization: &str = &format!("Bearer {token}");
     let spinner = maybe_start_spinner(config, spinner);
 
-    debug::print(config, format!("DELETE {request_url}\nbody: {body}"));
+    debug::maybe_print(config, format!("DELETE {request_url}\nbody: {body}"));
 
     let response = Client::new()
         .delete(request_url.clone())
@@ -98,7 +98,7 @@ pub async fn get_todoist(config: &Config, url: String, spinner: bool) -> Result<
     if config.verbose.unwrap_or_default() {
         println!("GET {request_url}")
     }
-    debug::print(config, format!("GET {request_url}"));
+    debug::maybe_print(config, format!("GET {request_url}"));
     let response = Client::new()
         .get(request_url.clone())
         .header(CONTENT_TYPE, "application/json")
@@ -120,7 +120,7 @@ async fn handle_response(
 ) -> Result<String, Error> {
     if response.status().is_success() {
         let json_string = response.text().await?;
-        debug::print(config, format!("{method} {url}\nresponse: {json_string}"));
+        debug::maybe_print(config, format!("{method} {url}\nresponse: {json_string}"));
         Ok(json_string)
     } else {
         let json_string = response.text().await?;

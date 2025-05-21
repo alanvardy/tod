@@ -33,6 +33,7 @@ mod labels;
 mod lists;
 mod projects;
 mod sections;
+mod shell;
 mod tasks;
 mod test;
 mod test_time;

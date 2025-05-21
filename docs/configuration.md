@@ -131,7 +131,6 @@ Tasks are ranked by points and the first is returned, the points are the sum of 
 - Priority 2: 3
 - Priority 3: 4
 
-
 The math for how much a deadline contributes in points is a little more involved. It is based on the number of days before the deadline (closer = more) and the value per day.
 
 The formula is `max(deadline_days - number of days until deadline, 0) * deadline_value`

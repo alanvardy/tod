@@ -49,6 +49,13 @@ pub struct Config {
     /// Whether to trigger terminal bell on error
     #[serde(default = "bell_on_failure")]
     pub bell_on_failure: bool,
+    /// A command to to run on task creation
+    pub task_create_command: Option<String>,
+    /// A command to run on task completion
+    pub task_complete_command: Option<String>,
+    /// A command to run on task comment creation
+    pub task_comment_command: Option<String>,
+    /// The timezone to use for the config
     pub timezone: Option<String>,
     pub timeout: Option<u64>,
     /// The last time we checked crates.io for the version
@@ -85,7 +92,6 @@ pub struct Config {
 fn bell_on_failure() -> bool {
     true
 }
-
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub struct Args {
     pub verbose: bool,
@@ -354,6 +360,9 @@ impl Config {
             },
             legacy_projects: Some(Vec::new()),
             time_provider: TimeProviderEnum::System(SystemTimeProvider),
+            task_comment_command: None,
+            task_create_command: None,
+            task_complete_command: None,
             projects: Some(Vec::new()),
         })
     }
@@ -468,6 +477,9 @@ impl Default for Config {
             timeout: None,
             bell_on_success: false,
             bell_on_failure: true,
+            task_create_command: None,
+            task_complete_command: None,
+            task_comment_command: None,
             sort_value: Some(SortValue::default()),
             timezone: None,
             completed: None,
@@ -612,6 +624,10 @@ mod tests {
                 next_task: None,
                 bell_on_success: false,
                 bell_on_failure: true,
+                task_create_command: None,
+                task_complete_command: None,
+                task_comment_command: None,
+
                 timezone: Some("UTC".to_string()),
                 timeout: None,
                 last_version_check: None,

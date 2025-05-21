@@ -39,6 +39,7 @@ mod test_time;
 mod time;
 mod todoist;
 mod users;
+mod utils;
 
 const NAME: &str = "Tod";
 const LOWERCASE_NAME: &str = "tod";

@@ -16,6 +16,7 @@ use crate::tasks::priority::Priority;
 use crate::tasks::{Task, TaskResponse};
 use crate::users;
 use crate::users::User;
+use crate::utils::execute_command;
 use crate::{color, projects, sections, tasks, time};
 
 // TODOIST URLS
@@ -531,8 +532,10 @@ pub async fn complete_task(config: &Config, task: &Task, spinner: bool) -> Resul
     request::post_todoist(config, url, Value::Null, spinner).await?;
 
     if !cfg!(test) {
+        maybe_task_complete_command(config.task_complete_command.as_deref()).await;
         config.reload().await?.clear_next_task().save().await?;
     }
+    // Execute the execute_command() complete_task_command if set in config
 
     // API does not pass back a task
     Ok(String::from("✓"))
@@ -634,6 +637,12 @@ pub async fn all_comments(
     }
 
     Ok(comments)
+}
+
+async fn maybe_task_complete_command(command: Option<&str>) {
+    if let Some(command) = command {
+        execute_command(command).await;
+    }
 }
 
 #[cfg(test)]

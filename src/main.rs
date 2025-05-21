@@ -33,13 +33,13 @@ mod labels;
 mod lists;
 mod projects;
 mod sections;
+mod shell;
 mod tasks;
 mod test;
 mod test_time;
 mod time;
 mod todoist;
 mod users;
-mod utils;
 
 const NAME: &str = "Tod";
 const LOWERCASE_NAME: &str = "tod";

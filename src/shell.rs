@@ -1,7 +1,7 @@
-//File for utility functions used local to the system, such as command exeution
-
+//File for shell functions used local to the system, such as command exeution and shell completions
 use std::process::Stdio;
 use tokio::process::Command;
+
 /// Executes a local system command  async with the given arguments and suppresses stdout.
 /// Captures stderr and prints it if the command fails.
 pub fn execute_command(command: &str) {
@@ -11,7 +11,12 @@ pub fn execute_command(command: &str) {
         let output = Command::new("sh")
             .arg("-c")
             .arg(&command)
-            .stdout(Stdio::null()) // Suppress stdout
+            .stdout(if cfg!(test) {
+                // Only capture stdout in tests for test case validation
+                Stdio::piped()
+            } else {
+                Stdio::null()
+            }) // Suppress stdout
             .stderr(Stdio::piped()) // Capture stderr
             .output()
             .await;
@@ -29,6 +34,7 @@ pub fn execute_command(command: &str) {
         }
     });
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

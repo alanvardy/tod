@@ -12,11 +12,11 @@ use crate::id::{self, Resource};
 use crate::labels::{self, Label, LabelResponse};
 use crate::projects::{Project, ProjectResponse};
 use crate::sections::{Section, SectionResponse};
+use crate::shell::execute_command;
 use crate::tasks::priority::Priority;
 use crate::tasks::{Task, TaskResponse};
 use crate::users;
 use crate::users::User;
-use crate::utils::execute_command;
 use crate::{color, projects, sections, tasks, time};
 
 // TODOIST URLS
@@ -154,6 +154,7 @@ pub async fn quick_create_task(config: &Config, content: &str) -> Result<Task, E
     let body = json!({"text": content, "auto_reminder": true});
 
     let json = request::post_todoist(config, url, body, true).await?;
+    maybe_run_command(config.task_create_command.as_deref()).await;
     tasks::json_to_task(json)
 }
 
@@ -208,6 +209,7 @@ pub async fn create_task(
     let body = json!(body);
 
     let json = request::post_todoist(config, url, body, true).await?;
+    maybe_run_command(config.task_create_command.as_deref()).await;
     tasks::json_to_task(json)
 }
 
@@ -532,7 +534,7 @@ pub async fn complete_task(config: &Config, task: &Task, spinner: bool) -> Resul
     request::post_todoist(config, url, Value::Null, spinner).await?;
 
     if !cfg!(test) {
-        maybe_task_complete_command(config.task_complete_command.as_deref()).await;
+        maybe_run_command(config.task_complete_command.as_deref()).await;
         config.reload().await?.clear_next_task().save().await?;
     }
     // Execute the execute_command() complete_task_command if set in config
@@ -598,6 +600,7 @@ pub async fn create_comment(
     let url = COMMENTS_URL.to_string();
 
     let response = request::post_todoist(config, url, body, spinner).await?;
+    maybe_run_command(config.task_comment_command.as_deref()).await;
     comments::json_to_comment(response)
 }
 
@@ -639,7 +642,7 @@ pub async fn all_comments(
     Ok(comments)
 }
 
-async fn maybe_task_complete_command(command: Option<&str>) {
+async fn maybe_run_command(command: Option<&str>) {
     if let Some(command) = command {
         execute_command(command);
     }

@@ -641,7 +641,7 @@ pub async fn all_comments(
 
 async fn maybe_task_complete_command(command: Option<&str>) {
     if let Some(command) = command {
-        execute_command(command).await;
+        execute_command(command);
     }
 }
 

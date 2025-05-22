@@ -87,6 +87,9 @@ tod project import
 # Get the next task for a project
 tod task next
 
+# Comment on the current (next) task
+tod task comment
+
 # Go through tasks with an interactive prompt, completing them in order of importance one at a time.
 tod list process
 

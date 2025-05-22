@@ -16,6 +16,10 @@
     - [timeout](#timeout)
     - [timezone](#timezone)
     - [token](#token)
+    - [timeprovider](#timeprovider)
+    - [task_create_command](#task_create_command)
+    - [task_comment_command](#task_comment_command)
+    - [task_complete_command](#task_complete_command)
     - [vecprojects](#vecprojects)
     - [verbose](#verbose)
 <!--toc:end-->
@@ -202,7 +206,17 @@ You will be prompted for timezone on first run
   possible values: Any valid token
 ```
 
-You will be prompted for your [Todoist API token](https://todoist.com/prefs/integrations) on first run
+You will be prompted for your [Todoist API token](https://todoist.com/prefs/integrations) on first run or if this is otherwise invalid/unset.
+
+### timeprovider
+
+```json
+  type: string
+  default: No default
+  possible values: Enum of SystemTimeProvider or FixedTimeProvider
+```
+
+Used for dev/testing only to return fixed time (fixture) for use in test cases. Otherwise defaults to SystemTimeProvider in all other cases.
 
 ### vecprojects
 
@@ -213,6 +227,36 @@ You will be prompted for your [Todoist API token](https://todoist.com/prefs/inte
 ```
 
 Projects are stored locally in config to help save on API requests and speed up actions taken. Manage this with the `project` subcommands. The strange naming is because `projects` was used in previous versions of `tod`.
+
+### task_comment_command
+
+``` json
+type: String
+default: None
+possible values: A string that is executed within the shell (such as 'echo task commented')
+```
+
+Defaults to `None`. The Shell command that spanwed for background execution upon a task being commented. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
+
+### task_create_command
+
+``` json
+type: String
+default: None
+possible values: A string that is executed within the shell (such as 'echo task created')
+```
+
+Defaults to `None`. The Shell command that spanwed for background execution upon a task being added/created. Only executes if set, for both regular and quick-add task creation. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
+
+### task_complete_command
+
+``` json
+type: String
+default: None
+possible values: A string that is executed within the shell (such as 'echo task completed')
+```
+
+Defaults to `None`. The Shell command that spanwed for background execution upon a task being completed. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
 
 ### verbose
 

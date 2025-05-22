@@ -24,6 +24,49 @@
     - [verbose](#verbose)
 <!--toc:end-->
 
+If the config does not exist, Tod will prompt for your initial Todoist API token and create a default config with the following values:
+
+``` json
+{
+  "bell_on_failure": true,
+  "bell_on_success": false,
+  "completed": null,
+  "disable_links": false,
+  "last_version_check": null,
+  "max_comment_length": null,
+  "mock_select": null,
+  "mock_string": null,
+  "mock_url": null,
+  "natural_language_only": null,
+  "next_id": null,
+  "next_taskv1": null,
+  "no_sections": null,
+  "path": "See Location - Platform Specific",
+  "projectsv1": [],
+  "sort_value": {
+    "deadline_days": 5,
+    "deadline_value": 30,
+    "no_due_date": 80,
+    "not_recurring": 50,
+    "now": 200,
+    "overdue": 150,
+    "priority_high": 4,
+    "priority_low": 1,
+    "priority_medium": 3,
+    "priority_none": 2,
+    "today": 100
+  },
+  "spinners": true,
+  "timeout": null,
+  "timezone": "",
+  "token": "Your Todoist API Todken",
+  "vecprojects": [],
+  "verbose": null
+}
+```
+
+The Config can be deleted with `tod config reset` at any time, and it will be re-created upon next execution.
+
 ## Location
 
  Data is stored in JSON format in `$XDG_CONFIG_HOME/tod.cfg`. This defaults to:
@@ -151,7 +194,7 @@ Defaults:
 ``` json
   {
     "deadline_days": 5,
-    "deadline_value", 30,
+    "deadline_value": 30,
     "no_due_date": 80,
     "not_recurring": 50,
     "now": 200,
@@ -163,6 +206,8 @@ Defaults:
     "today": 100
   },
 ```
+
+These values are u8, so they can be 0-255 (must not exceed 255) - if they exceed 255, Tod will report a config parse error.
 
 ### spinners
 

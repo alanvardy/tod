@@ -1,6 +1,18 @@
 //File for shell functions used local to the system, such as command exeution and shell completions
-use std::process::Stdio;
+use crate::{Cli, LOWERCASE_NAME};
+use clap::CommandFactory;
+use std::{io, process::Stdio};
 use tokio::process::Command;
+
+#[derive(clap::ValueEnum, Debug, Copy, Clone)]
+pub enum Shell {
+    Bash,
+    Zsh,
+    Fish,
+    #[allow(clippy::enum_variant_names)]
+    PowerShell,
+    Elvish,
+}
 
 /// Executes a local system command  async with the given arguments and suppresses stdout.
 /// Captures stderr and prints it if the command fails.
@@ -33,6 +45,33 @@ pub fn execute_command(command: &str) {
             }
         }
     });
+}
+
+pub(crate) fn generate_completions(shell: Shell) {
+    let mut cli = Cli::command();
+
+    match shell {
+        Shell::Bash => {
+            let shell = clap_complete::shells::Bash;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::Fish => {
+            let shell = clap_complete::shells::Fish;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::Zsh => {
+            let shell = clap_complete::shells::Zsh;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::PowerShell => {
+            let shell = clap_complete::shells::PowerShell;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+        Shell::Elvish => {
+            let shell = clap_complete::shells::Elvish;
+            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
+        }
+    };
 }
 
 #[cfg(test)]

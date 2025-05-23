@@ -7,13 +7,14 @@ extern crate matches;
 extern crate clap;
 
 use cargo::Version;
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use config::Config;
 use errors::Error;
 use input::DateTimeInput;
 use lists::Flag;
+use shell::Shell;
 use std::fmt::Display;
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::Path;
 use tasks::priority::Priority;
 use tasks::{SortOrder, TaskAttribute, priority};
@@ -41,7 +42,7 @@ mod time;
 mod todoist;
 mod users;
 
-const NAME: &str = "Tod";
+pub const NAME: &str = "Tod";
 const LOWERCASE_NAME: &str = "tod";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
@@ -543,15 +544,6 @@ struct ShellCompletions {
     shell: Shell,
 }
 
-#[derive(clap::ValueEnum, Debug, Copy, Clone)]
-pub enum Shell {
-    Bash,
-    Zsh,
-    Fish,
-    PowerShell,
-    Elvish,
-}
-
 enum FlagOptions {
     Project,
     Filter,
@@ -903,30 +895,7 @@ async fn select_command(
 }
 
 async fn shell_completions(args: &ShellCompletions) -> Result<String, Error> {
-    let mut cli = Cli::command();
-
-    match args.shell {
-        Shell::Bash => {
-            let shell = clap_complete::shells::Bash;
-            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
-        }
-        Shell::Fish => {
-            let shell = clap_complete::shells::Fish;
-            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
-        }
-        Shell::Zsh => {
-            let shell = clap_complete::shells::Zsh;
-            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
-        }
-        Shell::PowerShell => {
-            let shell = clap_complete::shells::PowerShell;
-            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
-        }
-        Shell::Elvish => {
-            let shell = clap_complete::shells::Elvish;
-            clap_complete::generate(shell, &mut cli, LOWERCASE_NAME, &mut io::stdout());
-        }
-    };
+    shell::generate_completions(args.shell);
 
     Ok(String::new())
 }

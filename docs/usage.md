@@ -84,6 +84,9 @@ tod task create --content "Write more rust" --project code
 # Import your projects
 tod project import
 
+# Import all projects in Todoist into Tod
+tod project import -a
+
 # Get the next task for a project
 tod task next
 

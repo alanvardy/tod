@@ -16,9 +16,56 @@
     - [timeout](#timeout)
     - [timezone](#timezone)
     - [token](#token)
+    - [timeprovider](#timeprovider)
+    - [task_create_command](#task_create_command)
+    - [task_comment_command](#task_comment_command)
+    - [task_complete_command](#task_complete_command)
     - [vecprojects](#vecprojects)
     - [verbose](#verbose)
 <!--toc:end-->
+
+If the config does not exist, Tod will prompt for your initial Todoist API token and create a default config with the following values:
+
+``` json
+{
+  "bell_on_failure": true,
+  "bell_on_success": false,
+  "completed": null,
+  "disable_links": false,
+  "last_version_check": null,
+  "max_comment_length": null,
+  "mock_select": null,
+  "mock_string": null,
+  "mock_url": null,
+  "natural_language_only": null,
+  "next_id": null,
+  "next_taskv1": null,
+  "no_sections": null,
+  "path": "See Location - Platform Specific",
+  "projectsv1": [],
+  "sort_value": {
+    "deadline_days": 5,
+    "deadline_value": 30,
+    "no_due_date": 80,
+    "not_recurring": 50,
+    "now": 200,
+    "overdue": 150,
+    "priority_high": 4,
+    "priority_low": 1,
+    "priority_medium": 3,
+    "priority_none": 2,
+    "today": 100
+  },
+  "spinners": true,
+  "timeout": null,
+  "timezone": "",
+  "token": "Your Todoist API Todken",
+  "vecprojects": [],
+  "verbose": null
+}
+```
+
+The Config can be deleted with `tod config reset` at any time, and it will be re-created upon next execution.
 
 ## Location
 
@@ -147,7 +194,7 @@ Defaults:
 ``` json
   {
     "deadline_days": 5,
-    "deadline_value", 30,
+    "deadline_value": 30,
     "no_due_date": 80,
     "not_recurring": 50,
     "now": 200,
@@ -159,6 +206,8 @@ Defaults:
     "today": 100
   },
 ```
+
+These values are u8, so they can be 0-255 (must not exceed 255) - if they exceed 255, Tod will report a config parse error.
 
 ### spinners
 
@@ -202,7 +251,17 @@ You will be prompted for timezone on first run
   possible values: Any valid token
 ```
 
-You will be prompted for your [Todoist API token](https://todoist.com/prefs/integrations) on first run
+You will be prompted for your [Todoist API token](https://todoist.com/prefs/integrations) on first run or if this is otherwise invalid/unset.
+
+### timeprovider
+
+```json
+  type: string
+  default: No default
+  possible values: Enum of SystemTimeProvider or FixedTimeProvider
+```
+
+Used for dev/testing only to return fixed time (fixture) for use in test cases. Otherwise defaults to SystemTimeProvider in all other cases.
 
 ### vecprojects
 
@@ -213,6 +272,36 @@ You will be prompted for your [Todoist API token](https://todoist.com/prefs/inte
 ```
 
 Projects are stored locally in config to help save on API requests and speed up actions taken. Manage this with the `project` subcommands. The strange naming is because `projects` was used in previous versions of `tod`.
+
+### task_comment_command
+
+``` json
+type: String
+default: None
+possible values: A string that is executed within the shell (such as 'echo task commented')
+```
+
+Defaults to `None`. The Shell command that spanwed for background execution upon a task being commented. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
+
+### task_create_command
+
+``` json
+type: String
+default: None
+possible values: A string that is executed within the shell (such as 'echo task created')
+```
+
+Defaults to `None`. The Shell command that spanwed for background execution upon a task being added/created. Only executes if set, for both regular and quick-add task creation. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
+
+### task_complete_command
+
+``` json
+type: String
+default: None
+possible values: A string that is executed within the shell (such as 'echo task completed')
+```
+
+Defaults to `None`. The Shell command that spanwed for background execution upon a task being completed. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
 
 ### verbose
 

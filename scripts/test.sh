@@ -5,18 +5,11 @@ echo "=== CLIPPY ===" &&
 cargo clippy -- -D warnings &&
 echo "=== TEST ===" &&
 cargo nextest run &&
-echo "=== TODOS ===" &&
-./scripts/lint_string.sh "TODO " &&
-./scripts/lint_string.sh "TODO:" &&
-./scripts/lint_string.sh "FIXME " &&
-./scripts/lint_string.sh "FIXME:" &&
-./scripts/lint_string.sh "todo " &&
-./scripts/lint_string.sh "todo:" &&
-./scripts/lint_string.sh "fixme " &&
-./scripts/lint_string.sh "fixme:" &&
-./scripts/lint_string.sh "dbg!" &&
-./scripts/lint_string.sh "DEBUG:" &&
-./scripts/lint_string.sh "FIXTURE:" &&
+echo "=== FORGOTTEN TODOS ===" &&
+# Requires ripgrep
+if rg -i -s -g '*.rs' 'TODO:|todo:|FIXME|fixme|dbg!|DEBUG:|FIXTURE:' .; then
+    exit 1
+fi
 echo "=== SUCCESS ===" &&
 echo "=== CLEANING FILES ===" &&
 ./scripts/testcfg_clean.sh &&

@@ -56,7 +56,7 @@ pub struct Config {
     /// A command to run on task comment creation
     pub task_comment_command: Option<String>,
     /// The timezone to use for the config
-    pub timezone: Option<String>,
+    timezone: Option<String>,
     pub timeout: Option<u64>,
     /// The last time we checked crates.io for the version
     pub last_version_check: Option<String>,
@@ -234,6 +234,14 @@ impl Config {
         };
 
         Ok(())
+    }
+
+    // Get timezone from config, or API if necessary
+    pub fn get_timezone(&self) -> Result<String, Error> {
+        self.timezone.clone().ok_or_else(|| Error {
+            message: "Must set timezone".to_string(),
+            source: "get_timezone".to_string(),
+        })
     }
 
     /// Prompt user for timezone if it does not exist and write to disk

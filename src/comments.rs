@@ -89,7 +89,8 @@ pub struct ImageAttachment {
 
 impl Comment {
     pub fn fmt(&self, config: &Config) -> Result<String, Error> {
-        let timezone = time::timezone_from_str(&config.timezone)?;
+        let timezone = config.get_timezone()?;
+        let timezone = time::timezone_from_str(&timezone)?;
         let datetime = time::datetime_from_str(&self.posted_at, timezone)?;
         let formatted_date = time::datetime_to_string(&datetime, config)?;
 

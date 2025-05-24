@@ -375,16 +375,14 @@ impl Task {
 
     /// Converts the JSON date representation into Date or Datetime
     fn datetimeinfo(&self, config: &Config) -> Result<DateTimeInfo, Error> {
-        let tz = match (self.clone().due, config.clone().timezone) {
-            (None, Some(tz_string)) => time::timezone_from_str(&Some(tz_string))?,
-            (None, None) => Tz::UTC,
-            (Some(DateInfo { timezone: None, .. }), Some(tz_string)) => time::timezone_from_str(&Some(tz_string))?,
-            (Some(DateInfo { timezone: None, .. }), None) => Tz::UTC,
-            (Some(DateInfo {
-                timezone: Some(tz_string),
+        let tz_string = config.get_timezone()?;
+        let tz = match self.clone().due {
+            None => time::timezone_from_str(&tz_string)?,
+            Some(DateInfo { timezone: None, .. }) => time::timezone_from_str(&tz_string)?,
+            Some(DateInfo {
+                timezone: Some(other_timezone),
                 ..
-                // Remove the Some here
-            }), _) => time::timezone_from_str(&Some(tz_string))?,
+            }) => time::timezone_from_str(&other_timezone)?,
         };
         match self.clone().due {
             None => Ok(DateTimeInfo::NoDateTime),
@@ -672,7 +670,8 @@ fn get_timebox(config: &Config, task: &Task) -> Result<(String, u32), Error> {
 
                 format!("{date} {time}")
             } else {
-                let tz = time::timezone_from_str(&config.timezone)?;
+                let timezone = config.get_timezone()?;
+                let tz = time::timezone_from_str(&timezone)?;
                 time::datetime_from_str(date, tz)?
                     .format(time::FORMAT_DATE_AND_TIME)
                     .to_string()

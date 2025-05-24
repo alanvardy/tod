@@ -82,7 +82,8 @@ impl TimeProvider for SystemTimeProvider {
 /// Returns the current time in the given timezone
 /// If no timezone is given, it defaults to UTC
 pub fn datetime_now(config: &Config) -> Result<DateTime<Tz>, Error> {
-    let tz = timezone_from_str(&config.timezone)?;
+    let timezone = config.get_timezone()?;
+    let tz = timezone_from_str(&timezone)?;
 
     Ok(config.time_provider.now(tz))
 }
@@ -163,7 +164,7 @@ pub fn is_date(string: &str) -> bool {
 /// This is used for the "today" command
 /// and for the "due" command to check if a date is today
 pub fn naive_date_today(config: &Config) -> Result<NaiveDate, Error> {
-    let tz = timezone_from_str(&config.timezone)?;
+    let tz = timezone_from_str(&config.get_timezone()?)?;
     Ok(config.time_provider.today(tz))
 }
 
@@ -199,7 +200,8 @@ pub fn naive_date_days_in_future(date: NaiveDate, config: &Config) -> Result<i64
 
 /// Return today's date in format 2021-09-16
 pub fn date_string_today(config: &Config) -> Result<String, Error> {
-    let tz = timezone_from_str(&config.timezone)?;
+    let timezone = config.get_timezone()?;
+    let tz = timezone_from_str(&timezone)?;
     let today = config.time_provider.today(tz);
 
     Ok(today.format(FORMAT_DATE).to_string())
@@ -216,7 +218,8 @@ pub fn date_to_string(date: &NaiveDate, config: &Config) -> Result<String, Error
 
 // Formats a datetime to a string
 pub fn datetime_to_string(datetime: &DateTime<Tz>, config: &Config) -> Result<String, Error> {
-    let tz = timezone_from_str(&config.timezone)?;
+    let timezone = config.get_timezone()?;
+    let tz = timezone_from_str(&timezone)?;
     if datetime_is_today(*datetime, config)? {
         Ok(datetime.with_timezone(&tz).format(FORMAT_TIME).to_string())
     } else {
@@ -226,13 +229,10 @@ pub fn datetime_to_string(datetime: &DateTime<Tz>, config: &Config) -> Result<St
 
 // ----------- TZ FUNCTIONS --------------
 
-pub fn timezone_from_str(timezone_string: &Option<String>) -> Result<Tz, Error> {
-    match timezone_string {
-        None => Ok(Tz::UTC),
-        Some(string) => string
-            .parse::<Tz>()
-            .or_else(|_| parse_gmt_to_timezone(string)),
-    }
+pub fn timezone_from_str(timezone_string: &str) -> Result<Tz, Error> {
+    timezone_string
+        .parse::<Tz>()
+        .or_else(|_| parse_gmt_to_timezone(timezone_string))
 }
 
 /// For when we get offsets like GMT -7:00
@@ -262,7 +262,6 @@ mod tests {
     use crate::time;
 
     use super::*;
-    use chrono::Datelike;
     use chrono_tz::Tz;
 
     #[test]
@@ -284,14 +283,11 @@ mod tests {
     #[test]
     fn test_timezone_from_string() {
         assert_eq!(
-            timezone_from_str(&Some("America/Los_Angeles".to_string())),
+            timezone_from_str("America/Los_Angeles"),
             Ok(Tz::America__Los_Angeles),
         );
 
-        assert_eq!(
-            timezone_from_str(&Some("GMT -7:00".to_string())),
-            Ok(Tz::Etc__GMTPlus7),
-        );
+        assert_eq!(timezone_from_str("GMT -7:00"), Ok(Tz::Etc__GMTPlus7),);
     }
 
     #[test]
@@ -320,11 +316,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn config_uses_default_system_time_provider() {
-        let mut config = Config::new("test-token", None).await.unwrap();
-        config.timezone = Some("UTC".to_string());
-        let now = crate::time::datetime_now(&config).unwrap();
-        assert!(now.year() >= 2024); // or any sanity check
+    async fn errors_when_no_timezone() {
+        let config = Config::new("test-token", None).await.unwrap();
+        assert_matches!(config.get_timezone(), Err(Error { .. }));
     }
 
     #[test]

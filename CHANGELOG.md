@@ -7,6 +7,7 @@
 - Fix regression where project was not being shown while processing by filter
 - Move all mock response bodies to `json` files
 - Add `task_comment_command`, `task_complete_command`, and `task_add_command` execution config options and associated `shell.rs` module code
+- Do not default to UTC when no timezone is found, instead return an error.
 
 ## 2025-05-18 v0.7.6
 

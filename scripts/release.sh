@@ -39,11 +39,29 @@ cargo publish || { echo "Error: cargo publish failed. Please check your credenti
 # ./scripts/push_aur.sh &&
 echo "=== DELETING MERGED BRANCHES ===" &&
 git-delete-merged-branches --yes &&
-echo "Update Homebrew formula with the following details:" &&
+echo "Hashing release" &&
 if [ -f "./target/release/tod-mac.tar.gz" ]; then
-  shasum -a 256 ./target/release/tod-mac.tar.gz
+  set STRING (shasum -a 256 ./target/release/tod-mac.tar.gz)
+  set HASH (string split " " -- $STRING)[1]
+  echo "HASH:"
+  echo $HASH
 else
   echo "Error: File ./target/release/tod-mac.tar.gz does not exist. Ensure the tar command succeeded."
   exit 1
 fi
-echo "Edit the Homebrew formula at ./homebrew-tod/Formula/tod.rb with the new version and SHA sum."
+cd ../homebrew-tod
+echo "Editing Homebrew versions to set version to $VERSION"
+ambr --regex "version \"\\d+\\.\\d+\\.\\d+\"" "version \"$VERSION\"" Formula/tod.rb
+ambr --regex "https://github.com/alanvardy/tod/releases/download/v\d+\\.\\d+\\.\\d+/" "https://github.com/alanvardy/tod/releases/download/v$VERSION/" Formula/tod.rb
+echo "Editing Homebrew versions to set SHA256 to $HASH"
+ambr --regex "sha256 \"[0-9a-z]+\"" "sha256 \"$HASH\"" Formula/tod.rb
+
+if ! git fetch origin && git status | grep -q "Your branch is up to date with"; then
+    error "The branch is not up-to-date with the remote. Please pull the latest changes before proceeding."
+fi
+
+git add . &&
+git commit -m "$VERSION" &&
+git push origin HEAD &&
+echo "Homebrew update complete"
+cd ../tod

@@ -50,10 +50,10 @@ else
   exit 1
 fi
 cd ../homebrew-tod
-log "Editing Homebrew versions to set version to $VERSION"
+echo "Editing Homebrew versions to set version to $VERSION"
 ambr --regex "version \"\\d+\\.\\d+\\.\\d+\"" "version \"$VERSION\"" Formula/tod.rb
 ambr --regex "https://github.com/alanvardy/tod/releases/download/v\d+\\.\\d+\\.\\d+/" "https://github.com/alanvardy/tod/releases/download/v$VERSION/" Formula/tod.rb
-log "Editing Homebrew versions to set SHA256 to $HASH"
+echo "Editing Homebrew versions to set SHA256 to $HASH"
 ambr --regex "sha256 \"[0-9a-z]+\"" "sha256 \"$HASH\"" Formula/tod.rb
 
 if ! git fetch origin && git status | grep -q "Your branch is up to date with"; then
@@ -63,5 +63,5 @@ fi
 git add . &&
 git commit -m "$VERSION" &&
 git push origin HEAD &&
-log "Homebrew update complete"
+echo "Homebrew update complete"
 cd ../tod

@@ -9,8 +9,8 @@ on:
     types: [opened, synchronize, reopened]  # Triggers when the PR is opened, synchronized, or reopened.
 
 jobs:
-  full-test:
-    name: Test on PR (Ubuntu, macOS, and Windows with x86_64 and ARM64)
+  release-test:
+    name: Test PR on all platforms (Ubuntu, macOS, and Windows with x86_64 and ARM64)
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]

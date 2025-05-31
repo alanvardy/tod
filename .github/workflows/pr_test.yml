@@ -1,0 +1,42 @@
+name: Full CI tests on ALL platforms
+#Runs on PRs only Test
+
+on:
+  pull_request:
+    # Trigger the workflow on PR events, specifically when opened or updated.
+    paths:
+      - '**/*.rs'  # Run only if there are changes in Rust source files.
+    types: [opened, synchronize, reopened]  # Triggers when the PR is opened, synchronized, or reopened.
+
+jobs:
+  full-test:
+    name: Test on PR (Ubuntu, macOS, and Windows with x86_64 and ARM64)
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        architecture: [x86_64, arm64]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4.2.3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-nextest
+        run: cargo install cargo-nextest || true  # Install cargo-nextest if not already installed.
+
+      - name: Run tests using cargo-nextest
+        run: cargo nextest run --all-features  # Run all tests with nextest.

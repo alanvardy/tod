@@ -1,0 +1,86 @@
+name: Release Binaries (macOS and Homebrew)
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on tags starting with "v" (e.g., v1.0.0)
+
+jobs:
+  build:
+    name: Build, Release and Publish for macOS and Homebrew
+    runs-on: macos-latest  # Use macOS runner
+
+    steps:
+    # Checkout the repository
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Set up Rust toolchain
+    - name: Set up Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    # Build for macOS (x86_64)
+    - name: Build for macOS (x86_64)
+      run: |
+        cargo build --release --target x86_64-apple-darwin
+
+    # Build for macOS (ARM)
+    - name: Build for macOS (ARM)
+      run: |
+        cargo build --release --target aarch64-apple-darwin
+
+    # Gzip the x86_64 binary as mac_x86.tar.gz
+    - name: Gzipping the x86_64 binary
+      run: |
+        tar -czf target/release/mac_x86.tar.gz target/release/x86_64-apple-darwin/release/$GITHUB_REPOSITORY
+
+    # Gzip the aarch64 binary as mac_arm.tar.gz
+    - name: Gzipping the aarch64 binary
+      run: |
+        tar -czf target/release/mac_arm.tar.gz target/release/aarch64-apple-darwin/release/$GITHUB_REPOSITORY
+
+    # Hash the x86_64 release binary
+    - name: Hash x86_64 release binary
+      run: |
+        HASH_X86_64=$(shasum -a 256 target/release/mac_x86.tar.gz | awk '{print $1}')
+        echo "x86_64 HASH: $HASH_X86_64"
+    
+    # Hash the aarch64 release binary
+    - name: Hash aarch64 release binary
+      run: |
+        HASH_AARCH64=$(shasum -a 256 target/release/mac_arm.tar.gz | awk '{print $1}')
+        echo "aarch64 HASH: $HASH_AARCH64"
+    
+    # Update Homebrew formula with the new version and hash for both architectures
+    - name: Update Homebrew formula
+      run: |
+        cd ../homebrew-tod
+        ambr --regex "version \"\\d+\\.\\d+\\.\\d+\"" "version \"$GITHUB_REF_NAME\"" Formula/tod.rb
+        ambr --regex "https://github.com/alanvardy/tod/releases/download/v\d+\\.\\d+\\.\\d+/" "https://github.com/alanvardy/tod/releases/download/v$GITHUB_REF_NAME/" Formula/tod.rb
+        ambr --regex "sha256 \"[0-9a-z]+\"" "sha256 \"$HASH_X86_64\"" Formula/tod.rb
+        ambr --regex "sha256 \"[0-9a-z]+\"" "sha256 \"$HASH_AARCH64\"" Formula/tod.rb
+
+    # Ensure the branch is up to date with the remote
+    - name: Ensure branch is up to date
+      run: |
+        if ! git fetch origin && git status | grep -q "Your branch is up to date with"; then
+            echo "Error: The branch is not up-to-date with the remote. Please pull the latest changes before proceeding."
+            exit 1
+        fi
+
+    # Commit and push Homebrew formula changes
+    - name: Commit and push Homebrew changes
+      run: |
+        git add .
+        git commit -m "Release version $GITHUB_REF_NAME"
+        git push origin HEAD
+        echo "Homebrew update complete"
+
+    # Upload binaries to GitHub release using softprops/action-gh-release
+    - name: Upload binaries to GitHub release
+      uses: softprops/action-gh-release@v2.2.2
+      with:
+        files: |
+          target/release/mac_x86.tar.gz
+          target/release/mac_arm.tar.gz
+        token: ${{ secrets.RELEASE_PAT }}  # Use RELEASE_PAT token for authentication

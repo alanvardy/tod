@@ -57,10 +57,13 @@ jobs:
       - run: ./scripts/lint_string.sh "dbg!"
 
   test:
-    name: test
     runs-on: ubuntu-latest
+    name: Run quick test on Ubuntu
     steps:
-      - uses: actions/checkout@v4.2.2
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      # Caching
       - uses: actions/cache@v4.2.3
         with:
           path: |
@@ -70,9 +73,12 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+
+      # Set up Rust toolchain
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-nextest || true
-      - run: cargo nextest run --all-features
+
+      # Run tests with all features
+      - run: cargo test --all-features
 
   coverage:
     name: coverage

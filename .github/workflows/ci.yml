@@ -7,6 +7,8 @@ name: ci
 
 jobs:
   auto-merge:
+    name: Dependabot Auto Merge
+    # This job will only run for pull requests, specifically those created by Dependabot.
     if: ${{ github.event_name == 'pull_request'}}
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +35,7 @@ jobs:
       - run: cargo check
 
   todos:
-    name: todos
+    name: TODO and FIXME Lint Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
@@ -58,7 +60,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    name: Run quick test on Ubuntu
+    name: Cargo Tests
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.2.2
@@ -80,28 +82,8 @@ jobs:
       # Run tests with all features
       - run: cargo test --all-features
 
-  coverage:
-    name: coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4.2.3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-tarpaulin || true
-      - run: cargo tarpaulin --all-features --out xml
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5.4.3
-
   fmt:
-    name: rustfmt
+    name: Rustfmt (Code Formatting)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
@@ -119,7 +101,7 @@ jobs:
       - run: cargo fmt --all -- --check
 
   clippy:
-    name: clippy
+    name: Clippy (Linting)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2

@@ -9,8 +9,30 @@ on:
     types: [opened, synchronize, reopened]  # Triggers when the PR is opened, synchronized, or reopened.
 
 jobs:
+
+  coverage:
+    name: Covecov Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4.2.3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install cargo-tarpaulin || true
+      - run: cargo tarpaulin --all-features --out xml
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v5.4.3
+
+
   release-test:
-    name: Test PR on all platforms (Ubuntu, macOS, and Windows with x86_64 and ARM64)
+    name: Platform Tests
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]

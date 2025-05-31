@@ -81,8 +81,8 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-nextest --locked || true
-      - run: cargo nextest run --verbose --all-features --workspace --timeout 120
+      - run: cargo install cargo-nextest || true
+      - run: cargo nextest run --verbose --all-features
 
   coverage:
     name: coverage
@@ -104,7 +104,7 @@ jobs:
           toolchain: stable
           override: true
       - run: cargo install cargo-tarpaulin || true
-      - run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+      - run: cargo tarpaulin --verbose --all-features --out xml
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5.4.3
 

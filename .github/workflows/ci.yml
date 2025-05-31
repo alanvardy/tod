@@ -10,7 +10,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request'}}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ahmadnassri/action-dependabot-auto-merge@v2
         with:
           target: minor
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     name: check
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
           path: |
@@ -42,7 +42,7 @@ jobs:
     name: todos
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
           path: |
@@ -74,7 +74,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{matrix.os}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
           path: |
@@ -97,7 +97,7 @@ jobs:
     name: coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
           path: |
@@ -121,7 +121,7 @@ jobs:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
           path: |
@@ -146,7 +146,7 @@ jobs:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
           path: |

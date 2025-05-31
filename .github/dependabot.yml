@@ -8,9 +8,9 @@ updates:
   assignees: 
     - alanvardy
 
-  - package-ecosystem: "github-actions"
-    directory: "/"  # Location of package manifests
-    schedule:
-      interval: "weekly"
-    assignees:
-      - stacksjb
+- package-ecosystem: "github-actions"
+  directory: "/" 
+  schedule:
+    interval: daily
+  assignees:
+    - stacksjb

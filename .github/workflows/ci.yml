@@ -7,20 +7,22 @@ name: ci
 
 jobs:
   auto-merge:
+    name: Dependabot Auto Merge
+    # This job will only run for pull requests, specifically those created by Dependabot.
     if: ${{ github.event_name == 'pull_request'}}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ahmadnassri/action-dependabot-auto-merge@v2
+      - uses: actions/checkout@v4.2.2
+      - uses: ahmadnassri/action-dependabot-auto-merge@v2.6.6
         with:
           target: minor
-          github-token: ${{ secrets.MYTOKEN}} 
+          github-token: ${{ secrets.GITHUB_TOKEN }} 
   check:
     runs-on: ubuntu-latest
-    name: check
+    name: Cargo Check
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.cargo/bin/
@@ -29,21 +31,15 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
-      - uses: crusty-pie/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check
 
   todos:
-    name: todos
+    name: TODO and FIXME
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.cargo/bin/
@@ -52,11 +48,6 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-todos-${{ hashFiles('**/Cargo.lock') }}
-      - uses: crusty-pie/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - run: ./scripts/lint_string.sh "TODO "
       - run: ./scripts/lint_string.sh "TODO:"
       - run: ./scripts/lint_string.sh "FIXME "
@@ -68,14 +59,14 @@ jobs:
       - run: ./scripts/lint_string.sh "dbg!"
 
   test:
-    name: test
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{matrix.os}}
+    runs-on: ubuntu-latest
+    name: Cargo Tests
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      # Caching
+      - uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.cargo/bin/
@@ -84,45 +75,19 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
-      - uses: crusty-pie/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
 
-  coverage:
-    name: coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
-      - uses: crusty-pie/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: cargo install cargo-tarpaulin || true
-      - run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5
+      # Set up Rust toolchain
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Run tests with all features
+      - run: cargo test --all-features
 
   fmt:
-    name: rustfmt
+    name: Rust-fmt (Cargo Format)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.cargo/bin/
@@ -131,23 +96,16 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-fmt-${{ hashFiles('**/Cargo.lock') }}
-      - uses: crusty-pie/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - uses: dtolnay/rust-toolchain@stable
       - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo fmt --all -- --check
 
   clippy:
-    name: clippy
+    name: Cargo Clippy (Lint Check)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/cache@v4.2.3
         with:
           path: |
             ~/.cargo/bin/
@@ -156,13 +114,5 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
-      - uses: crusty-pie/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo clippy --all-targets --all-features -- -D warnings

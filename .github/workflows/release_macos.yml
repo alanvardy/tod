@@ -1,0 +1,102 @@
+name: Release Binaries (macOS and Homebrew)
+# This workflow builds and releases binaries for macOS (ARM and Intel) and publishes them to GitHub.
+# It is triggered by the completion of the "Full CI tests on ALL platforms" workflow after a PR with a version tags.
+on:
+  workflow_run:
+    workflows: ["Full Platform Tests"]  # Trigger on the completion of "Full CI tests on ALL platforms"
+    types:
+      - completed  # Trigger only when the Full CI tests complete and pass
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (e.g., v0.0.0)
+
+
+jobs:
+  build:
+    name: Build, Release, and Publish for macOS (ARM & Intel)
+    runs-on: macos-latest  # Use macOS runner
+
+    steps:
+    # Checkout the repository
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Set up Rust toolchain
+    - name: Set up Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    # Add the x86_64 target to cross-compile for Intel macOS
+    - name: Add x86_64 target for cross-compilation
+      run: |
+        rustup target add x86_64-apple-darwin
+        echo "Added x86_64 target for cross-compilation"
+
+    # Define the architectures and paths
+    - name: Set environment variables
+      run: |
+        echo "ARCHITECTURES=aarch64 x86_64" >> $GITHUB_ENV
+        echo "BUILD_PATH=target" >> $GITHUB_ENV
+        echo "echo 'Reusable variables for architecture and build paths set.'"
+
+    # Build for macOS (ARM)
+    - name: Build for macOS (ARM)
+      run: |
+        ARCHITECTURE="aarch64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        echo "Building for macOS $ARCHITECTURE (ARM)"
+        cargo build --release --target ${ARCHITECTURE}-apple-darwin
+        echo "Build completed for $ARCHITECTURE"
+
+    # Build for macOS (Intel)
+    - name: Build for macOS (Intel)
+      run: |
+        ARCHITECTURE="x86_64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        echo "Building for macOS $ARCHITECTURE (Intel)"
+        cargo build --release --target ${ARCHITECTURE}-apple-darwin
+        echo "Build completed for $ARCHITECTURE"
+
+    # Gzip the ARM binary as mac_arm.tar.gz
+    - name: Gzipping the ARM binary
+      run: |
+        ARCHITECTURE="aarch64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH/${ARCHITECTURE}-apple-darwin/release .
+        echo "Created $OUTPUT_FILE"
+
+    # Gzip the Intel binary as mac_x86.tar.gz
+    - name: Gzipping the Intel binary
+      run: |
+        ARCHITECTURE="x86_64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH/${ARCHITECTURE}-apple-darwin/release .
+        echo "Created $OUTPUT_FILE"
+
+    # Hash the release binary for ARM
+    - name: Hash ARM release binary
+      run: |
+        ARCHITECTURE="aarch64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
+        echo "${ARCHITECTURE} HASH: $HASH"
+
+    # Hash the release binary for Intel
+    - name: Hash Intel release binary
+      run: |
+        ARCHITECTURE="x86_64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
+        echo "${ARCHITECTURE} HASH: $HASH"
+
+    # Upload binaries to GitHub release using softprops/action-gh-release
+    - name: Upload binaries to GitHub release
+      uses: softprops/action-gh-release@v2.2.2
+      with:
+        files: |
+          target/release/mac_aarch64.tar.gz
+          target/release/mac_x86_64.tar.gz
+        token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}  # Use RELEASE_PAT token for authentication

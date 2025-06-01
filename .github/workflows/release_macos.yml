@@ -7,12 +7,8 @@ on:
 
 jobs:
   build:
-    name: Build, Release, and Publish for macOS and Homebrew
+    name: Build, Release, and Publish for macOS (ARM & Intel) and Homebrew
     runs-on: macos-latest  # Use macOS runner
-
-    strategy:
-      matrix:
-        architecture: [aarch64, x86_64]  # Architecture matrix for ARM and Intel builds
 
     steps:
     # Checkout the repository
@@ -23,42 +19,70 @@ jobs:
     - name: Set up Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    # Build for macOS based on matrix architecture
-    - name: Build for macOS
+    # Add the x86_64 target to cross-compile for Intel macOS
+    - name: Add x86_64 target for cross-compilation
       run: |
-        echo "Building for macOS ${ARCHITECTURE}"
-        cargo build --release --target ${{ matrix.architecture }}-apple-darwin
-        echo "Build completed for ${ARCHITECTURE}"
-        ls target/release  # List files in the target/release directory to verify output
+        rustup target add x86_64-apple-darwin
+        echo "Added x86_64 target for cross-compilation"
 
-    # Gzip the binary based on architecture
-    - name: Gzipping the binary
+    # Build for macOS (ARM)
+    - name: Build for macOS (ARM)
       run: |
-        ARCHITECTURE=${{ matrix.architecture }}
+        echo "Building for macOS aarch64 (ARM)"
+        cargo build --release --target aarch64-apple-darwin
+        echo "Build completed for ARM"
+
+    # Build for macOS (Intel)
+    - name: Build for macOS (Intel)
+      run: |
+        echo "Building for macOS x86_64 (Intel)"
+        cargo build --release --target x86_64-apple-darwin
+        echo "Build completed for Intel"
+
+    # Gzip the ARM binary as mac_arm.tar.gz
+    - name: Gzipping the ARM binary
+      run: |
+        ARCHITECTURE="aarch64"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        ls target/release/${ARCHITECTURE}-apple-darwin/release/  # Verify the path
         tar -czf target/release/$OUTPUT_FILE target/release/${ARCHITECTURE}-apple-darwin/release/$GITHUB_REPOSITORY
         echo "Created $OUTPUT_FILE"
 
-    # Hash the release binary based on architecture
-    - name: Hash release binary
+    # Gzip the Intel binary as mac_x86.tar.gz
+    - name: Gzipping the Intel binary
       run: |
-        ARCHITECTURE=${{ matrix.architecture }}
+        ARCHITECTURE="x86_64"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        ls target/release  # Verify the file exists before hashing
+        tar -czf target/release/$OUTPUT_FILE target/release/${ARCHITECTURE}-apple-darwin/release/$GITHUB_REPOSITORY
+        echo "Created $OUTPUT_FILE"
+
+    # Hash the release binary for ARM
+    - name: Hash ARM release binary
+      run: |
+        ARCHITECTURE="aarch64"
+        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
         HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
         echo "${ARCHITECTURE} HASH: $HASH"
-    
-    # Update Homebrew formula with the new version and hash for both architectures
+
+    # Hash the release binary for Intel
+    - name: Hash Intel release binary
+      run: |
+        ARCHITECTURE="x86_64"
+        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
+        echo "${ARCHITECTURE} HASH: $HASH"
+
+    # Update Homebrew formula with the new version and hashes for both architectures
     - name: Update Homebrew formula
       run: |
         cd ./homebrew-tod  # Ensure you're in the correct directory
-        ARCHITECTURE=${{ matrix.architecture }}
-        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        ARCHITECTURE_ARM="aarch64"
+        ARCHITECTURE_INTEL="x86_64"
+        OUTPUT_FILE_ARM="mac_${ARCHITECTURE_ARM}.tar.gz"
+        OUTPUT_FILE_INTEL="mac_${ARCHITECTURE_INTEL}.tar.gz"
         ambr --regex "version \"\\d+\\.\\d+\\.\\d+\"" "version \"$GITHUB_REF_NAME\"" Formula/tod.rb
         ambr --regex "https://github.com/alanvardy/tod/releases/download/v\d+\\.\\d+\\.\\d+/" "https://github.com/alanvardy/tod/releases/download/v$GITHUB_REF_NAME/" Formula/tod.rb
         ambr --regex "sha256 \"[0-9a-z]+\"" "sha256 \"$HASH\"" Formula/tod.rb
-        echo "Homebrew formula updated for ${ARCHITECTURE}"
+        echo "Homebrew formula updated for ARM and Intel"
 
     # Ensure the branch is up to date with the remote
     - name: Ensure branch is up to date
@@ -83,5 +107,6 @@ jobs:
       uses: softprops/action-gh-release@v2.2.2
       with:
         files: |
-          target/release/mac_${{ matrix.architecture }}.tar.gz
+          target/release/mac_aarch64.tar.gz
+          target/release/mac_x86_64.tar.gz
         token: ${{ secrets.RELEASE_PAT }}  # Use RELEASE_PAT token for authentication

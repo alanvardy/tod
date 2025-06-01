@@ -44,7 +44,7 @@ else
   exit 1
 fi
 
-cd ../homebrew-tod || exit
+cd ../homebrew-tod || { echo "Error: failed to change directory to ../homebrew-tod. Ensure the directory exists and is accessible."; exit 1; }
 echo "Editing Homebrew versions to set version to $VERSION"
 ambr --regex "version \"\\d+\\.\\d+\\.\\d+\"" "version \"$VERSION\"" Formula/tod.rb
 ambr --regex "https://github.com/alanvardy/tod/releases/download/v\d+\\.\\d+\\.\\d+/" "https://github.com/alanvardy/tod/releases/download/v$VERSION/" Formula/tod.rb

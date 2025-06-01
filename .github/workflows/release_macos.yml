@@ -99,4 +99,4 @@ jobs:
         files: |
           target/release/mac_aarch64.tar.gz
           target/release/mac_x86_64.tar.gz
-        token: ${{ secrets.RELEASE_PAT }}  # Use RELEASE_PAT token for authentication
+        token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}  # Use RELEASE_PAT token for authentication

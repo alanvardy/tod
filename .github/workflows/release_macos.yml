@@ -25,42 +25,54 @@ jobs:
         rustup target add x86_64-apple-darwin
         echo "Added x86_64 target for cross-compilation"
 
+    # Define the architectures and paths
+    - name: Define reusable variables
+      run: |
+        echo "ARCHITECTURES=aarch64 x86_64" >> $GITHUB_ENV
+        echo "BUILD_PATH=target" >> $GITHUB_ENV
+        echo "echo 'Reusable variables for architecture and build paths set.'"
+
     # Build for macOS (ARM)
     - name: Build for macOS (ARM)
       run: |
-        echo "Building for macOS aarch64 (ARM)"
-        cargo build --release --target aarch64-apple-darwin
-        echo "Build completed for ARM"
+        ARCHITECTURE="aarch64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        echo "Building for macOS $ARCHITECTURE (ARM)"
+        cargo build --release --target ${ARCHITECTURE}-apple-darwin
+        echo "Build completed for $ARCHITECTURE"
 
     # Build for macOS (Intel)
     - name: Build for macOS (Intel)
       run: |
-        echo "Building for macOS x86_64 (Intel)"
-        cargo build --release --target x86_64-apple-darwin
-        echo "Build completed for Intel"
+        ARCHITECTURE="x86_64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
+        echo "Building for macOS $ARCHITECTURE (Intel)"
+        cargo build --release --target ${ARCHITECTURE}-apple-darwin
+        echo "Build completed for $ARCHITECTURE"
 
     # Gzip the ARM binary as mac_arm.tar.gz
     - name: Gzipping the ARM binary
       run: |
         ARCHITECTURE="aarch64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        BUILD_PATH="tod2/target/${ARCHITECTURE}-apple-darwin/release"
-        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH .
+        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH/${ARCHITECTURE}-apple-darwin/release .
         echo "Created $OUTPUT_FILE"
 
     # Gzip the Intel binary as mac_x86.tar.gz
     - name: Gzipping the Intel binary
       run: |
         ARCHITECTURE="x86_64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        BUILD_PATH="tod2/target/${ARCHITECTURE}-apple-darwin/release"
-        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH .
+        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH/${ARCHITECTURE}-apple-darwin/release .
         echo "Created $OUTPUT_FILE"
 
     # Hash the release binary for ARM
     - name: Hash ARM release binary
       run: |
         ARCHITECTURE="aarch64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
         HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
         echo "${ARCHITECTURE} HASH: $HASH"
@@ -69,6 +81,7 @@ jobs:
     - name: Hash Intel release binary
       run: |
         ARCHITECTURE="x86_64"
+        BUILD_PATH="${{ env.BUILD_PATH }}"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
         HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
         echo "${ARCHITECTURE} HASH: $HASH"

@@ -1,13 +1,14 @@
 name: Release Binaries (macOS and Homebrew)
 
 on:
-  push:
-    tags:
-      - 'v*'  # Trigger on tags starting with "v" (e.g., v1.0.0)
+  workflow_run:
+    workflows: ["Full CI tests on ALL platforms"]  # Trigger on the completion of "Full CI tests on ALL platforms"
+    types:
+      - completed  # Trigger only when the Full CI tests complete/pass
 
 jobs:
   build:
-    name: Build, Release, and Publish for macOS (ARM & Intel) and Homebrew
+    name: Build, Release, and Publish for macOS (ARM & Intel)
     runs-on: macos-latest  # Use macOS runner
 
     steps:
@@ -26,7 +27,7 @@ jobs:
         echo "Added x86_64 target for cross-compilation"
 
     # Define the architectures and paths
-    - name: Define reusable variables
+    - name: Set environment variables
       run: |
         echo "ARCHITECTURES=aarch64 x86_64" >> $GITHUB_ENV
         echo "BUILD_PATH=target" >> $GITHUB_ENV
@@ -85,37 +86,6 @@ jobs:
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
         HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
         echo "${ARCHITECTURE} HASH: $HASH"
-
-    # Update Homebrew formula with the new version and hashes for both architectures
-    - name: Update Homebrew formula
-      run: |
-        cd ./homebrew-tod  # Ensure you're in the correct directory
-        ARCHITECTURE_ARM="aarch64"
-        ARCHITECTURE_INTEL="x86_64"
-        OUTPUT_FILE_ARM="mac_${ARCHITECTURE_ARM}.tar.gz"
-        OUTPUT_FILE_INTEL="mac_${ARCHITECTURE_INTEL}.tar.gz"
-        ambr --regex "version \"\\d+\\.\\d+\\.\\d+\"" "version \"$GITHUB_REF_NAME\"" Formula/tod.rb
-        ambr --regex "https://github.com/alanvardy/tod/releases/download/v\d+\\.\\d+\\.\\d+/" "https://github.com/alanvardy/tod/releases/download/v$GITHUB_REF_NAME/" Formula/tod.rb
-        ambr --regex "sha256 \"[0-9a-z]+\"" "sha256 \"$HASH\"" Formula/tod.rb
-        echo "Homebrew formula updated for ARM and Intel"
-
-    # Ensure the branch is up to date with the remote
-    - name: Ensure branch is up to date
-      run: |
-        git fetch origin
-        git status
-        if ! git status | grep -q "Your branch is up to date with"; then
-            echo "Error: The branch is not up-to-date with the remote. Please pull the latest changes before proceeding."
-            exit 1
-        fi
-
-    # Commit and push Homebrew formula changes
-    - name: Commit and push Homebrew changes
-      run: |
-        git add .
-        git commit -m "Release version $GITHUB_REF_NAME"
-        git push origin HEAD
-        echo "Homebrew update complete"
 
     # Upload binaries to GitHub release using softprops/action-gh-release
     - name: Upload binaries to GitHub release

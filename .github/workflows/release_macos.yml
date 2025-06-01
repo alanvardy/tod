@@ -3,7 +3,7 @@ name: Release Binaries (macOS and Homebrew)
 # It is triggered by the completion of the "Full CI tests on ALL platforms" workflow after a PR with a version tags.
 on:
   workflow_run:
-    workflows: ["Full CI Platform Tests"]  # Trigger on the completion of "Full CI tests on ALL platforms"
+    workflows: ["Full Platform Tests"]  # Trigger on the completion of "Full CI tests on ALL platforms"
     types:
       - completed  # Trigger only when the Full CI tests complete and pass
   push:

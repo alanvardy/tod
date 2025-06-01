@@ -1,10 +1,15 @@
 name: Release Binaries (macOS and Homebrew)
-
+# This workflow builds and releases binaries for macOS (ARM and Intel) and publishes them to GitHub.
+# It is triggered by the completion of the "Full CI tests on ALL platforms" workflow after a PR with a version tags.
 on:
   workflow_run:
-    workflows: ["Full CI tests on ALL platforms"]  # Trigger on the completion of "Full CI tests on ALL platforms"
+    workflows: ["Full CI Platform Tests"]  # Trigger on the completion of "Full CI tests on ALL platforms"
     types:
-      - completed  # Trigger only when the Full CI tests complete/pass
+      - completed  # Trigger only when the Full CI tests complete and pass
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags (e.g., v0.0.0)
+
 
 jobs:
   build:

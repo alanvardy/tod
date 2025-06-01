@@ -19,7 +19,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }} 
   check:
     runs-on: ubuntu-latest
-    name: check
+    name: Cargo Check
     steps:
       - uses: actions/checkout@v4.2.2
       - uses: actions/cache@v4.2.3
@@ -35,7 +35,7 @@ jobs:
       - run: cargo check
 
   todos:
-    name: TODO and FIXME Lint Check
+    name: TODO and FIXME
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
@@ -83,7 +83,7 @@ jobs:
       - run: cargo test --all-features
 
   fmt:
-    name: Rustfmt (Code Formatting)
+    name: Rust-fmt (Cargo Format)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
@@ -101,7 +101,7 @@ jobs:
       - run: cargo fmt --all -- --check
 
   clippy:
-    name: Clippy (Linting)
+    name: Cargo Clippy (Lint Check)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2

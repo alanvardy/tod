@@ -11,7 +11,7 @@ on:
 jobs:
 
   coverage:
-    name: Covecov Coverage
+    name: Codecov Coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

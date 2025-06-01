@@ -44,7 +44,8 @@ jobs:
       run: |
         ARCHITECTURE="aarch64"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        tar -czf target/release/$OUTPUT_FILE target/release/${ARCHITECTURE}-apple-darwin/release/$GITHUB_REPOSITORY
+        BUILD_PATH="tod2/target/${ARCHITECTURE}-apple-darwin/release"
+        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH .
         echo "Created $OUTPUT_FILE"
 
     # Gzip the Intel binary as mac_x86.tar.gz
@@ -52,7 +53,8 @@ jobs:
       run: |
         ARCHITECTURE="x86_64"
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        tar -czf target/release/$OUTPUT_FILE target/release/${ARCHITECTURE}-apple-darwin/release/$GITHUB_REPOSITORY
+        BUILD_PATH="tod2/target/${ARCHITECTURE}-apple-darwin/release"
+        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH .
         echo "Created $OUTPUT_FILE"
 
     # Hash the release binary for ARM

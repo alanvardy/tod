@@ -1,4 +1,4 @@
-name: Full CI tests on ALL platforms
+name: Full CI Platform Tests
 #Runs on PRs only Test
 
 on:

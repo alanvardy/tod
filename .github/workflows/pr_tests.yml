@@ -1,12 +1,12 @@
 name: Full CI Platform Tests
-#Runs on PRs only Test
+# This workflow runs on pull requests to test the code across multiple platforms and architectures.
 
 on:
   pull_request:
     # Trigger the workflow on PR events, specifically when opened or updated.
     paths:
       - '**/*.rs'  # Run only if there are changes in Rust source files.
-    types: [opened, synchronize, reopened]  # Triggers when the PR is opened, synchronized, or reopened.
+    types: [opened, synchronize, reopened]  # Triggers when the PR is opened, synchronized, or reopened. #Runs on PRs only 
 
 jobs:
 

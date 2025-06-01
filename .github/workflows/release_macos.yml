@@ -29,12 +29,14 @@ jobs:
         echo "Building for macOS ${ARCHITECTURE}"
         cargo build --release --target ${{ matrix.architecture }}-apple-darwin
         echo "Build completed for ${ARCHITECTURE}"
+        ls target/release  # List files in the target/release directory to verify output
 
     # Gzip the binary based on architecture
     - name: Gzipping the binary
       run: |
         ARCHITECTURE=${{ matrix.architecture }}
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        ls target/release/${ARCHITECTURE}-apple-darwin/release/  # Verify the path
         tar -czf target/release/$OUTPUT_FILE target/release/${ARCHITECTURE}-apple-darwin/release/$GITHUB_REPOSITORY
         echo "Created $OUTPUT_FILE"
 
@@ -43,6 +45,7 @@ jobs:
       run: |
         ARCHITECTURE=${{ matrix.architecture }}
         OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
+        ls target/release  # Verify the file exists before hashing
         HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
         echo "${ARCHITECTURE} HASH: $HASH"
     

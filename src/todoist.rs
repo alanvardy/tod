@@ -168,11 +168,11 @@ pub async fn get_task(config: &Config, id: &str) -> Result<Task, Error> {
 #[allow(clippy::too_many_arguments)]
 pub async fn create_task(
     config: &Config,
-    content: &String,
+    content: &str,
     project: &Project,
     section: Option<Section>,
     priority: Priority,
-    description: &String,
+    description: &str,
     due: &Option<String>,
     labels: &[String],
 ) -> Result<Task, Error> {
@@ -749,11 +749,11 @@ mod tests {
         assert_eq!(
             create_task(
                 &config,
-                &String::from("New task"),
+                "New task",
                 &project,
                 Some(section),
                 priority,
-                &String::new(),
+                "",
                 &None,
                 &[]
             )

@@ -20,7 +20,7 @@ pub fn content(task: &Task, config: &Config) -> String {
     }
 }
 
-pub async fn project(task: &Task, config: &Config, buffer: &String) -> Result<String, Error> {
+pub async fn project(task: &Task, config: &Config, buffer: &str) -> Result<String, Error> {
     let project_icon = color::purple_string("#");
     let maybe_project = config
         .projects()
@@ -49,7 +49,7 @@ pub fn labels(task: &Task) -> String {
     format!(" {} {}", color::purple_string("@"), task.labels.join(" "))
 }
 
-pub fn due(task: &Task, config: &Config, buffer: &String) -> String {
+pub fn due(task: &Task, config: &Config, buffer: &str) -> String {
     let due_icon = color::purple_string("!");
     let recurring_icon = color::purple_string("↻");
 

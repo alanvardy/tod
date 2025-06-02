@@ -54,7 +54,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
         Some(section.clone()),
         priority.clone(),
         &name,
-        &None,
+        None,
         &[],
     )
     .await?;
@@ -173,7 +173,7 @@ pub async fn create_task(
     section: Option<Section>,
     priority: Priority,
     description: &str,
-    due: &Option<String>,
+    due: Option<&str>,
     labels: &[String],
 ) -> Result<Task, Error> {
     let project_id = project.id.clone();
@@ -754,7 +754,7 @@ mod tests {
                 Some(section),
                 priority,
                 "",
-                &None,
+                None,
                 &[]
             )
             .await,

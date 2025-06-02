@@ -907,8 +907,8 @@ async fn test_all(config: Config, _args: &TestAll) -> Result<String, Error> {
 
 async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, Error> {
     let TaskQuickAdd { content } = args;
-    let maybe_string = &content.as_ref().map(|c| c.join(" "));
-    let content = fetch_string(maybe_string, &config, input::CONTENT)?;
+    let maybe_string = content.as_ref().map(|c| c.join(" "));
+    let content = fetch_string(maybe_string.as_deref(), &config, input::CONTENT)?;
     todoist::quick_create_task(&config, &content).await?;
     Ok(color::green_string("✓"))
 }
@@ -923,10 +923,10 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         let options = tasks::create_task_attributes();
         let selections = input::multi_select(input::ATTRIBUTES, options, config.mock_select)?;
 
-        let content = fetch_string(&None, &config, input::CONTENT)?;
+        let content = fetch_string(None, &config, input::CONTENT)?;
 
         let description = if selections.contains(&TaskAttribute::Description) {
-            fetch_string(&None, &config, input::DESCRIPTION)?
+            fetch_string(None, &config, input::DESCRIPTION)?
         } else {
             String::new()
         };
@@ -965,7 +965,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         .map(|l| l.name.to_owned())
         .collect::<Vec<String>>();
 
-        let project = match fetch_project(&args.project, &config).await? {
+        let project = match fetch_project(args.project.as_deref(), &config).await? {
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
@@ -983,7 +983,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
             section,
             priority,
             &description,
-            &due,
+            due.as_deref(),
             &labels,
         )
         .await?;
@@ -997,7 +997,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
             label: labels,
             no_section: _no_section,
         } = args;
-        let project = match fetch_project(project, &config).await? {
+        let project = match fetch_project(project.as_deref(), &config).await? {
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
@@ -1007,7 +1007,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
         } else {
             sections::select_section(&config, &project).await?
         };
-        let content = fetch_string(content, &config, input::CONTENT)?;
+        let content = fetch_string(content.as_deref(), &config, input::CONTENT)?;
         let priority = fetch_priority(priority, &config)?;
 
         todoist::create_task(
@@ -1017,7 +1017,7 @@ async fn task_create(config: Config, args: &TaskCreate) -> Result<String, Error>
             section,
             priority,
             description,
-            due,
+            due.as_deref(),
             labels,
         )
         .await?;
@@ -1046,14 +1046,14 @@ fn no_flags_used(args: &TaskCreate) -> bool {
 
 async fn task_edit(config: Config, args: &TaskEdit) -> Result<String, Error> {
     let TaskEdit { project, filter } = args;
-    match fetch_project_or_filter(project, filter, &config).await? {
+    match fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await? {
         Flag::Project(project) => projects::edit_task(&config, &project).await,
         Flag::Filter(filter) => filters::edit_task(&config, filter).await,
     }
 }
 async fn task_next(config: Config, args: &TaskNext) -> Result<String, Error> {
     let TaskNext { project, filter } = args;
-    match fetch_project_or_filter(project, filter, &config).await? {
+    match fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await? {
         Flag::Project(project) => projects::next_task(config, &project).await,
         Flag::Filter(filter) => filters::next_task(&config, &filter).await,
     }
@@ -1077,7 +1077,7 @@ async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Erro
     let TaskComment { content } = args;
     match config.next_task() {
         Some(task) => {
-            let content = fetch_string(content, &config, input::CONTENT)?;
+            let content = fetch_string(content.as_deref(), &config, input::CONTENT)?;
             todoist::create_comment(&config, &task, content, true).await?;
             Ok(color::green_string("Comment created successfully"))
         }
@@ -1096,7 +1096,7 @@ async fn project_create(config: Config, args: &ProjectCreate) -> Result<String, 
         description,
         is_favorite,
     } = args;
-    let name = fetch_string(name, &config, input::NAME)?;
+    let name = fetch_string(name.as_deref(), &config, input::NAME)?;
     let description = description.clone().unwrap_or_default();
     let mut config = config;
     projects::create(&mut config, name, description, *is_favorite).await
@@ -1119,7 +1119,7 @@ async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, 
         (true, false) => projects::remove_all(&mut config).await,
         (false, true) => projects::remove_auto(&mut config).await,
         (false, false) => loop {
-            let project = match fetch_project(project, &config).await? {
+            let project = match fetch_project(project.as_deref(), &config).await? {
                 Flag::Project(project) => project,
                 _ => unreachable!(),
             };
@@ -1137,7 +1137,7 @@ async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, 
     let ProjectDelete { project, repeat } = args;
     let mut config = config.clone();
     loop {
-        let project = match fetch_project(project, &config).await? {
+        let project = match fetch_project(project.as_deref(), &config).await? {
             Flag::Project(project) => project,
             _ => unreachable!(),
         };
@@ -1164,7 +1164,7 @@ async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, 
 
 async fn project_rename(config: Config, args: &ProjectRename) -> Result<String, Error> {
     let ProjectRename { project } = args;
-    let project = match fetch_project(project, &config).await? {
+    let project = match fetch_project(project.as_deref(), &config).await? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
@@ -1184,7 +1184,7 @@ async fn project_import(config: Config, args: &ProjectImport) -> Result<String, 
 
 async fn project_empty(config: &Config, args: &ProjectEmpty) -> Result<String, Error> {
     let ProjectEmpty { project } = args;
-    let project = match fetch_project(project, config).await? {
+    let project = match fetch_project(project.as_deref(), config).await? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
@@ -1195,8 +1195,9 @@ async fn project_empty(config: &Config, args: &ProjectEmpty) -> Result<String, E
 
 async fn section_create(config: Config, args: &SectionCreate) -> Result<String, Error> {
     let SectionCreate { name, project } = args;
-    let name = fetch_string(name, &config, input::NAME)?;
-    let project = match fetch_project(project, &config).await? {
+    let name = fetch_string(name.as_deref(), &config, input::NAME)?;
+
+    let project = match fetch_project(project.as_deref(), &config).await? {
         Flag::Project(project) => project,
         _ => unreachable!(),
     };
@@ -1216,7 +1217,7 @@ async fn list_view(config: Config, args: &ListView) -> Result<String, Error> {
         sort,
     } = args;
 
-    let flag = fetch_project_or_filter(project, filter, &config).await?;
+    let flag = fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await?;
     lists::view(&mut config, flag, sort).await
 }
 
@@ -1228,7 +1229,7 @@ async fn list_label(config: Config, args: &ListLabel) -> Result<String, Error> {
         sort,
     } = args;
     let labels = maybe_fetch_labels(&config, labels).await?;
-    let flag = fetch_project_or_filter(project, filter, &config).await?;
+    let flag = fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await?;
     lists::label(&config, flag, &labels, sort).await
 }
 
@@ -1238,7 +1239,7 @@ async fn list_process(config: Config, args: &ListProcess) -> Result<String, Erro
         filter,
         sort,
     } = args;
-    let flag = fetch_project_or_filter(project, filter, &config).await?;
+    let flag = fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await?;
     lists::process(&config, flag, sort).await
 }
 
@@ -1248,7 +1249,7 @@ async fn list_timebox(config: Config, args: &ListTimebox) -> Result<String, Erro
         filter,
         sort,
     } = args;
-    let flag = fetch_project_or_filter(project, filter, &config).await?;
+    let flag = fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await?;
     lists::timebox(&config, flag, sort).await
 }
 
@@ -1258,12 +1259,12 @@ async fn list_prioritize(config: Config, args: &ListPrioritize) -> Result<String
         filter,
         sort,
     } = args;
-    let flag = fetch_project_or_filter(project, filter, &config).await?;
+    let flag = fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await?;
     lists::prioritize(&config, flag, sort).await
 }
 async fn list_import(config: Config, args: &ListImport) -> Result<String, Error> {
     let ListImport { path } = args;
-    let path = fetch_string(path, &config, input::PATH)?;
+    let path = fetch_string(path.as_deref(), &config, input::PATH)?;
     let file_path = select_file(path, &config)?;
     lists::import(&config, &file_path).await
 }
@@ -1308,7 +1309,7 @@ async fn list_schedule(config: Config, args: &ListSchedule) -> Result<String, Er
         overdue,
         sort,
     } = args;
-    match fetch_project_or_filter(project, filter, &config).await? {
+    match fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await? {
         Flag::Filter(filter) => filters::schedule(&config, &filter, sort).await,
         Flag::Project(project) => {
             let task_filter = if *overdue {
@@ -1328,7 +1329,7 @@ async fn list_deadline(config: Config, args: &ListDeadline) -> Result<String, Er
         filter,
         sort,
     } = args;
-    match fetch_project_or_filter(project, filter, &config).await? {
+    match fetch_project_or_filter(project.as_deref(), filter.as_deref(), &config).await? {
         Flag::Filter(filter) => filters::deadline(&config, &filter, sort).await,
         Flag::Project(project) => projects::deadline(&config, &project, sort).await,
     }
@@ -1418,7 +1419,7 @@ async fn find_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, E
 }
 
 fn fetch_string(
-    maybe_string: &Option<String>,
+    maybe_string: Option<&str>,
     config: &Config,
     prompt: &str,
 ) -> Result<String, Error> {
@@ -1428,7 +1429,7 @@ fn fetch_string(
     }
 }
 
-async fn fetch_project(project_name: &Option<String>, config: &Config) -> Result<Flag, Error> {
+async fn fetch_project(project_name: Option<&str>, config: &Config) -> Result<Flag, Error> {
     let projects = config.projects().await?;
     if projects.is_empty() {
         return Err(errors::new("fetch_project", NO_PROJECTS_ERR));
@@ -1441,7 +1442,7 @@ async fn fetch_project(project_name: &Option<String>, config: &Config) -> Result
     match project_name {
         Some(project_name) => projects
             .iter()
-            .find(|p| p.name == project_name.as_str())
+            .find(|p| p.name == project_name)
             .map_or_else(
                 || {
                     Err(errors::new(
@@ -1455,7 +1456,7 @@ async fn fetch_project(project_name: &Option<String>, config: &Config) -> Result
     }
 }
 
-fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, Error> {
+fn fetch_filter(filter: Option<&str>, config: &Config) -> Result<Flag, Error> {
     match filter {
         Some(string) => Ok(Flag::Filter(string.to_owned())),
         None => {
@@ -1466,8 +1467,8 @@ fn fetch_filter(filter: &Option<String>, config: &Config) -> Result<Flag, Error>
 }
 
 async fn fetch_project_or_filter(
-    project: &Option<String>,
-    filter: &Option<String>,
+    project: Option<&str>,
+    filter: Option<&str>,
     config: &Config,
 ) -> Result<Flag, Error> {
     match (project, filter) {

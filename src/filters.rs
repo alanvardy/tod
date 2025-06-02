@@ -70,7 +70,7 @@ async fn fetch_next_task(config: &Config, filter: &str) -> Result<Option<(Task, 
 }
 
 /// Put dates on all tasks without dates
-pub async fn schedule(config: &Config, filter: &String, sort: &SortOrder) -> Result<String, Error> {
+pub async fn schedule(config: &Config, filter: &str, sort: &SortOrder) -> Result<String, Error> {
     let tasks = todoist::all_tasks_by_filters(config, filter)
         .await?
         .into_iter()
@@ -98,7 +98,7 @@ pub async fn schedule(config: &Config, filter: &String, sort: &SortOrder) -> Res
     }
 }
 /// Put deadlines on all non-recurring tasks without deadlines
-pub async fn deadline(config: &Config, filter: &String, sort: &SortOrder) -> Result<String, Error> {
+pub async fn deadline(config: &Config, filter: &str, sort: &SortOrder) -> Result<String, Error> {
     let tasks = todoist::all_tasks_by_filters(config, filter)
         .await?
         .into_iter()

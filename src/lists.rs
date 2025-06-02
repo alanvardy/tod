@@ -252,7 +252,7 @@ pub async fn label(
     Ok(color::green_string(&success))
 }
 
-pub async fn import(config: &Config, file_path: &String) -> Result<String, Error> {
+pub async fn import(config: &Config, file_path: &str) -> Result<String, Error> {
     let mut lines = String::new();
     fs::File::open(file_path)
         .await?

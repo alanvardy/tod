@@ -1,5 +1,5 @@
 use crate::cargo::Version;
-use crate::errors::{self, Error};
+use crate::errors::Error;
 use crate::id::Resource;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
@@ -472,6 +472,11 @@ impl Config {
             .deadline_value
             .unwrap_or(DEFAULT_DEADLINE_VALUE)
     }
+
+    pub async fn set_token(&mut self, access_token: String) -> Result<String, Error> {
+        self.token = access_token;
+        self.save().await
+    }
 }
 
 impl Default for Config {
@@ -525,20 +530,23 @@ pub async fn get_or_create(
             // File not found or unreadable — prompt for token
             let desc =
                 "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
-            return set_token(desc, tx).await;
+            return create_config_with_token(desc, tx).await;
         }
     };
 
     // 🧠 Config loaded successfully — but check if token is blank
     if config.token.trim().is_empty() {
         let desc = "Your configuration file exists but the Todoist API token is empty.\nPlease enter your Todoist API token from https://todoist.com/prefs/integrations ";
-        return set_token(desc, tx).await;
+        return create_config_with_token(desc, tx).await;
     }
 
     Ok(config)
 }
 //Fn to set token
-pub async fn set_token(desc: &str, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
+pub async fn create_config_with_token(
+    desc: &str,
+    tx: &UnboundedSender<Error>,
+) -> Result<Config, Error> {
     let token = input::string(desc, Some(String::new()))?;
     Config::new(&token, Some(tx.clone())).await?.create().await
 }
@@ -580,9 +588,9 @@ pub async fn get(
 ///
 pub async fn generate_path() -> Result<String, Error> {
     let config_directory = dirs::config_dir()
-        .ok_or_else(|| errors::new("dirs", "Could not find config directory"))?
+        .ok_or_else(|| Error::new("dirs", "Could not find config directory"))?
         .to_str()
-        .ok_or_else(|| errors::new("dirs", "Could not convert config directory to string"))?
+        .ok_or_else(|| Error::new("dirs", "Could not convert config directory to string"))?
         .to_owned();
     if cfg!(test) {
         _ = fs::create_dir(format!("{config_directory}/tod_test")).await;
@@ -596,12 +604,12 @@ pub async fn generate_path() -> Result<String, Error> {
 fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
     if path.starts_with('~') {
         let home =
-            homedir::my_home()?.ok_or_else(|| errors::new("homedir", "Could not get homedir"))?;
+            homedir::my_home()?.ok_or_else(|| Error::new("homedir", "Could not get homedir"))?;
         let mut path = path;
         path.replace_range(
             ..1,
             home.to_str()
-                .ok_or_else(|| errors::new("homedir", "Could not get homedir"))?,
+                .ok_or_else(|| Error::new("homedir", "Could not get homedir"))?,
         );
 
         Ok(path)
@@ -612,6 +620,10 @@ fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::test;
+    use pretty_assertions::assert_eq;
+
     impl Config {
         //Method for default testing
         pub fn default_test() -> Self {
@@ -694,10 +706,6 @@ mod tests {
             self
         }
     }
-    use crate::test;
-
-    use super::*;
-    use pretty_assertions::assert_eq;
 
     fn tx() -> UnboundedSender<Error> {
         let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();

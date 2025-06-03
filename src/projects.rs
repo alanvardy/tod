@@ -4,7 +4,7 @@ use std::fmt::Display;
 use tokio::task::JoinHandle;
 
 use crate::config::Config;
-use crate::errors::{self, Error};
+use crate::errors::Error;
 use crate::sections::Section;
 use crate::tasks::{FormatType, Task};
 use crate::{SortOrder, color, input, sections, tasks, todoist};
@@ -322,7 +322,7 @@ async fn maybe_add_project(
             } else if string == "skip" {
                 Ok("Skipped".into())
             } else {
-                Err(errors::new("add_project", "Invalid option"))
+                Err(Error::new("add_project", "Invalid option"))
             }
         }
         Err(e) => Err(e)?,

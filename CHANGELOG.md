@@ -2,6 +2,8 @@
 
 ## Unreleased (on main branch only)
 
+- Added `auth login` for registering with `OAuth`
+
 ## 2025-05-19 v0.7.7
 
 - Fix regression where project was not being shown while processing by filter
@@ -68,7 +70,7 @@
 
 ## 2025-02-15 v0.6.29
 
-- Add homebrew support
+- Add Homebrew support
 - Remove Arch User Repository support (hopefully temporarily)
 - Show good error when running `config reset` but no config file exists
 

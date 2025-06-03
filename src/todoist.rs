@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use urlencoding::encode;
 mod request;
 
-use crate::comments;
 use crate::comments::{Comment, CommentResponse};
 use crate::config::Config;
 use crate::errors::Error;
 use crate::id::{self, Resource};
 use crate::labels::{self, Label, LabelResponse};
+use crate::oauth::{CLIENT_ID, CLIENT_SECRET};
 use crate::projects::{Project, ProjectResponse};
 use crate::sections::{Section, SectionResponse};
 use crate::shell::execute_command;
@@ -18,6 +18,7 @@ use crate::tasks::{Task, TaskResponse};
 use crate::users;
 use crate::users::User;
 use crate::{color, projects, sections, tasks, time};
+use crate::{comments, oauth};
 
 // TODOIST URLS
 pub const TASKS_URL: &str = "/api/v1/tasks/";
@@ -27,6 +28,9 @@ const USER_URL: &str = "/api/v1/user";
 const PROJECTS_URL: &str = "/api/v1/projects";
 const LABELS_URL: &str = "/api/v1/labels";
 const IDS_URL: &str = "/api/v1/id_mappings/";
+const ACCESS_TOKEN_URL: &str = "/oauth/access_token";
+pub const OAUTH_URL: &str = "/oauth/authorize";
+
 /// Number of items that can be requested from API at once
 pub const QUERY_LIMIT: u8 = 200;
 
@@ -162,6 +166,15 @@ pub async fn get_task(config: &Config, id: &str) -> Result<Task, Error> {
     let url = format!("{TASKS_URL}{id}");
     let json = request::get_todoist(config, url, true).await?;
     tasks::json_to_task(json)
+}
+
+pub async fn get_access_token(config: &Config, code: &str) -> Result<String, Error> {
+    let url = ACCESS_TOKEN_URL.to_string();
+    let body = json!({"code": code, "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET});
+
+    let json = request::post_todoist(config, url, body, true).await?;
+
+    oauth::json_to_access_token(json).map(|t| t.access_token)
 }
 
 /// Add Task without natural language support but supports additional parameters

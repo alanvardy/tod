@@ -6,7 +6,7 @@ use std::{
 use crate::color;
 use homedir::GetHomeError;
 use serde::Deserialize;
-use tokio::task::JoinError;
+use tokio::{sync::oneshot::error::RecvError, task::JoinError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Error {
@@ -31,6 +31,15 @@ impl From<std::io::Error> for Error {
         Self {
             source: "io".into(),
             message: format!("{value}"),
+        }
+    }
+}
+
+impl From<RecvError> for Error {
+    fn from(_value: RecvError) -> Self {
+        Self {
+            source: String::from("RecvError"),
+            message: "Sender dropped without sending".to_string(),
         }
     }
 }
@@ -134,12 +143,15 @@ impl From<inquire::InquireError> for Error {
     }
 }
 
-pub fn new(source: &str, message: &str) -> Error {
-    Error {
-        source: source.into(),
-        message: message.into(),
+impl Error {
+    pub fn new(source: &str, message: &str) -> Error {
+        Error {
+            source: source.into(),
+            message: message.into(),
+        }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

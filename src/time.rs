@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::errors::{self, Error};
 
-use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -193,7 +193,7 @@ pub fn is_date_in_past(date: NaiveDate, config: &Config) -> Result<bool, Error> 
 
 /// Returns 0 if today, negative if date given is in the past
 pub fn naive_date_days_in_future(date: NaiveDate, config: &Config) -> Result<i64, Error> {
-    let duration = date.signed_duration_since(naive_date_today(config)?);
+    let duration: Duration = date - naive_date_today(config)?;
     Ok(duration.num_days())
 }
 // ----------- STRING FUNCTIONS --------------

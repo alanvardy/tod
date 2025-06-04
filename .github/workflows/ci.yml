@@ -16,7 +16,7 @@ jobs:
       - uses: ahmadnassri/action-dependabot-auto-merge@v2.6.6
         with:
           target: minor
-          github-token: ${{ secrets.GITHUB_TOKEN }} 
+          github-token: ${{ secrets.MYTOKEN }} 
   check:
     runs-on: ubuntu-latest
     name: Cargo Check

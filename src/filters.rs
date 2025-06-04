@@ -40,7 +40,7 @@ pub async fn edit_task(config: &Config, filter: String) -> Result<String, Error>
     }
 
     future::join_all(handles).await;
-    Ok(String::from("Finished editing task"))
+    Ok("Finished editing task".into())
 }
 
 /// Get the next task by priority and save its id to config
@@ -153,7 +153,7 @@ mod tests {
             .with_mock_url(server.url())
             .mock_select(0);
 
-        let result = edit_task(&config, String::from("today"));
+        let result = edit_task(&config, "today".into());
         assert_eq!(result.await, Ok("Finished editing task".to_string()));
         mock.assert();
     }

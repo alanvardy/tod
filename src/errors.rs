@@ -29,7 +29,7 @@ impl Display for Error {
 impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
         Self {
-            source: String::from("io"),
+            source: "io".into(),
             message: format!("{value}"),
         }
     }
@@ -38,7 +38,7 @@ impl From<std::io::Error> for Error {
 impl From<TryFromIntError> for Error {
     fn from(value: TryFromIntError) -> Self {
         Self {
-            source: String::from("TryFromIntError"),
+            source: "TryFromIntError".into(),
             message: format!("{value}"),
         }
     }
@@ -47,7 +47,7 @@ impl From<TryFromIntError> for Error {
 impl From<JoinError> for Error {
     fn from(value: JoinError) -> Self {
         Self {
-            source: String::from("Join on future"),
+            source: "Join on future".into(),
             message: format!("{value}"),
         }
     }
@@ -56,7 +56,7 @@ impl From<JoinError> for Error {
 impl From<chrono::LocalResult<chrono::DateTime<chrono_tz::Tz>>> for Error {
     fn from(value: chrono::LocalResult<chrono::DateTime<chrono_tz::Tz>>) -> Self {
         Self {
-            source: String::from("chrono"),
+            source: "chrono".into(),
             message: format!("{value:?}"),
         }
     }
@@ -65,7 +65,7 @@ impl From<chrono::LocalResult<chrono::DateTime<chrono_tz::Tz>>> for Error {
 impl From<tokio::sync::mpsc::error::SendError<Error>> for Error {
     fn from(value: tokio::sync::mpsc::error::SendError<Error>) -> Self {
         Self {
-            source: String::from("tokio mpsc"),
+            source: "tokio mpsc".into(),
             message: format!("{value}"),
         }
     }
@@ -74,7 +74,7 @@ impl From<tokio::sync::mpsc::error::SendError<Error>> for Error {
 impl From<chrono_tz::ParseError> for Error {
     fn from(value: chrono_tz::ParseError) -> Self {
         Self {
-            source: String::from("chrono_tz"),
+            source: "chrono_tz".into(),
             message: format!("{value}"),
         }
     }
@@ -83,7 +83,7 @@ impl From<chrono_tz::ParseError> for Error {
 impl From<ParseIntError> for Error {
     fn from(value: ParseIntError) -> Self {
         Self {
-            source: String::from("ParseIntError"),
+            source: "ParseIntError".into(),
             message: format!("{value}"),
         }
     }
@@ -92,7 +92,7 @@ impl From<ParseIntError> for Error {
 impl From<chrono::ParseError> for Error {
     fn from(value: chrono::ParseError) -> Self {
         Self {
-            source: String::from("chrono"),
+            source: "chrono".into(),
             message: format!("{value}"),
         }
     }
@@ -101,7 +101,7 @@ impl From<chrono::ParseError> for Error {
 impl From<GetHomeError> for Error {
     fn from(value: GetHomeError) -> Self {
         Self {
-            source: String::from("homedir"),
+            source: "homedir".into(),
             message: format!("{value}"),
         }
     }
@@ -110,7 +110,7 @@ impl From<GetHomeError> for Error {
 impl From<serde_json::Error> for Error {
     fn from(value: serde_json::Error) -> Self {
         Self {
-            source: String::from("serde_json"),
+            source: "serde_json".into(),
             message: format!("{value}"),
         }
     }
@@ -119,7 +119,7 @@ impl From<serde_json::Error> for Error {
 impl From<reqwest::Error> for Error {
     fn from(value: reqwest::Error) -> Self {
         Self {
-            source: String::from("reqwest"),
+            source: "reqwest".into(),
             message: format!("{value}"),
         }
     }
@@ -128,7 +128,7 @@ impl From<reqwest::Error> for Error {
 impl From<inquire::InquireError> for Error {
     fn from(value: inquire::InquireError) -> Self {
         Self {
-            source: String::from("inquire"),
+            source: "inquire".into(),
             message: format!("{value}"),
         }
     }
@@ -136,8 +136,8 @@ impl From<inquire::InquireError> for Error {
 
 pub fn new(source: &str, message: &str) -> Error {
     Error {
-        source: String::from(source),
-        message: String::from(message),
+        source: source.into(),
+        message: message.into(),
     }
 }
 #[cfg(test)]

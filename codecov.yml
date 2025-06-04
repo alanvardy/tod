@@ -1,6 +1,6 @@
 coverage:
   ignore:
-    - src/error.rs
+    - src/errors.rs
     - src/input.rs
     - src/color.rs
     - src/debug.rs

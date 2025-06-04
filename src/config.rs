@@ -224,7 +224,7 @@ impl Config {
                     );
                     self.tx().send(Error {
                         message,
-                        source: String::from("Crates.io"),
+                        source: "Crates.io".into(),
                     })?;
                     new_config.clone().save().await?;
                 }
@@ -342,7 +342,7 @@ impl Config {
     pub async fn new(token: &str, tx: Option<UnboundedSender<Error>>) -> Result<Config, Error> {
         Ok(Config {
             path: generate_path().await?,
-            token: String::from(token),
+            token: token.into(),
             next_id: None,
             next_task: None,
             last_version_check: None,

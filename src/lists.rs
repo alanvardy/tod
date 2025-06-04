@@ -268,7 +268,7 @@ pub async fn import(config: &Config, file_path: &str) -> Result<String, Error> {
         todoist::quick_create_task(config, &line).await?;
     }
 
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 #[cfg(test)]

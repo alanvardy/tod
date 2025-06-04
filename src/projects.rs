@@ -117,7 +117,7 @@ pub async fn list(config: &mut Config) -> Result<String, Error> {
         .map(|p| p.unwrap_or_default())
         .collect();
     if projects.is_empty() {
-        return Ok(String::from("No projects found"));
+        return Ok("No projects found".into());
     }
     projects.sort();
     let mut buffer = String::new();
@@ -241,7 +241,7 @@ pub async fn remove_all(config: &mut Config) -> Result<String, Error> {
     )?;
 
     if selection == "Cancel" {
-        return Ok(String::from("Cancelled"));
+        return Ok("Cancelled".into());
     }
 
     let projects = config.projects().await?;
@@ -253,8 +253,8 @@ pub async fn remove_all(config: &mut Config) -> Result<String, Error> {
         config.remove_project(project);
     }
     config.save().await?;
-    let message = String::from("Removed all projects from config");
-    Ok(color::green_string(&message))
+    let message = "Removed all projects from config";
+    Ok(color::green_string(message))
 }
 
 /// Returns the projects that are not already in config
@@ -320,7 +320,7 @@ async fn maybe_add_project(
             if string == "add" {
                 add(config, &project).await
             } else if string == "skip" {
-                Ok(String::from("Skipped"))
+                Ok("Skipped".into())
             } else {
                 Err(errors::new("add_project", "Invalid option"))
             }
@@ -359,7 +359,7 @@ pub async fn edit_task(config: &Config, project: &Project) -> Result<String, Err
     }
 
     future::join_all(handles).await;
-    Ok(String::from("Finished editing task"))
+    Ok("Finished editing task".into())
 }
 
 /// Empty a project by sending tasks to other projects one at a time

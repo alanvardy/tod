@@ -85,7 +85,7 @@ pub fn due(task: &Task, config: &Config, buffer: &str) -> String {
                 Some(Duration {
                     amount: 1,
                     unit: Unit::Day,
-                }) => String::from(" for 1 day"),
+                }) => " for 1 day".into(),
                 Some(Duration {
                     amount,
                     unit: Unit::Day,

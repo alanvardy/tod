@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::errors::{self, Error};
+use crate::errors::Error;
 
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
@@ -119,9 +119,9 @@ fn naive_datetime_to_datetime(
         .and_local_timezone(timezone)
         .single()
         .ok_or_else(|| {
-            errors::new(
+            Error::new(
                 "naive_datetime_to_datetime",
-                "Anmbiguous or invalid datetime",
+                "Ambiguous or invalid datetime",
             )
         })
 }
@@ -146,7 +146,7 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
             naive_datetime_to_datetime(naive_datetime, timezone)?.date_naive()
         }
         _ => {
-            return Err(errors::new(
+            return Err(Error::new(
                 "date_from_str",
                 &format!("Cannot parse NaiveDate, unknown length: {}", str),
             ));
@@ -240,7 +240,7 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
     let split: Vec<&str> = gmt.split_whitespace().collect();
     let offset = split
         .get(1)
-        .ok_or_else(|| errors::new("parse_timezone", "Invalid GMT format: missing offset"))?;
+        .ok_or_else(|| Error::new("parse_timezone", "Invalid GMT format: missing offset"))?;
     let offset = offset.replace(":00", "");
     let offset = offset.replace(':', "");
     let offset_num = offset.parse::<i32>()?;

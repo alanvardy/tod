@@ -6,6 +6,7 @@ use crate::VERSION;
 /// So you can find the `Task` variant in tests/responses/Task.json
 #[derive(strum_macros::Display)]
 pub enum ResponseFromFile {
+    AccessToken,
     /// List of all kinds of comments
     CommentsAllTypes,
     /// An unscheduled task
@@ -48,6 +49,7 @@ impl ResponseFromFile {
     /// Use an empty vector to make no changes
     async fn replace_values(&self, json_string: String) -> String {
         let replace_with: Vec<(&str, String)> = match self {
+            Self::AccessToken => Vec::new(),
             Self::CommentsAllTypes => Vec::new(),
             Self::Comment => Vec::new(),
             Self::Task => Vec::new(),

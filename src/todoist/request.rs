@@ -14,7 +14,6 @@ use uuid::Uuid;
 use crate::config::Args;
 use crate::config::Config;
 use crate::debug;
-use crate::errors;
 use crate::errors::Error;
 
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
@@ -124,7 +123,7 @@ async fn handle_response(
         Ok(json_string)
     } else {
         let json_string = response.text().await?;
-        Err(errors::new(
+        Err(Error::new(
             "reqwest",
             &format!(
                 "

@@ -32,6 +32,7 @@ mod id;
 mod input;
 mod labels;
 mod lists;
+mod oauth;
 mod projects;
 mod sections;
 mod shell;
@@ -99,6 +100,11 @@ enum Commands {
     #[clap(alias = "c")]
     /// (c) Commands around configuration and the app
     Config(ConfigCommands),
+
+    #[command(subcommand)]
+    #[clap(alias = "a")]
+    /// (a) Commands for logging in with OAuth
+    Auth(AuthCommands),
 
     #[command(subcommand)]
     #[clap(alias = "s")]
@@ -510,6 +516,13 @@ enum ConfigCommands {
 }
 
 #[derive(Subcommand, Debug, Clone)]
+enum AuthCommands {
+    #[clap(alias = "l")]
+    /// (l) Log into Todoist using OAuth
+    Login(AuthLogin),
+}
+
+#[derive(Subcommand, Debug, Clone)]
 enum ShellCommands {
     #[clap(alias = "b")]
     /// (b) Generate shell completions for various shells. Does not need a configuration file
@@ -538,6 +551,9 @@ struct ConfigSetTimezone {
     /// TimeZone to add, i.e. "Canada/Pacific"
     timezone: Option<String>,
 }
+
+#[derive(Parser, Debug, Clone)]
+struct AuthLogin {}
 
 #[derive(Parser, Debug, Clone)]
 struct ShellCompletions {
@@ -874,6 +890,18 @@ async fn select_command(
             )
         }
 
+        Commands::Auth(AuthCommands::Login(args)) => {
+            let config = match fetch_config(&cli, &tx).await {
+                Ok(config) => config,
+                Err(e) => return (true, true, Err(e)),
+            };
+            (
+                config.bell_on_success,
+                config.bell_on_failure,
+                auth_login(config, args).await,
+            )
+        }
+
         // Shell
         Commands::Shell(ShellCommands::Completions(args)) => {
             (true, true, shell_completions(args).await)
@@ -894,6 +922,10 @@ async fn select_command(
     }
 }
 
+async fn auth_login(config: Config, _args: &AuthLogin) -> Result<String, Error> {
+    let mut config = config;
+    oauth::login(&mut config).await
+}
 async fn shell_completions(args: &ShellCompletions) -> Result<String, Error> {
     shell::generate_completions(args.shell);
 
@@ -1066,7 +1098,7 @@ async fn task_complete(config: Config, _args: &TaskComplete) -> Result<String, E
 
             Ok(color::green_string("Task completed successfully"))
         }
-        None => Err(errors::new(
+        None => Err(Error::new(
             "task_complete",
             "There is nothing to complete. A task must first be marked as 'next'.",
         )),
@@ -1081,7 +1113,7 @@ async fn task_comment(config: Config, args: &TaskComment) -> Result<String, Erro
             todoist::create_comment(&config, &task, content, true).await?;
             Ok(color::green_string("Comment created successfully"))
         }
-        None => Err(errors::new(
+        None => Err(Error::new(
             "task_comment",
             "There is nothing to comment on. A task must first be marked as 'next'.",
         )),
@@ -1129,7 +1161,7 @@ async fn project_remove(config: Config, args: &ProjectRemove) -> Result<String, 
                 return value;
             }
         },
-        (_, _) => Err(errors::new("project_remove", "Incorrect flags provided")),
+        (_, _) => Err(Error::new("project_remove", "Incorrect flags provided")),
     }
 }
 
@@ -1340,7 +1372,7 @@ async fn list_deadline(config: Config, args: &ListDeadline) -> Result<String, Er
 async fn config_check_version(_args: &ConfigCheckVersion) -> Result<String, Error> {
     match cargo::compare_versions(None).await {
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
-        Ok(Version::Dated(version)) => Err(errors::new(
+        Ok(Version::Dated(version)) => Err(Error::new(
             "cargo",
             &format!(
                 "Tod is out of date with version: {}, latest is:{}",
@@ -1358,7 +1390,7 @@ async fn config_reset(config: Config, _args: &ConfigReset) -> Result<String, Err
 
     match fs::remove_file(path.clone()).await {
         Ok(_) => Ok(format!("{path} deleted successfully")),
-        Err(e) => Err(errors::new(
+        Err(e) => Err(Error::new(
             "config_reset",
             &format!("Could not delete config at path: {path}, {e}"),
         )),
@@ -1371,7 +1403,7 @@ async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, E
             let tz = updated_config.get_timezone()?;
             Ok(format!("Timezone set successfully to: {tz}"))
         }
-        Err(e) => Err(errors::new(
+        Err(e) => Err(Error::new(
             "tz_reset",
             &format!("Could not reset timezone in config. {e}"),
         )),
@@ -1432,7 +1464,7 @@ fn fetch_string(
 async fn fetch_project(project_name: Option<&str>, config: &Config) -> Result<Flag, Error> {
     let projects = config.projects().await?;
     if projects.is_empty() {
-        return Err(errors::new("fetch_project", NO_PROJECTS_ERR));
+        return Err(Error::new("fetch_project", NO_PROJECTS_ERR));
     }
 
     if projects.len() == 1 {
@@ -1445,7 +1477,7 @@ async fn fetch_project(project_name: Option<&str>, config: &Config) -> Result<Fl
             .find(|p| p.name == project_name)
             .map_or_else(
                 || {
-                    Err(errors::new(
+                    Err(Error::new(
                         "fetch_project",
                         "Could not find project in config",
                     ))
@@ -1474,7 +1506,7 @@ async fn fetch_project_or_filter(
     match (project, filter) {
         (Some(_), None) => fetch_project(project, config).await,
         (None, Some(_)) => fetch_filter(filter, config),
-        (Some(_), Some(_)) => Err(errors::new(
+        (Some(_), Some(_)) => Err(Error::new(
             "project_or_filter",
             "Must select project OR filter",
         )),

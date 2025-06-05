@@ -32,10 +32,10 @@ pub async fn post_todoist(
     spinner: bool,
 ) -> Result<String, Error> {
     let base_url = get_base_url(config);
-    let token = &config.token;
+    let token = get_token(config)?;
 
     let request_url = format!("{base_url}{url}");
-    let authorization: &str = &format!("Bearer {token}");
+    let authorization = format!("Bearer {token}");
     let spinner = maybe_start_spinner(config, spinner);
 
     debug::maybe_print(config, format!("POST {request_url}\nbody: {body}"));
@@ -56,6 +56,40 @@ pub async fn post_todoist(
     handle_response(config, response, "POST", url, body).await
 }
 
+pub async fn post_todoist_no_token(
+    config: &Config,
+    url: String,
+    body: serde_json::Value,
+    spinner: bool,
+) -> Result<String, Error> {
+    let base_url = get_base_url(config);
+    let request_url = format!("{base_url}{url}");
+    let spinner = maybe_start_spinner(config, spinner);
+
+    debug::maybe_print(config, format!("POST {request_url}\nbody: {body}"));
+
+    let client = Client::new()
+        .post(request_url.clone())
+        .header(CONTENT_TYPE, "application/json")
+        .header("X-Request-Id", new_uuid())
+        .timeout(get_timeout(config));
+
+    let response = match &body {
+        Value::Null => client.send().await?,
+
+        body => client.json(&body).send().await?,
+    };
+    maybe_stop_spinner(spinner);
+    handle_response(config, response, "POST", url, body).await
+}
+
+fn get_token(config: &Config) -> Result<String, Error> {
+    config
+        .token
+        .clone()
+        .ok_or_else(|| Error::new("post_todoist", "No token, use auth login to set your token"))
+}
+
 pub async fn delete_todoist(
     config: &Config,
     url: String,
@@ -63,10 +97,10 @@ pub async fn delete_todoist(
     spinner: bool,
 ) -> Result<String, Error> {
     let base_url = get_base_url(config);
-    let token = &config.token;
+    let token = get_token(config)?;
 
     let request_url = format!("{base_url}{url}");
-    let authorization: &str = &format!("Bearer {token}");
+    let authorization = format!("Bearer {token}");
     let spinner = maybe_start_spinner(config, spinner);
 
     debug::maybe_print(config, format!("DELETE {request_url}\nbody: {body}"));
@@ -89,10 +123,10 @@ pub async fn delete_todoist(
 /// Get Todoist via REST api
 pub async fn get_todoist(config: &Config, url: String, spinner: bool) -> Result<String, Error> {
     let base_url = get_base_url(config);
-    let token = config.token.clone();
+    let token = get_token(config)?;
 
     let request_url = format!("{base_url}{url}");
-    let authorization: &str = &format!("Bearer {token}");
+    let authorization = format!("Bearer {token}");
     let spinner = maybe_start_spinner(config, spinner);
     if config.verbose.unwrap_or_default() {
         println!("GET {request_url}")

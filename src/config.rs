@@ -4,7 +4,7 @@ use crate::id::Resource;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
 use crate::time::{SystemTimeProvider, TimeProviderEnum};
-use crate::{VERSION, cargo, color, debug, input, time, todoist};
+use crate::{VERSION, cargo, color, debug, input, oauth, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -18,6 +18,9 @@ use crate::test_time::FixedTimeProvider;
 const MAX_COMMENT_LENGTH: u32 = 500;
 pub const DEFAULT_DEADLINE_VALUE: u8 = 30;
 pub const DEFAULT_DEADLINE_DAYS: u8 = 5;
+pub const OAUTH: &str = "Login with OAuth (recommended)";
+pub const DEVELOPER: &str = "Login with developer API token";
+pub const TOKEN_METHOD: &str = "Choose your Todoist login method";
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Completed {
@@ -29,7 +32,7 @@ pub struct Completed {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
     /// The Todoist Api token
-    pub token: String,
+    pub token: Option<String>,
     /// List of Todoist projects and their project numbers
     #[serde(rename = "projectsv1")]
     projects: Option<Vec<Project>>,
@@ -143,7 +146,14 @@ impl Config {
     /// Set timezone on Config struct only
     pub fn with_timezone(self: &Config, timezone: &str) -> Config {
         Config {
-            timezone: Some(timezone.to_string()),
+            timezone: Some(timezone.into()),
+            ..self.clone()
+        }
+    }
+
+    pub fn with_token(self: &Config, token: &str) -> Config {
+        Config {
+            token: Some(token.into()),
             ..self.clone()
         }
     }
@@ -339,10 +349,10 @@ impl Config {
         Ok(config)
     }
 
-    pub async fn new(token: &str, tx: Option<UnboundedSender<Error>>) -> Result<Config, Error> {
+    pub async fn new(tx: Option<UnboundedSender<Error>>) -> Result<Config, Error> {
         Ok(Config {
             path: generate_path().await?,
-            token: token.into(),
+            token: None,
             next_id: None,
             next_task: None,
             last_version_check: None,
@@ -474,15 +484,42 @@ impl Config {
     }
 
     pub async fn set_token(&mut self, access_token: String) -> Result<String, Error> {
-        self.token = access_token;
+        self.token = Some(access_token);
         self.save().await
+    }
+
+    async fn maybe_set_token(self) -> Result<Config, Error> {
+        if self.token.clone().unwrap_or_default().trim().is_empty() {
+            let mock_select = Some(1);
+            let options = vec![OAUTH, DEVELOPER];
+            let mut config = match input::select(TOKEN_METHOD, options, mock_select)? {
+                OAUTH => {
+                    let mut config = self.clone();
+                    oauth::login(&mut config).await?;
+                    config
+                }
+                DEVELOPER => {
+                    let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
+
+                    // We can't use mock_string from config here because it can't be set in test.
+                    let fake_token = Some("faketoken".into());
+                    let token = input::string(desc, fake_token)?;
+                    self.with_token(&token)
+                }
+                _ => unreachable!(),
+            };
+            config.save().await?;
+            Ok(config)
+        } else {
+            Ok(self)
+        }
     }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Config {
-            token: String::new(),
+            token: None,
             path: String::new(),
             next_id: None,
             next_task: None,
@@ -524,31 +561,17 @@ pub async fn get_or_create(
     timeout: Option<u64>,
     tx: &UnboundedSender<Error>,
 ) -> Result<Config, Error> {
-    let config = match get(config_path.clone(), verbose, timeout, tx).await {
-        Ok(config) => config,
+    match get(config_path.clone(), verbose, timeout, tx).await {
+        Ok(config) => config.maybe_set_token().await,
         Err(_) => {
             // File not found or unreadable — prompt for token
-            let desc =
-                "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
-            return create_config_with_token(desc, tx).await;
+            create_config(tx).await?.maybe_set_token().await
         }
-    };
-
-    // 🧠 Config loaded successfully — but check if token is blank
-    if config.token.trim().is_empty() {
-        let desc = "Your configuration file exists but the Todoist API token is empty.\nPlease enter your Todoist API token from https://todoist.com/prefs/integrations ";
-        return create_config_with_token(desc, tx).await;
     }
-
-    Ok(config)
 }
 //Fn to set token
-pub async fn create_config_with_token(
-    desc: &str,
-    tx: &UnboundedSender<Error>,
-) -> Result<Config, Error> {
-    let token = input::string(desc, Some(String::new()))?;
-    Config::new(&token, Some(tx.clone())).await?.create().await
+pub async fn create_config(tx: &UnboundedSender<Error>) -> Result<Config, Error> {
+    Config::new(Some(tx.clone())).await?.create().await
 }
 
 pub async fn get(
@@ -578,7 +601,7 @@ pub async fn get(
     })?;
 
     let redacted_config = Config {
-        token: "REDACTED".to_string(),
+        token: Some("REDACTED".into()),
         ..config.clone()
     };
     debug::maybe_print(&config, format!("{:#?}", redacted_config));
@@ -628,7 +651,7 @@ mod tests {
         //Method for default testing
         pub fn default_test() -> Self {
             Config {
-                token: "default-token".to_string(),
+                token: Some("default-token".to_string()),
                 path: "/tmp/test.cfg".to_string(),
                 time_provider: TimeProviderEnum::Fixed(FixedTimeProvider),
                 args: Args {
@@ -714,8 +737,8 @@ mod tests {
 
     #[tokio::test]
     async fn new_should_generate_config() {
-        let config = Config::new("something", None).await.unwrap();
-        assert_eq!(config.token, String::from("something"));
+        let config = Config::new(None).await.unwrap();
+        assert_eq!(config.token, None);
     }
 
     #[tokio::test]
@@ -781,16 +804,16 @@ mod tests {
         let server = mockito::Server::new_async().await;
 
         // --- CREATE ---
-        let new_config = test::fixtures::config().await;
+        let new_config = test::fixtures::config().await.with_token("created");
         let created_config = Config {
-            token: String::from("created"),
+            token: Some(String::from("created")),
             ..new_config.clone()
         };
         created_config.create().await.unwrap();
 
         // --- LOAD ---
         let loaded_config = Config::load(&new_config.path).await.unwrap();
-        assert_eq!(loaded_config.token, "created");
+        assert_eq!(loaded_config.token, Some("created".into()));
 
         // --- GET_OR_CREATE (create) ---
         let config_created = get_or_create(None, false, None, &tx())
@@ -848,7 +871,7 @@ mod tests {
         // You can assert that it contains expected fields just to be thorough
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("token"));
-        assert!(debug_output.contains(&config.token));
+        assert!(debug_output.contains(&config.token.unwrap()));
     }
     #[test]
     fn debug_impls_for_config_components_should_work() {
@@ -922,7 +945,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_config_with_methods() {
-        let base_config = Config::new("token_value", None)
+        let base_config = Config::new(None)
             .await
             .expect("Failed to create base config");
 

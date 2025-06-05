@@ -317,7 +317,7 @@ mod tests {
 
     #[tokio::test]
     async fn errors_when_no_timezone() {
-        let config = Config::new("test-token", None).await.unwrap();
+        let config = Config::new(None).await.unwrap();
         assert_matches!(config.get_timezone(), Err(Error { .. }));
     }
 

@@ -210,7 +210,7 @@ pub fn date_string_today(config: &Config) -> Result<String, Error> {
 // Formats a date to a string
 pub fn date_to_string(date: &NaiveDate, config: &Config) -> Result<String, Error> {
     if is_date_today(*date, config)? {
-        Ok(String::from("Today"))
+        Ok("Today".into())
     } else {
         Ok(date.format(FORMAT_DATE).to_string())
     }

@@ -35,7 +35,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let name = "TEST".to_string();
     let date = time::date_string_today(&config)?;
     let priority = Priority::None;
-    let labels = vec![String::from("one"), String::from("two")];
+    let labels: Vec<String> = vec!["one".into(), "two".into()];
 
     println!("Creating project");
     let project = create_project(&config, name.clone(), name.clone(), false, false).await?;
@@ -105,7 +105,7 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     let _task = update_task_labels(&config, &task, labels, false).await?;
 
     println!("Adding task label");
-    let _task = add_task_label(&config, task.clone(), String::from("three"), false).await?;
+    let _task = add_task_label(&config, task.clone(), "three".into(), false).await?;
 
     println!("Updating task due with natural language");
     let _task =
@@ -177,7 +177,7 @@ pub async fn create_task(
     labels: &[String],
 ) -> Result<Task, Error> {
     let project_id = project.id.clone();
-    let url = String::from(TASKS_URL);
+    let url = TASKS_URL.into();
     let mut body: HashMap<String, Value> = HashMap::new();
     body.insert("content".to_owned(), Value::String(content.to_owned()));
     body.insert(
@@ -403,7 +403,7 @@ pub async fn update_task_priority(
 
     request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back an task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 /// Add a label to task by ID
@@ -420,7 +420,7 @@ pub async fn add_task_label(
 
     request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back an task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 /// Update due date for task using natural language
@@ -450,7 +450,7 @@ pub async fn update_task_due_natural_language(
 
     request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 /// Update the content of a task by ID
@@ -465,7 +465,7 @@ pub async fn update_task_content(
 
     request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 /// Update the content of a task by ID
@@ -491,7 +491,7 @@ pub async fn update_task_deadline(
 
     request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 /// Update the description of a task by ID
@@ -506,7 +506,7 @@ pub async fn update_task_description(
 
     request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 /// Update the labels of a task by ID
@@ -522,7 +522,7 @@ pub async fn update_task_labels(
 
     request::post_todoist(config, url, body, spinner).await?;
     // Does not pass back a task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 /// Complete the last task returned by "next task"
@@ -540,7 +540,7 @@ pub async fn complete_task(config: &Config, task: &Task, spinner: bool) -> Resul
     // Execute the execute_command() complete_task_command if set in config
 
     // API does not pass back a task
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<String, Error> {
@@ -548,7 +548,7 @@ pub async fn delete_task(config: &Config, task: &Task, spinner: bool) -> Result<
     let url = format!("{}{}", TASKS_URL, task.id);
 
     request::delete_todoist(config, url, body, spinner).await?;
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 
 pub async fn delete_project(
@@ -560,7 +560,7 @@ pub async fn delete_project(
     let body = json!({});
 
     request::delete_todoist(config, url, body, spinner).await?;
-    Ok(String::from("✓"))
+    Ok("✓".into())
 }
 pub async fn create_project(
     config: &Config,
@@ -778,7 +778,7 @@ mod tests {
         let project = test::fixtures::project();
 
         assert_eq!(
-            create_section(&config, String::from("New task"), &project, false).await,
+            create_section(&config, "New task".into(), &project, false).await,
             Ok(test::fixtures::section())
         );
         mock.assert();
@@ -799,7 +799,7 @@ mod tests {
         let task = test::fixtures::today_task().await;
         let comment = test::fixtures::comment();
         assert_eq!(
-            create_comment(&config, &task, String::from("New comment"), true).await,
+            create_comment(&config, &task, "New comment".into(), true).await,
             Ok(comment)
         );
         mock.assert();

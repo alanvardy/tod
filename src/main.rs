@@ -1151,7 +1151,7 @@ async fn project_delete(config: Config, args: &ProjectDelete) -> Result<String, 
             let result = input::select(&desc, options, config.mock_select)?;
 
             if result == input::CANCEL {
-                return Ok(String::from("Cancelled"));
+                return Ok("Cancelled".into());
             }
         }
         let value = projects::delete(&mut config, &project).await;

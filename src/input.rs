@@ -109,8 +109,8 @@ pub fn datetime(
         "Complete" => Ok(DateTimeInput::Complete),
         SKIP => Ok(DateTimeInput::Skip),
         _ => Err(Error {
-            message: String::from("Unrecognized input"),
-            source: String::from("Datetime Input"),
+            message: "Unrecognized input".into(),
+            source: "Datetime Input".into(),
         }),
     }
 }
@@ -143,7 +143,7 @@ pub fn string(desc: &str, mock_string: Option<String>) -> Result<String, Error> 
 /// Get string input with default value
 pub fn string_with_default(desc: &str, default_message: &str) -> Result<String, Error> {
     if cfg!(test) {
-        return Ok(String::from(default_message));
+        return Ok(default_message.into());
     }
 
     Text::new(desc)

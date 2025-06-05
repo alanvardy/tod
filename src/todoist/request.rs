@@ -202,7 +202,7 @@ fn maybe_stop_spinner(spinner: Option<Spinner>) {
 /// Create a new UUID, required for Todoist API
 pub fn new_uuid() -> String {
     if cfg!(test) {
-        String::from(FAKE_UUID)
+        FAKE_UUID.into()
     } else {
         Uuid::new_v4().to_string()
     }

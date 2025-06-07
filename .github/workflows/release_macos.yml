@@ -7,9 +7,9 @@ permissions:
   pull-requests: write  # Allow the workflow to write to pull requests
 
 on:
-  repository_dispatch:
-    types: [trigger-release]  # Triggered by the 'repository-dispatch' event with 'trigger-release' type
-
+  push:
+    tags:
+      - 'v*.*.*'
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
@@ -88,14 +88,14 @@ jobs:
         HASH=$(shasum -a 256 target/release/tod-$VERSION-macOS-x86_64.tar.gz | awk '{print $1}')
         echo "Intel HASH: $HASH"
 
-    # Upload Bbnaries to GitHub release using softprops/action-gh-release
-    - name: Upload macOS binaries to GitHub release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          target/release/tod-${{ env.VERSION }}-macOS-arm64.tar.gz
-          target/release/tod-${{ env.VERSION }}-macOS-x86_64.tar.gz
-        tag_name: ${{ env.VERSION }}
-        token: ${{ secrets.TOD_CONTENTS_READ_WRITE }} 
-        fail_on_unmatched_files: true
-        generate_release_notes: true
+    # Upload Binaries to existing GitHub release using softprops/action-gh-release
+    - name: Upload macOS binaries
+      run: |
+        gh release upload "$VERSION" \
+          target/release/tod-$VERSION-macOS-arm64.tar.gz \
+          target/release/tod-$VERSION-macOS-x86_64.tar.gz \
+          --repo "$GITHUB_REPOSITORY" \
+          --clobber
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+        VERSION: ${{ env.VERSION }}

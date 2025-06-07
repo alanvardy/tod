@@ -4,49 +4,33 @@ on:
   pull_request:
     branches:
       - main
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, ready_for_review]
 
-  push:
-    tags:
-      - "v*.*.*"
-      
 jobs:
-  check-changelog:
-    name: Check Release Version
+  check-release-pr:
+    name: Check Changelog & Cargo.toml Versions
+    if: >
+      startsWith(github.head_ref, 'release-please--') ||
+      contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract version tag and compare directly
+      - name: Extract and compare versions from files
         run: |
-          # Extract version number from the tag and remove the 'v' prefix
-          VERSION=${GITHUB_REF#refs/tags/}  # Strip out 'refs/tags/'
-          VERSION=${VERSION#v}  # Remove the 'v' prefix
-          echo "Version from tag: ${VERSION}"
-
-          # Read the top lines of CHANGELOG.md and extract the version
+          # Extract from CHANGELOG.md
           changelog_version=$(head -n 7 CHANGELOG.md | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1)
-          changelog_version_clean=${changelog_version#*v}  # Remove 'v' from changelog version
-          echo "Version from CHANGELOG.md: ${changelog_version_clean}"
+          changelog_version_clean=${changelog_version#*v}
+          echo "CHANGELOG: $changelog_version_clean"
 
-          # Extract version from Cargo.toml (example: version = "0.7.7")
+          # Extract from Cargo.toml
           cargo_version=$(grep -oP '^version = "\d+\.\d+\.\d+"$' Cargo.toml | sed 's/version = "//g' | sed 's/"//g')
-          echo "Version from Cargo.toml: ${cargo_version}"
+          echo "Cargo.toml: $cargo_version"
 
-          # Compare the versions directly
-          if [[ "${changelog_version_clean}" == "${VERSION}" && "${cargo_version}" == "${VERSION}" ]]; then
-            echo "All versions match."
+          if [[ "$changelog_version_clean" == "$cargo_version" ]]; then
+            echo "Versions match: $cargo_version"
           else
-            echo "Versions do not match. Failing the release check."
-            exit 1  # Fail if any version doesn't match
+            echo "Mismatch: CHANGELOG=$changelog_version_clean, Cargo.toml=$cargo_version"
+            exit 1
           fi
-
-      - name: Trigger Build Workflows
-        if: success() && startsWith(github.ref, 'refs/tags/')  # Only run this step if all previous steps were successful
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
-          repository: ${{ github.repository }}
-          event-type: trigger-release
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "tag_name": "${{ github.ref }}" }'

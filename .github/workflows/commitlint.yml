@@ -1,4 +1,4 @@
-name: Lint Commit Message
+name: Commit Lint (main branch)
 on:
     push:
       branches:

@@ -1,0 +1,40 @@
+name: PR Tests
+# This workflow runs on pull requests to check code coverage using Codecov.
+
+permissions:
+  contents: read  # Allow the workflow to read repository contents
+  pull-requests: write  # Allow the workflow to write to pull requests
+
+on:
+  pull_request:
+    # Trigger the workflow on PR events, specifically when opened or updated.
+    
+    paths:
+      - '**/*.rs'  # Run only if there are changes in Rust source files.
+    types: [opened, synchronize, reopened]  # Triggers when the PR is opened, synchronized, or reopened.
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_PROFILE_RELEASE_LTO: true
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+
+jobs:
+  coverage:
+    name: Codecov Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+         cache-all-crates: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
+      - name: Run tests with coverage
+        run: cargo tarpaulin --all-features --out xml
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v5
+

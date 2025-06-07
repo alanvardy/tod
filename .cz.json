@@ -1,0 +1,10 @@
+{
+  "commitizen": {
+    "name": "cz_conventional_commits",
+    "tag_format": "v$version",
+    "version_scheme": "semver",
+    "version_provider": "cargo",
+    "major_version_zero": true
+  }
+}
+

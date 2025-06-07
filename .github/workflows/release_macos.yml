@@ -1,6 +1,6 @@
 name: macOS Test and Release
 # This runs an OS-specific test, then builds and releases binaries for macOS (ARM and Intel) and publishes them to GitHub.
-# It is triggered by the completion of the "Release Check" workflow when the CHANGELOG.md is updated and version tag is present.
+# It is triggered by push with a version tag is present (generally from a Dependabot release)
 
 permissions:
   contents: write  # Allow the workflow to write to the repository contents

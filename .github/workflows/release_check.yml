@@ -6,31 +6,36 @@ on:
       - main
     types: [opened, synchronize, reopened, labeled, ready_for_review]
 
+permissions:
+  contents: read  # This grants read access specifically to the 'contents' scope
+
 jobs:
   check-release-pr:
-    name: Check Changelog & Cargo.toml Versions
+    name: Check Version in CHANGELOG and Cargo.toml
     if: >
       startsWith(github.head_ref, 'release-please--') ||
       contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Extract and compare versions from files
+      - name: Check Version Consistency
         run: |
-          # Extract from CHANGELOG.md
+          # Extract version from CHANGELOG.md (first vX.Y.Z in first 7 lines)
           changelog_version=$(head -n 7 CHANGELOG.md | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1)
-          changelog_version_clean=${changelog_version#*v}
-          echo "CHANGELOG: $changelog_version_clean"
+          changelog_version_clean=${changelog_version#v}
+          echo "CHANGELOG.md version: ${changelog_version_clean}"
 
-          # Extract from Cargo.toml
-          cargo_version=$(grep -oP '^version = "\d+\.\d+\.\d+"$' Cargo.toml | sed 's/version = "//g' | sed 's/"//g')
-          echo "Cargo.toml: $cargo_version"
+          # Extract version from Cargo.toml
+          cargo_version=$(grep -oP '^version = "\d+\.\d+\.\d+"' Cargo.toml | sed 's/version = "//;s/"//')
+          echo "Cargo.toml version: ${cargo_version}"
 
-          if [[ "$changelog_version_clean" == "$cargo_version" ]]; then
-            echo "Versions match: $cargo_version"
+          # Compare versions
+          if [[ "${changelog_version_clean}" == "${cargo_version}" ]]; then
+            echo "✅ Version check passed"
           else
-            echo "Mismatch: CHANGELOG=$changelog_version_clean, Cargo.toml=$cargo_version"
+            echo "❌ Version mismatch between CHANGELOG.md and Cargo.toml"
             exit 1
           fi

@@ -1,0 +1,22 @@
+# This job will only run for pull requests, specifically those created by Dependabot.
+# This will auto-merge Dependabot PRs that are minor updates and if they pass all tests.
+name: Auto Merge
+permissions:
+  pull-requests: write  # Allow the workflow to write to pull requests
+  contents: write
+
+on:
+    pull_request:
+
+jobs:
+  auto-merge:
+    name: Dependabot Auto Merge
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ahmadnassri/action-dependabot-auto-merge@v2
+        with:
+          target: minor
+          github-token: ${{ secrets.MYTOKEN }} 
+

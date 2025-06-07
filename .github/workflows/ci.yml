@@ -2,52 +2,49 @@ on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_PROFILE_RELEASE_LTO: true
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
 
 name: ci
 
+permissions:
+  contents: read  # This grants read access specifically to the 'contents' scope
+
+
 jobs:
-  auto-merge:
-    name: Dependabot Auto Merge
-    # This job will only run for pull requests, specifically those created by Dependabot.
-    if: ${{ github.event_name == 'pull_request'}}
+  test:
     runs-on: ubuntu-latest
+    name: Cargo CI Tests
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: ahmadnassri/action-dependabot-auto-merge@v2.6.6
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
-          target: minor
-          github-token: ${{ secrets.MYTOKEN }} 
+          cache-all-crates: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+      - name: Cargo Test
+        run: cargo nextest run --all-features
   check:
     runs-on: ubuntu-latest
     name: Cargo Check
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: actions/cache@v4.2.3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+      - name: Check
+        run: cargo check --locked --all-features
 
   todos:
-    name: TODO and FIXME
+    name: TODO and FIXME 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: actions/cache@v4.2.3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-todos-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v4
       - run: ./scripts/lint_string.sh "TODO "
       - run: ./scripts/lint_string.sh "TODO:"
       - run: ./scripts/lint_string.sh "FIXME "
@@ -58,61 +55,34 @@ jobs:
       - run: ./scripts/lint_string.sh "fixme:"
       - run: ./scripts/lint_string.sh "dbg!"
 
-  test:
-    runs-on: ubuntu-latest
-    name: Cargo Tests
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4.2.2
-
-      # Caching
-      - uses: actions/cache@v4.2.3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
-
-      # Set up Rust toolchain
-      - uses: dtolnay/rust-toolchain@stable
-
-      # Run tests with all features
-      - run: cargo test --all-features
-
   fmt:
     name: Rust-fmt (Cargo Format)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: actions/cache@v4.2.3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-fmt-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+         cache-all-crates: true
       - run: rustup component add rustfmt
       - run: cargo fmt --all -- --check
 
   clippy:
-    name: Cargo Clippy (Lint Check)
+    name: Clippy (Cargo Clippy Lint Check)
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: actions/cache@v4.2.3
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Rust Dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+          cache-all-crates: true
+      - name: Install Clippy
+        run: rustup component add clippy
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings

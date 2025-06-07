@@ -1,15 +1,21 @@
-name: Release Binaries (macOS and Homebrew)
-# This workflow builds and releases binaries for macOS (ARM and Intel) and publishes them to GitHub.
-# It is triggered by the completion of the "Full CI tests on ALL platforms" workflow after a PR with a version tags.
+name: macOS Test and Release
+# This runs an OS-specific test, then builds and releases binaries for macOS (ARM and Intel) and publishes them to GitHub.
+# It is triggered by push with a version tag is present (generally from a Dependabot release)
+
+permissions:
+  contents: write  # Allow the workflow to write to the repository contents
+  pull-requests: write  # Allow the workflow to write to pull requests
+
 on:
-  workflow_run:
-    workflows: ["Full Platform Tests"]  # Trigger on the completion of "Full CI tests on ALL platforms"
-    types:
-      - completed  # Trigger only when the Full CI tests complete and pass
   push:
     tags:
-      - 'v*'  # Trigger on version tags (e.g., v0.0.0)
-
+      - 'v*.*.*'
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_PROFILE_RELEASE_LTO: true
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
 
 jobs:
   build:
@@ -20,83 +26,76 @@ jobs:
     # Checkout the repository
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.client_payload.ref }}  # Use the ref from the repository-dispatch payload to checkout the specific commit
 
-    # Set up Rust toolchain
-    - name: Set up Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-all-crates: true
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: nextest
 
+    # Run Platform Tests
+    - name: Run tests using cargo-nextest
+      run: cargo nextest run --all-features  # Run all tests with nextest.
+      continue-on-error: false  # Fail the job if tests do not pass
+
+    # Get version from Cargo.toml
+    - name: Set VERSION from Cargo.toml
+      id: cargo-get
+      uses: nicolaiunrein/cargo-get@master
+      with:
+        subcommand: package.version 
+
+    # Set the version as an output variable
+    - name: Set version output
+      id: package-version
+      run: echo "VERSION=$(cargo get package.version --pretty)" >> $GITHUB_ENV
     # Add the x86_64 target to cross-compile for Intel macOS
     - name: Add x86_64 target for cross-compilation
-      run: |
-        rustup target add x86_64-apple-darwin
-        echo "Added x86_64 target for cross-compilation"
-
-    # Define the architectures and paths
-    - name: Set environment variables
-      run: |
-        echo "ARCHITECTURES=aarch64 x86_64" >> $GITHUB_ENV
-        echo "BUILD_PATH=target" >> $GITHUB_ENV
-        echo "echo 'Reusable variables for architecture and build paths set.'"
-
+      run: rustup target add x86_64-apple-darwin
+ 
     # Build for macOS (ARM)
     - name: Build for macOS (ARM)
       run: |
-        ARCHITECTURE="aarch64"
-        BUILD_PATH="${{ env.BUILD_PATH }}"
-        echo "Building for macOS $ARCHITECTURE (ARM)"
-        cargo build --release --target ${ARCHITECTURE}-apple-darwin
-        echo "Build completed for $ARCHITECTURE"
+        cargo build --release --target aarch64-apple-darwin
 
-    # Build for macOS (Intel)
-    - name: Build for macOS (Intel)
-      run: |
-        ARCHITECTURE="x86_64"
-        BUILD_PATH="${{ env.BUILD_PATH }}"
-        echo "Building for macOS $ARCHITECTURE (Intel)"
-        cargo build --release --target ${ARCHITECTURE}-apple-darwin
-        echo "Build completed for $ARCHITECTURE"
-
-    # Gzip the ARM binary as mac_arm.tar.gz
+    # Gzip the ARM binary as tod-<version>-macOS-arm64.tar.gz
     - name: Gzipping the ARM binary
-      run: |
-        ARCHITECTURE="aarch64"
-        BUILD_PATH="${{ env.BUILD_PATH }}"
-        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH/${ARCHITECTURE}-apple-darwin/release .
-        echo "Created $OUTPUT_FILE"
-
-    # Gzip the Intel binary as mac_x86.tar.gz
-    - name: Gzipping the Intel binary
-      run: |
-        ARCHITECTURE="x86_64"
-        BUILD_PATH="${{ env.BUILD_PATH }}"
-        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        tar -czf target/release/$OUTPUT_FILE -C $BUILD_PATH/${ARCHITECTURE}-apple-darwin/release .
-        echo "Created $OUTPUT_FILE"
+      run:
+        tar -czf target/release/tod-$VERSION-macOS-arm64.tar.gz -C target/aarch64-apple-darwin/release tod
 
     # Hash the release binary for ARM
     - name: Hash ARM release binary
       run: |
-        ARCHITECTURE="aarch64"
-        BUILD_PATH="${{ env.BUILD_PATH }}"
-        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
-        echo "${ARCHITECTURE} HASH: $HASH"
+        HASH=$(shasum -a 256 target/release/tod-$VERSION-macOS-arm64.tar.gz | awk '{print $1}')
+        echo "ARM HASH: $HASH"
+
+    # Build for macOS (Intel)
+    - name: Build for macOS (Intel)
+      run: |
+        cargo build --release --target x86_64-apple-darwin
+
+    # Gzip the Intel binary as tod-<version>-macOS-x86_64.tar.gz
+    - name: Gzipping the Intel binary
+      run: |
+        tar -czf target/release/tod-$VERSION-macOS-x86_64.tar.gz -C target/x86_64-apple-darwin/release tod
 
     # Hash the release binary for Intel
     - name: Hash Intel release binary
       run: |
-        ARCHITECTURE="x86_64"
-        BUILD_PATH="${{ env.BUILD_PATH }}"
-        OUTPUT_FILE="mac_${ARCHITECTURE}.tar.gz"
-        HASH=$(shasum -a 256 target/release/$OUTPUT_FILE | awk '{print $1}')
-        echo "${ARCHITECTURE} HASH: $HASH"
+        HASH=$(shasum -a 256 target/release/tod-$VERSION-macOS-x86_64.tar.gz | awk '{print $1}')
+        echo "Intel HASH: $HASH"
 
-    # Upload binaries to GitHub release using softprops/action-gh-release
-    - name: Upload binaries to GitHub release
-      uses: softprops/action-gh-release@v2.2.2
-      with:
-        files: |
-          target/release/mac_aarch64.tar.gz
-          target/release/mac_x86_64.tar.gz
-        token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}  # Use RELEASE_PAT token for authentication
+    # Upload Binaries to existing GitHub release using softprops/action-gh-release
+    - name: Upload macOS binaries
+      run: |
+        gh release upload "$VERSION" \
+          target/release/tod-$VERSION-macOS-arm64.tar.gz \
+          target/release/tod-$VERSION-macOS-x86_64.tar.gz \
+          --repo "$GITHUB_REPOSITORY" \
+          --clobber
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+        VERSION: ${{ env.VERSION }}

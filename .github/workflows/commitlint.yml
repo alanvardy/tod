@@ -1,0 +1,17 @@
+name: Commit Lint (main branch)
+on:
+    push:
+      branches:
+        - main
+  
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: wagoid/commitlint-github-action@v6
+      

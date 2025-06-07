@@ -9,6 +9,10 @@ env:
 
 name: ci
 
+permissions:
+  contents: read  # This grants read access specifically to the 'contents' scope
+
+
 jobs:
   test:
     runs-on: ubuntu-latest

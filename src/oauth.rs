@@ -145,7 +145,7 @@ mod tests {
 
         config.clone().create().await.unwrap();
 
-        assert_eq!(config.token, String::from("alreadycreated"));
+        assert_eq!(config.token, Some(String::from("alreadycreated")));
 
         let login_handle = tokio::spawn(async move { login(&mut config).await.unwrap() });
         tokio::time::sleep(std::time::Duration::from_millis(1000)).await;

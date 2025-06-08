@@ -172,7 +172,7 @@ pub async fn get_access_token(config: &Config, code: &str) -> Result<String, Err
     let url = ACCESS_TOKEN_URL.to_string();
     let body = json!({"code": code, "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET});
 
-    let json = request::post_todoist(config, url, body, true).await?;
+    let json = request::post_todoist_no_token(config, url, body, true).await?;
 
     oauth::json_to_access_token(json).map(|t| t.access_token)
 }

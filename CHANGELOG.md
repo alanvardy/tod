@@ -3,6 +3,7 @@
 ## Unreleased (on main branch only)
 
 - Added `auth login` for registering with `OAuth`
+- Allow user to choose `OAuth` or `Developer Token` on first run
 
 ## 2025-05-19 v0.7.7
 

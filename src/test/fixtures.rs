@@ -117,9 +117,10 @@ pub async fn task(days_in_future: i64) -> Task {
 pub async fn config() -> Config {
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel::<Error>();
 
-    Config::new("alreadycreated", Some(tx))
+    Config::new(Some(tx))
         .await
         .expect("Could not generate directory")
+        .with_token("alreadycreated")
         .with_projects(vec![project()])
         .with_time_provider(time::TimeProviderEnum::Fixed(FixedTimeProvider))
         .with_timezone("America/Vancouver")

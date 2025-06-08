@@ -11,6 +11,7 @@ use spinners::Spinner;
 use spinners::Spinners;
 use uuid::Uuid;
 
+use crate::color;
 use crate::config::Args;
 use crate::config::Config;
 use crate::debug;
@@ -21,6 +22,8 @@ const TODOIST_URL: &str = "https://api.todoist.com";
 
 const SPINNER: Spinners = Spinners::Dots4;
 const MESSAGE: &str = "Querying API";
+const HTTP_UNAUTHORIZED: u16 = 401;
+const HTTP_FORBIDDEN: u16 = 403;
 
 /// Post to Todoist via REST api
 /// We use this when we want more options and don't need natural language processing
@@ -151,10 +154,20 @@ async fn handle_response(
     url: String,
     body: serde_json::Value,
 ) -> Result<String, Error> {
-    if response.status().is_success() {
+    let status = response.status();
+    let status_code = status.as_u16();
+    if status.is_success() {
         let json_string = response.text().await?;
         debug::maybe_print(config, format!("{method} {url}\nresponse: {json_string}"));
         Ok(json_string)
+    } else if status_code == HTTP_UNAUTHORIZED || status_code == HTTP_FORBIDDEN {
+        let command = color::blue_string("tod auth login");
+        Err(Error::new(
+            "reqwest",
+            &format!(
+                "Unauthorized or Forbidden response from Todoist\nRun {command} to reauthenticate"
+            ),
+        ))
     } else {
         let json_string = response.text().await?;
         Err(Error::new(

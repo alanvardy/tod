@@ -959,6 +959,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_forbidden() {
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server
+            .mock("GET", "/api/v1/tasks/5149481867")
+            .with_status(403)
+            .with_header("content-type", "application/json")
+            .with_body(ResponseFromFile::TodayTask.read().await)
+            .create_async()
+            .await;
+
+        let config = test::fixtures::config().await.with_mock_url(server.url());
+
+        let error = get_task(&config, "5149481867").await.unwrap_err();
+        mock.assert();
+        assert_eq!(error.source, String::from("reqwest"));
+        assert_eq!(
+            error.message,
+            String::from(
+                "Unauthorized or Forbidden response from Todoist\nRun tod auth login to reauthenticate"
+            )
+        );
+    }
+
+    #[tokio::test]
     async fn test_update_task_priority() {
         let task = test::fixtures::today_task().await;
         let url: &str = &format!("{}{}", "/api/v1/tasks/", task.id);

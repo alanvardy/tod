@@ -9,11 +9,12 @@ use crate::{config::Config, todoist};
 
 use axum::{Router, extract::Query, routing::get};
 use std::sync::Arc;
-use tokio::sync::oneshot;
+use tokio::sync::oneshot::{self, Sender};
 
 pub const CLIENT_ID: &str = "2696d64dc4f745679e21181c56b489fe";
 pub const CLIENT_SECRET: &str = "bfde0d10e3d740beb47f95879881634e";
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
+const TRANSMIT_ERROR: &str = "Could not transmit";
 
 const LOCALHOST: &str = "127.0.0.1:8080";
 const SCOPE: &str = "data:read_write,data:delete,project:delete";
@@ -33,9 +34,9 @@ pub struct AccessToken {
     pub access_token: String,
 }
 
-pub async fn login(config: &mut Config) -> Result<String, Error> {
+pub async fn login(config: &mut Config, test_tx: Option<Sender<()>>) -> Result<String, Error> {
     let csrf_token = print_oauth_url();
-    let code = receive_callback(&csrf_token)
+    let code = receive_callback(&csrf_token, test_tx)
         .await?
         .code
         .ok_or_else(|| Error::new("params", "no code provided"))?;
@@ -54,7 +55,7 @@ fn print_oauth_url() -> String {
     csrf_token
 }
 
-async fn receive_callback(csrf_token: &str) -> Result<Params, Error> {
+async fn receive_callback(csrf_token: &str, tx: Option<Sender<()>>) -> Result<Params, Error> {
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let shutdown_signal = Arc::new(Mutex::new(Some(shutdown_tx)));
 
@@ -72,10 +73,10 @@ async fn receive_callback(csrf_token: &str) -> Result<Params, Error> {
 
                 if let Some(tx) = response.lock().await.take() {
                     if let Some(error_message) = params.error.clone() {
-                        tx.send(params).unwrap();
+                        tx.send(params).expect(TRANSMIT_ERROR);
                         format!("Error from Todoist: {error_message}")
                     } else {
-                        tx.send(params).unwrap();
+                        tx.send(params).expect(TRANSMIT_ERROR);
                         String::from(
                             "Success! You can close this window and return to your terminal.",
                         )
@@ -88,12 +89,15 @@ async fn receive_callback(csrf_token: &str) -> Result<Params, Error> {
     );
 
     let listener = tokio::net::TcpListener::bind(LOCALHOST).await?;
+    if let Some(tx) = tx {
+        // Let test suite know that are ready to call the server
+        tx.send(()).expect("failed to notify test");
+    };
     axum::serve(listener, app)
         .with_graceful_shutdown(async {
             shutdown_rx.await.ok();
         })
-        .await
-        .unwrap();
+        .await?;
 
     let params = response_rx.await?;
 
@@ -146,9 +150,11 @@ mod tests {
         config.clone().create().await.unwrap();
 
         assert_eq!(config.token, Some(String::from("alreadycreated")));
+        let (test_tx, test_rx) = oneshot::channel::<()>();
+        let login_handle =
+            tokio::spawn(async move { login(&mut config, Some(test_tx)).await.unwrap() });
 
-        let login_handle = tokio::spawn(async move { login(&mut config).await.unwrap() });
-        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        test_rx.await.unwrap();
 
         let params = [("code", "state"), ("state", FAKE_UUID)];
         let client = reqwest::Client::new();

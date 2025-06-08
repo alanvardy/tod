@@ -495,7 +495,7 @@ impl Config {
             let mut config = match input::select(TOKEN_METHOD, options, mock_select)? {
                 OAUTH => {
                     let mut config = self.clone();
-                    oauth::login(&mut config).await?;
+                    oauth::login(&mut config, None).await?;
                     config
                 }
                 DEVELOPER => {

@@ -924,7 +924,7 @@ async fn select_command(
 
 async fn auth_login(config: Config, _args: &AuthLogin) -> Result<String, Error> {
     let mut config = config;
-    oauth::login(&mut config).await
+    oauth::login(&mut config, None).await
 }
 async fn shell_completions(args: &ShellCompletions) -> Result<String, Error> {
     shell::generate_completions(args.shell);

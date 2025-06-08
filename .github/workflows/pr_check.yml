@@ -1,0 +1,24 @@
+
+
+name: 'Check Mergable by label ✅' 
+on:
+    pull_request:
+        branches:
+            - main
+        types:
+            - opened
+            - reopened
+            - synchronize
+            - edited
+            - labeled
+            - unlabeled
+
+jobs:
+  fail-by-label:
+    if: contains(github.event.pull_request.labels.*.name, 'Do Not Merge') || contains(github.event.pull_request.labels.*.name, 'do not merge') || contains(github.event.pull_request.labels.*.name, 'DNM') || contains(github.event.pull_request.labels.*.name, 'WIP')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if PR is labeled "do not merge"
+        run: |
+          echo "This PR is labeled as do not merge!"
+          exit 1

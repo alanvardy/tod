@@ -11,6 +11,7 @@ use spinners::Spinner;
 use spinners::Spinners;
 use uuid::Uuid;
 
+use crate::color;
 use crate::config::Args;
 use crate::config::Config;
 use crate::debug;
@@ -151,10 +152,17 @@ async fn handle_response(
     url: String,
     body: serde_json::Value,
 ) -> Result<String, Error> {
-    if response.status().is_success() {
+    let status = response.status();
+    if status.is_success() {
         let json_string = response.text().await?;
         debug::maybe_print(config, format!("{method} {url}\nresponse: {json_string}"));
         Ok(json_string)
+    } else if status.as_u16() == 401 || status.as_u16() == 403 {
+        let command = color::blue_string("tod auth login");
+        Err(Error::new(
+            "reqwest",
+            &format!("Unauthorized response from Todoist\nRun {command} to reauthenticate"),
+        ))
     } else {
         let json_string = response.text().await?;
         Err(Error::new(

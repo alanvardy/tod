@@ -67,6 +67,9 @@ tod t q -c Buy more milk today
 # See https://todoist.com/help/articles/use-task-quick-add-in-todoist-va4Lhpzz for more details
 tod t q -c Buy more milk today // with a description
 
+# Set a reminder
+tod t q -c Buy more milk today ! today 2pm
+
 # creates a task named "Clean my room" due on Tuesday at 1pm, with Priority of 2
 tod t q -c Clean my room on tuesday at 1pm p2
 

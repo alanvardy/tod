@@ -265,7 +265,7 @@ pub async fn import(config: &Config, file_path: &str) -> Result<String, Error> {
         .filter(|s| !s.is_empty())
         .collect();
     for line in lines {
-        todoist::quick_create_task(config, &line).await?;
+        todoist::quick_create_task(config, &line, None).await?;
     }
 
     Ok("✓".into())

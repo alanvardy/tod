@@ -1,17 +1,14 @@
-name: PR Tests
-# This workflow runs on pull requests to check code coverage using Codecov.
+name: Codecov
 
 permissions:
   contents: read  # Allow the workflow to read repository contents
   pull-requests: write  # Allow the workflow to write to pull requests
 
 on:
-  pull_request:
-    # Trigger the workflow on PR events, specifically when opened or updated.
-    
+  push:
+    # Trigger the workflow on push    
     paths:
       - '**/*.rs'  # Run only if there are changes in Rust source files.
-    types: [opened, synchronize, reopened]  # Triggers when the PR is opened, synchronized, or reopened.
 
 env:
   CARGO_TERM_COLOR: always

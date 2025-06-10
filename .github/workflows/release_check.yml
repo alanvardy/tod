@@ -23,17 +23,16 @@ jobs:
 
       - name: Check Version Consistency
         run: |
-          # Extract version from CHANGELOG.md (first vX.Y.Z in first 7 lines)
-          changelog_version=$(head -n 15 CHANGELOG.md | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1)
-          changelog_version_clean=${changelog_version#v}
-          echo "CHANGELOG.md version: ${changelog_version_clean}"
-
-          # Extract version from Cargo.toml
-          cargo_version=$(grep -oP '^version = "\d+\.\d+\.\d+"' Cargo.toml | sed 's/version = "//;s/"//')
+          # Extract version from CHANGELOG.md (matches: ## [0.8.0](...) or pre-releases like [1.0.0-rc.1])
+          changelog_version=$(grep -E '^## \[[0-9]+\.[0-9]+\.[0-9]+([-+a-zA-Z0-9.]*)?' CHANGELOG.md | head -n 1 | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+([-+a-zA-Z0-9.]*)?).*/\1/')
+          echo "CHANGELOG.md version: ${changelog_version}"
+          
+          # Extract version from Cargo.toml (handles pre-releases too)
+          cargo_version=$(grep '^version = "' Cargo.toml | head -n 1 | sed -E 's/version = "([0-9]+\.[0-9]+\.[0-9]+([-+a-zA-Z0-9.]*)?)"/\1/')
           echo "Cargo.toml version: ${cargo_version}"
-
-          # Compare versions
-          if [[ "${changelog_version_clean}" == "${cargo_version}" ]]; then
+          
+          # Compare
+          if [[ "${changelog_version}" == "${cargo_version}" ]]; then
             echo "✅ Version check passed"
           else
             echo "❌ Version mismatch between CHANGELOG.md and Cargo.toml"

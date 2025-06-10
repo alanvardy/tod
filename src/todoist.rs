@@ -84,8 +84,8 @@ pub async fn test_all_endpoints(config: Config) -> Result<String, Error> {
     delete_task(&config, &task, false).await?;
 
     println!("Creating two tasks with quick_add_task");
-    let _task = quick_create_task(&config, &name).await?;
-    let task = quick_create_task(&config, &name).await?;
+    let _task = quick_create_task(&config, &name, None).await?;
+    let task = quick_create_task(&config, &name, Some(String::from("tomorrow"))).await?;
 
     println!("Finding tasks with tasks_for_project");
     let _tasks = all_tasks_by_project(&config, &project, Some(1)).await?;
@@ -153,9 +153,13 @@ pub async fn get_v1_ids(
 }
 
 /// Add a new task to the inbox with natural language support
-pub async fn quick_create_task(config: &Config, content: &str) -> Result<Task, Error> {
+pub async fn quick_create_task(
+    config: &Config,
+    content: &str,
+    reminder: Option<String>,
+) -> Result<Task, Error> {
     let url = format!("{TASKS_URL}quick");
-    let body = json!({"text": content, "auto_reminder": true});
+    let body = json!({"text": content, "auto_reminder": true, "reminder": reminder});
 
     let json = request::post_todoist(config, url, body, true).await?;
     maybe_run_command(config.task_create_command.as_deref()).await;
@@ -713,7 +717,7 @@ mod tests {
             .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider));
 
         assert_eq!(
-            quick_create_task(&config, "testy test").await,
+            quick_create_task(&config, "testy test", None).await,
             Ok(test::fixtures::today_task().await)
         );
         mock.assert();

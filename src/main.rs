@@ -270,7 +270,8 @@ enum TaskCommands {
 #[derive(Parser, Debug, Clone)]
 struct TaskQuickAdd {
     #[arg(short, long, num_args(1..))]
-    /// Content for task
+    /// Content for task. Add a reminder at the end by prefixing the natural language date with `!`.
+    /// Example: Get milk on sunday !saturday 4pm
     content: Option<Vec<String>>,
 }
 
@@ -941,7 +942,17 @@ async fn task_quick_add(config: Config, args: &TaskQuickAdd) -> Result<String, E
     let TaskQuickAdd { content } = args;
     let maybe_string = content.as_ref().map(|c| c.join(" "));
     let content = fetch_string(maybe_string.as_deref(), &config, input::CONTENT)?;
-    todoist::quick_create_task(&config, &content).await?;
+    let (content, reminder) = if let Some(index) = content.find('!') {
+        let (before, after) = content.split_at(index);
+        // after starts with '!', so skip it
+        (
+            before.trim().to_string(),
+            Some(after[1..].trim().to_string()),
+        )
+    } else {
+        (content, None)
+    };
+    todoist::quick_create_task(&config, &content, reminder).await?;
     Ok(color::green_string("✓"))
 }
 

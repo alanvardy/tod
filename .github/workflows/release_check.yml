@@ -24,7 +24,7 @@ jobs:
       - name: Check Version Consistency
         run: |
           # Extract version from CHANGELOG.md (first vX.Y.Z in first 7 lines)
-          changelog_version=$(head -n 15 CHANGELOG.md | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1)
+          changelog_version=$(head -n 14 CHANGELOG.md | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1)
           changelog_version_clean=${changelog_version#v}
           echo "CHANGELOG.md version: ${changelog_version_clean}"
 

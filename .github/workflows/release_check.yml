@@ -1,3 +1,4 @@
+# This workflow checks for version consistency between the CHANGELOG.md and Cargo.toml files in a pull request. 
 name: Release Check
 
 on:

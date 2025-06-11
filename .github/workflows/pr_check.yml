@@ -1,4 +1,4 @@
-
+# This workflow checks if a pull request is labeled with "do not merge" or "WIP" and fails any jobs if the tag exists.
 
 name: 'Check PR Merge' 
 permissions:

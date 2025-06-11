@@ -1,3 +1,5 @@
+# This workflow runs on all PRs and ensures they are formatted using Conventional Commits (https://www.conventionalcommits.org/), rejecting any that do not conform to the commit message standards.
+
 name: Commit Lint (main branch)
 
 on: [pull_request]  

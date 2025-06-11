@@ -317,26 +317,7 @@ impl Config {
             .read_to_string(&mut json)
             .await?;
 
-        let config: Config = match serde_json::from_str(&json) {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!(
-                    "\n{}",
-                    color::red_string(&format!(
-                        "Error loading config file '{}':\n{}\n\
-                    \nYour config may contain an invalid value (e.g., a number over 255 in a `u8` field like `sort_value`).\n\
-                    Please manually fix or delete the file.",
-                        path, e
-                    ))
-                );
-                if cfg!(test) {
-                    return Err(e.into());
-                } else {
-                    std::process::exit(1);
-                }
-            }
-        };
-
+        let config: Config = serde_json::from_str(&json).map_err(|e| config_load_error(e, path))?;
         let config = if config.sort_value.is_none() {
             Config {
                 sort_value: Some(SortValue::default()),
@@ -514,6 +495,21 @@ impl Config {
             Ok(self)
         }
     }
+}
+
+fn config_load_error(error: serde_json::Error, path: &str) -> Error {
+    let source = "serde_json";
+    let message = format!(
+        "\n{}",
+        color::red_string(&format!(
+            "Error loading config file '{}':\n{}\n\
+                    \nYour config may contain an invalid value (e.g., a number over 255 in a `u8` field like `sort_value`).\n\
+                    Please manually fix or delete the file.",
+            path, error
+        ))
+    );
+
+    Error::new(source, &message)
 }
 
 impl Default for Config {

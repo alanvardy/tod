@@ -1,9 +1,9 @@
-name: Linux Build & Release & Cargo Registry
 # This GitHub Actions workflow builds the tod application for Linux x86_64 and ARM64,
-# packages the binaries, uploads them to a GitHub release, and publishes the package to the Cargo registry.
+# packages the binaries, uploads them to a GitHub release.
 # It also runs tests using nextest to ensure code quality before the release.
 # It is triggered by a push with a version tag (e.g., v1.0.0), typically from a release-please release.
 
+name: Linux Build & Release
 on:
   push:
     tags:
@@ -115,15 +115,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
           VERSION: ${{ env.VERSION }}
-  
-  linux-cargo-release:
-    name: Release Cargo Registry
-    runs-on: ubuntu-latest
-    needs: [linux-build-x86] # Wait for build to complete before uploading to cargo registry
-    steps:
-      - uses: actions/checkout@v4
-      - run: cargo install auto-release
-      - run: auto-release -p <package>
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-

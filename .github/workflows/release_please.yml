@@ -1,3 +1,5 @@
+# This workflow uses the release-please GitHub Action to automate the release process. It automatically creates new releases based on the commit history and versioning strategy defined in the Cargo.toml file. The action is triggered on pushes to the main branch.
+
 on:
     push:
       branches:

@@ -1,5 +1,8 @@
-on:
-  [push, pull_request]
+# This file performs CI testing for Tod using GitHub Actions.
+# It runs tests, checks code quality, and ensures no TODO/FIXME comments are left in the code.
+
+
+on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,6 +20,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Run all tests using nextest
     name: Cargo CI Tests
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +44,7 @@ jobs:
           cache-all-crates: true
       - name: Check
         run: cargo check --locked --all-features
-
+#Lint Check for any TODO or FIXME comments in the codebase.
   todos:
     name: TODO and FIXME 
     runs-on: ubuntu-latest
@@ -55,7 +59,7 @@ jobs:
       - run: ./scripts/lint_string.sh "fixme "
       - run: ./scripts/lint_string.sh "fixme:"
       - run: ./scripts/lint_string.sh "dbg!"
-
+  #Ensure code is formatted correctly using Rust's formatting tool (rustfmt).
   fmt:
     name: Rust-fmt (Cargo Format)
     runs-on: ubuntu-latest
@@ -67,7 +71,7 @@ jobs:
          cache-all-crates: true
       - run: rustup component add rustfmt
       - run: cargo fmt --all -- --check
-
+# Lint code using Clippy, a Rust linter that helps catch common mistakes and improve code quality.
   clippy:
     name: Clippy (Cargo Clippy Lint Check)
     runs-on: ubuntu-latest

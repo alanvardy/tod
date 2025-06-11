@@ -1,8 +1,7 @@
-name: macOS Build & Release
 # This runs an OS-specific test, then builds and releases binaries for macOS (ARM and Intel) and publishes them to GitHub.
 # It is triggered by push with a version tag is present (generally from a release-please release)
 
-
+name: macOS Build & Release
 permissions:
   contents: write  # Allow the workflow to write to the repository contents
   pull-requests: write  # Allow the workflow to write to pull requests

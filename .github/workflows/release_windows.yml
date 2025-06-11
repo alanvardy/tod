@@ -1,9 +1,8 @@
-name: Windows Build & Release
 # This workflow builds the Windows x86_64 binary and uploads it to a GitHub release.
 # It is triggered by a push with a version tag (e.g., v1.0.0), typically from a release-please release.
 # It also allows manual triggering for testing purposes.
 
-
+name: Windows Build & Release
 on:
   push:
     tags:
@@ -63,16 +62,16 @@ jobs:
       - name: Zip the Windows binary
         run: |
           Compress-Archive -Path target\x86_64-pc-windows-msvc\release\tod.exe `
-                          -DestinationPath target\release\tod-${env:VERSION}-windows-x86_64.zip
+                          -DestinationPath target\release\tod-${env:VERSION}-Windows-x86_64.zip
 
       - name: Hash the ZIP
         run: |
-          Get-FileHash target\release\tod-${env:VERSION}-windows-x86_64.zip -Algorithm SHA256
+          Get-FileHash target\release\tod-${env:VERSION}-Windows-x86_64.zip -Algorithm SHA256
 
       - name: Upload to GitHub Release
         run: |
           gh release upload "$env:VERSION" `
-          "target/release/tod-${env:VERSION}-windows-x86_64.zip" `
+          "target/release/tod-${env:VERSION}-Windows-x86_64.zip" `
           --repo "$env:GITHUB_REPOSITORY" `
           --clobber
         env:

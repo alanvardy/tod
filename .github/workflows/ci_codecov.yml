@@ -1,3 +1,5 @@
+# This workflow is designed to run tests and collect code coverage data using Codecov to ensure code quality.
+
 name: Codecov
 
 permissions:
@@ -33,6 +35,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-tarpaulin
+          # Run cargo-tarpaulin to collect code coverage data and upload it to Codecov
       - name: Run tests with coverage
         run: cargo tarpaulin --all-features --out xml --frozen --skip-clean
       - name: Upload to codecov.io

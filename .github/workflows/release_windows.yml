@@ -27,13 +27,32 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repo
+      # Checkout the repository
+      - name: Checkout repository
         uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
 
-      - name: Install Rust target (if needed)
+      # Run Platform Tests
+      - name: Run tests using cargo-nextest
+        run: cargo nextest run --all-features  # Run all tests with nextest.
+        continue-on-error: false  # Fail the job if tests do not pass
+
+      - name: Install Rust target for Windows
         run: rustup target add x86_64-pc-windows-msvc
 
-      - name: Get version
+      # Get version from Cargo.toml
+      - name: get VERSION from Cargo.toml
+        id: cargo-get
+        uses: nicolaiunrein/cargo-get@master
+        with:
+          subcommand: package.version 
+      
+      - name: Set version variable
         id: version
         shell: bash
         run: echo "VERSION=$(cargo get package.version --pretty)" >> $GITHUB_ENV
@@ -53,8 +72,8 @@ jobs:
       - name: Upload to GitHub Release
         run: |
           gh release upload "$env:VERSION" `
-            "target/release/tod-${env:VERSION}-windows-x86_64.zip" `
-            --repo "$env:GITHUB_REPOSITORY" `
-            --clobber
+          "target/release/tod-${env:VERSION}-windows-x86_64.zip" `
+          --repo "$env:GITHUB_REPOSITORY" `
+          --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}

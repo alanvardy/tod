@@ -26,8 +26,6 @@ jobs:
     # Checkout the repository
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.client_payload.ref }}  # Use the ref from the repository-dispatch payload to checkout the specific commit
 
     - uses: Swatinem/rust-cache@v2
       with:

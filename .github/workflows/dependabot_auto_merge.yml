@@ -11,6 +11,7 @@ on:
 jobs:
   auto-merge:
     name: Dependabot Auto Merge
+    # Only run on pull requests created by Dependabot
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:

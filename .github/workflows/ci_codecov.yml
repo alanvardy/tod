@@ -8,7 +8,9 @@ on:
   push:
     # Trigger the workflow on push    
     paths:
-      - '**/*.rs'  # Run only if there are changes in Rust source files.
+      - '**/*.rs'  # Run if there are changes in Rust source files.
+      - '**/*.json'  # Run if there are changes in JSON files.
+      - '**/*.lock'  # Run if there are changes in lock files.
 
 env:
   CARGO_TERM_COLOR: always
@@ -31,7 +33,7 @@ jobs:
         with:
           tool: cargo-tarpaulin
       - name: Run tests with coverage
-        run: cargo tarpaulin --all-features --out xml
+        run: cargo tarpaulin --all-features --out xml --frozen --skip-clean
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v5
 

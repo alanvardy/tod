@@ -1,4 +1,12 @@
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore: # Don't run on documentation or configuration only updates
+      - '**.md'
+      - '**.yaml'
+  pull_request:
+    paths-ignore: # Don't run on documentation or configuration only updates
+      - '**.md'
+      - '**.yaml'
 
 env:
   CARGO_TERM_COLOR: always

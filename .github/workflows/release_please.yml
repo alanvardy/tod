@@ -11,6 +11,8 @@ name: release-please
 jobs:
     release-please:
       runs-on: ubuntu-latest
+      # Skip/exclude Dependabot from auto triggering release-please
+      if: github.actor != 'dependabot[bot]'
       steps:
         - uses: googleapis/release-please-action@v4
           with:

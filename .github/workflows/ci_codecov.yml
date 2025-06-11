@@ -11,6 +11,7 @@ on:
       - '**/*.rs'  # Run if there are changes in Rust source files.
       - '**/*.json'  # Run if there are changes in JSON files.
       - '**/*.lock'  # Run if there are changes in lock files.
+      - '**/*.toml'  # Run if there are changes in TOML files.
 
 env:
   CARGO_TERM_COLOR: always

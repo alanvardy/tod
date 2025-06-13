@@ -24,5 +24,8 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
+**Verbose / Log Output**
+If encountering an error with Tod, Please provide the error output and attach/provide the debug/verbose output ('tod -v *command*')
+
 **Additional context**
 Add any other context about the problem here.

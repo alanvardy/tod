@@ -10,6 +10,8 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:  # Allow manual triggering of the workflow
+
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
@@ -39,7 +41,7 @@ jobs:
       run: cargo nextest run --all-features  # Run all tests with nextest.
       continue-on-error: false  # Fail the job if tests do not pass
 
-    # Get version from Cargo.toml
+    # Get version and tag from Cargo.toml
     - name: Set VERSION from Cargo.toml
       id: cargo-get
       uses: nicolaiunrein/cargo-get@master
@@ -49,51 +51,55 @@ jobs:
     # Set the version as an output variable
     - name: Set version output
       id: package-version
-      run: echo "VERSION=$(cargo get package.version --pretty)" >> $GITHUB_ENV
-    # Add the x86_64 target to cross-compile for Intel macOS
+      run: |
+        echo "VERSION=$(cargo get package.version)" >> $GITHUB_ENV
+        echo "TAG=$(cargo get package.version --pretty)" >> $GITHUB_ENV
+
+    # Add the x86_64 target to cross-compile for darwin (macOS Intel)
     - name: Add x86_64 target for cross-compilation
       run: rustup target add x86_64-apple-darwin
  
-    # Build for macOS (ARM)
+    # Build for darwin (macOS ARM)
     - name: Build for macOS (ARM)
       run: |
         cargo build --release --target aarch64-apple-darwin
 
-    # Gzip the ARM binary as tod-<version>-macOS-arm64.tar.gz
+    # Gzip the ARM binary as tod-<version>-darwin-arm64.tar.gz
     - name: Gzipping the ARM binary
       run:
-        tar -czf target/release/tod-$VERSION-macOS-arm64.tar.gz -C target/aarch64-apple-darwin/release tod
+        tar -czf target/release/tod-$VERSION-darwin-arm64.tar.gz -C target/aarch64-apple-darwin/release tod
 
     # Hash the release binary for ARM
     - name: Hash ARM release binary
       run: |
-        HASH=$(shasum -a 256 target/release/tod-$VERSION-macOS-arm64.tar.gz | awk '{print $1}')
+        HASH=$(shasum -a 256 target/release/tod-$VERSION-darwin-arm64.tar.gz | awk '{print $1}')
         echo "ARM HASH: $HASH"
 
-    # Build for macOS (Intel)
+    # Build for darwin (macOS amd64)
     - name: Build for macOS (Intel)
       run: |
         cargo build --release --target x86_64-apple-darwin
 
-    # Gzip the Intel binary as tod-<version>-macOS-x86_64.tar.gz
-    - name: Gzipping the Intel binary
+    # Gzip the x86 binary as tod-<version>-darwin-amd64.tar.gz
+    - name: Gzipping the x86 binary
       run: |
-        tar -czf target/release/tod-$VERSION-macOS-x86_64.tar.gz -C target/x86_64-apple-darwin/release tod
+        tar -czf target/release/tod-$VERSION-darwin-amd64.tar.gz -C target/x86_64-apple-darwin/release tod
 
-    # Hash the release binary for Intel
+    # Hash the release binary for amd64
     - name: Hash Intel release binary
       run: |
-        HASH=$(shasum -a 256 target/release/tod-$VERSION-macOS-x86_64.tar.gz | awk '{print $1}')
+        HASH=$(shasum -a 256 target/release/tod-$VERSION-darwin-amd64.tar.gz | awk '{print $1}')
         echo "Intel HASH: $HASH"
 
     # Upload Binaries to existing GitHub release using softprops/action-gh-release
-    - name: Upload macOS binaries
+    - name: Upload darwin (macOS) binaries
       run: |
-        gh release upload "$VERSION" \
-          target/release/tod-$VERSION-macOS-arm64.tar.gz \
-          target/release/tod-$VERSION-macOS-x86_64.tar.gz \
+        gh release upload "$TAG" \
+          target/release/tod-$VERSION-darwin-amd64.tar.gz \
+          target/release/tod-$VERSION-darwin-arm64.tar.gz \
           --repo "$GITHUB_REPOSITORY" \
           --clobber
       env:
         GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
         VERSION: ${{ env.VERSION }}
+        TAG: ${{ env.TAG }}

@@ -8,6 +8,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,7 +22,7 @@ env:
   CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
 
 jobs:
-  linux-build-x86:
+  linux-build-x86_64:
     name: Build & Upload Linux x86_64
     runs-on: ubuntu-latest
 
@@ -46,26 +47,29 @@ jobs:
         with:
           subcommand: package.version
 
-      - name: Get version
+      - name: Get version and tag
         id: version
-        run: echo "VERSION=$(cargo get package.version --pretty)" >> $GITHUB_ENV
+        run: |
+          echo "VERSION=$(cargo get package.version)" >> $GITHUB_ENV
+          echo "TAG=$(cargo get package.version --pretty)" >> $GITHUB_ENV
 
       - name: Build
         run: cargo build --release --target x86_64-unknown-linux-gnu
 
       - name: Package
         run: |
-          tar -czf target/release/tod-${{ env.VERSION }}-Linux-x86_64.tar.gz \
+          tar -czf target/release/tod-$VERSION-linux-amd64.tar.gz \
             -C target/x86_64-unknown-linux-gnu/release tod
-          shasum -a 256 target/release/tod-${{ env.VERSION }}-Linux-x86_64.tar.gz
+          shasum -a 256 target/release/tod-$VERSION-linux-amd64.tar.gz
 
       - name: Upload to Github
         run: |
-          gh release upload "$VERSION" \
-            target/release/tod-${VERSION}-Linux-x86_64.tar.gz \
+          gh release upload "$TAG" \
+            target/release/tod-$VERSION-linux-amd64.tar.gz \
             --repo "$GITHUB_REPOSITORY" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          TAG: ${{ env.TAG }}
           VERSION: ${{ env.VERSION }}
 
   linux-build-arm64:
@@ -93,24 +97,27 @@ jobs:
         with:
           subcommand: package.version
 
-      - name: Get version
+      - name: Get version and tag
         id: version
-        run: echo "VERSION=$(cargo get package.version --pretty)" >> $GITHUB_ENV
+        run: |
+          echo "VERSION=$(cargo get package.version)" >> $GITHUB_ENV
+          echo "TAG=$(cargo get package.version --pretty)" >> $GITHUB_ENV
 
       - name: Build
         run: cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Package
         run: |
-          tar -czf target/release/tod-${{ env.VERSION }}-Linux-arm64.tar.gz \
+          tar -czf target/release/tod-$VERSION-linux-arm64.tar.gz \
             -C target/aarch64-unknown-linux-gnu/release tod
-          shasum -a 256 target/release/tod-${{ env.VERSION }}-Linux-arm64.tar.gz
+          shasum -a 256 target/release/tod-$VERSION-linux-arm64.tar.gz
 
       - name: Upload to Github
         run: |
-          gh release upload "$VERSION" \
-            target/release/tod-${VERSION}-Linux-arm64.tar.gz \
+          gh release upload "$TAG" \
+            target/release/tod-$VERSION-linux-arm64.tar.gz \
             --repo "$GITHUB_REPOSITORY" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          TAG: ${{ env.TAG }}
           VERSION: ${{ env.VERSION }}

@@ -22,8 +22,8 @@ env:
   CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
 
 jobs:
-  linux-build-x86_64:
-    name: Build & Upload Linux x86_64
+  linux-build-amd64:
+    name: Build & Upload Linux AMD64
     runs-on: ubuntu-latest
 
     steps:

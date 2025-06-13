@@ -7,6 +7,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -43,17 +44,19 @@ jobs:
       - name: Install Rust target for Windows
         run: rustup target add x86_64-pc-windows-msvc
 
-      # Get version from Cargo.toml
+      # Get version and tag from Cargo.toml
       - name: get VERSION from Cargo.toml
         id: cargo-get
         uses: nicolaiunrein/cargo-get@master
         with:
           subcommand: package.version 
       
-      - name: Set version variable
+      - name: Set version and tag variable
         id: version
         shell: bash
-        run: echo "VERSION=$(cargo get package.version --pretty)" >> $GITHUB_ENV
+        run: |
+          echo "VERSION=$(cargo get package.version)" >> $GITHUB_ENV
+          echo "TAG=$(cargo get package.version --pretty)" >> $GITHUB_ENV
 
       - name: Build release binary
         run: cargo build --release --target x86_64-pc-windows-msvc
@@ -61,17 +64,19 @@ jobs:
       - name: Zip the Windows binary
         run: |
           Compress-Archive -Path target\x86_64-pc-windows-msvc\release\tod.exe `
-                          -DestinationPath target\release\tod-${env:VERSION}-Windows-x86_64.zip
+                          -DestinationPath target\release\tod-${env:VERSION}-windows-amd64.zip
 
       - name: Hash the ZIP
         run: |
-          Get-FileHash target\release\tod-${env:VERSION}-Windows-x86_64.zip -Algorithm SHA256
+          Get-FileHash target\release\tod-${env:VERSION}-windows-amd64.zip -Algorithm SHA256
 
       - name: Upload to GitHub Release
         run: |
-          gh release upload "$env:VERSION" `
-          "target/release/tod-${env:VERSION}-Windows-x86_64.zip" `
+          gh release upload "$env:TAG" `
+          "target/release/tod-${env:VERSION}-windows-amd64.zip" `
           --repo "$env:GITHUB_REPOSITORY" `
           --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          VERSION: ${{ env.VERSION }}
+          TAG: ${{ env.TAG }}

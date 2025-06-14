@@ -1016,4 +1016,29 @@ mod tests {
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("/tmp/test.cfg"));
     }
+    // Test function for max_comment_length
+    #[test]
+    fn max_comment_length_should_return_configured_value() {
+        let config = Config {
+            max_comment_length: Some(1234),
+            ..Config::default_test()
+        };
+
+        assert_eq!(config.max_comment_length(), 1234);
+    }
+
+    #[test]
+    fn max_comment_length_should_fallback_when_not_set() {
+        let config = Config {
+            max_comment_length: None,
+            ..Config::default_test()
+        };
+
+        let result = config.max_comment_length();
+
+        // In CI or test environments terminal_size might return None
+        // so just ensure it's a positive, nonzero value
+        assert!(result > 0);
+        assert!(result <= MAX_COMMENT_LENGTH);
+    }
 }

@@ -8,6 +8,7 @@ use crate::{VERSION, cargo, color, debug, input, oauth, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use terminal_size::{Height, terminal_size};
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
@@ -186,8 +187,19 @@ impl Config {
             Ok(new_projects)
         }
     }
-    pub fn max_comment_length(self: &Config) -> u32 {
-        self.max_comment_length.unwrap_or(MAX_COMMENT_LENGTH)
+    // Returns the maximum comment length if configured, otherwise estimates based on terminal window size (if supported)
+    pub fn max_comment_length(&self) -> u32 {
+        match self.max_comment_length {
+            Some(length) => length,
+            None => {
+                if let Some((_, Height(height))) = terminal_size() {
+                    let estimated = height.saturating_sub(3) as u32 * 80;
+                    estimated.min(MAX_COMMENT_LENGTH)
+                } else {
+                    MAX_COMMENT_LENGTH
+                }
+            }
+        }
     }
     pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
         let all_projects = todoist::all_projects(self, None).await?;

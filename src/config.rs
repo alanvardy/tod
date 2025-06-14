@@ -8,6 +8,7 @@ use crate::{VERSION, cargo, color, debug, input, oauth, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use terminal_size::{Height, terminal_size};
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
@@ -186,8 +187,19 @@ impl Config {
             Ok(new_projects)
         }
     }
-    pub fn max_comment_length(self: &Config) -> u32 {
-        self.max_comment_length.unwrap_or(MAX_COMMENT_LENGTH)
+    // Returns the maximum comment length if configured, otherwise estimates based on terminal window size (if supported)
+    pub fn max_comment_length(&self) -> u32 {
+        match self.max_comment_length {
+            Some(length) => length,
+            None => {
+                if let Some((_, Height(height))) = terminal_size() {
+                    let estimated = height.saturating_sub(3) as u32 * 80;
+                    estimated.min(MAX_COMMENT_LENGTH)
+                } else {
+                    MAX_COMMENT_LENGTH
+                }
+            }
+        }
     }
     pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
         let all_projects = todoist::all_projects(self, None).await?;
@@ -1003,5 +1015,30 @@ mod tests {
         // Check some expected fields are present in the debug output
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("/tmp/test.cfg"));
+    }
+    // Test function for max_comment_length
+    #[test]
+    fn max_comment_length_should_return_configured_value() {
+        let config = Config {
+            max_comment_length: Some(1234),
+            ..Config::default_test()
+        };
+
+        assert_eq!(config.max_comment_length(), 1234);
+    }
+
+    #[test]
+    fn max_comment_length_should_fallback_when_not_set() {
+        let config = Config {
+            max_comment_length: None,
+            ..Config::default_test()
+        };
+
+        let result = config.max_comment_length();
+
+        // In CI or test environments terminal_size might return None
+        // so just ensure it's a positive, nonzero value
+        assert!(result > 0);
+        assert!(result <= MAX_COMMENT_LENGTH);
     }
 }

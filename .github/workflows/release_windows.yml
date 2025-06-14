@@ -45,7 +45,7 @@ jobs:
         run: rustup target add x86_64-pc-windows-msvc
 
       # Get version and tag from Cargo.toml
-      - name: get VERSION from Cargo.toml
+      - name: get VERSION and tag from Cargo.toml
         id: cargo-get
         uses: nicolaiunrein/cargo-get@master
         with:

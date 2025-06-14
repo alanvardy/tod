@@ -26,4 +26,4 @@ Project maintainers have the right to remove, edit, or reject comments, commits,
 
 ## Contact
 
-If you have any questions or experience abuse, please contact the project maintainer at [your-email@example.com].
+If you have any questions or experience abuse, please contact the project maintainer at [alan@vardy.cc].

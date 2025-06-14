@@ -42,7 +42,7 @@ jobs:
       continue-on-error: false  # Fail the job if tests do not pass
 
     # Get version and tag from Cargo.toml
-    - name: Set VERSION from Cargo.toml
+    - name: Set VERSION and TAG from Cargo.toml
       id: cargo-get
       uses: nicolaiunrein/cargo-get@master
       with:

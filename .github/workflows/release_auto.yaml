@@ -3,7 +3,9 @@ name: Release Automation
 on:
   push:
     branches: [main]
+  workflow_dispatch: #Allows manual triggering of the workflow
 
+    
 permissions:
   contents: write
   pull-requests: write

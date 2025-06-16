@@ -1,0 +1,84 @@
+name: Release Automation
+
+# This workflow automates the release process for the tod application.
+# It automatically triggers each step in the release process:
+# 1. Comments on the start of the release process.
+# 2. Builds the application.
+# 3. Uploads build artifacts.
+# 4. Publishes the release.
+# 5. Comments on the completion of the release process.
+# It is triggered manually or by the release-please action when a new release is published.
+# The workflow uses the GitHub CLI to comment on the associated pull request with the status of the release process.
+# The workflow requires the `TOD_CONTENTS_READ_WRITE` secret to be set for authentication with the GitHub API.
+
+on:
+  workflow_dispatch:  # manual trigger
+  release:
+    types: [published]  # triggered by release-please
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  comment-start:
+    name: Comment on release start
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+
+      - name: Comment with build start status
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          PR_NUMBER=$(gh pr list --search "$TAG_NAME" --json number --jq '.[0].number' || echo "")
+
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr comment "$PR_NUMBER" --body "🚀 Autorelease process for \`$TAG_NAME\` started. [View workflow run]($RUN_URL)"
+          else
+            echo "No associated PR found for tag $TAG_NAME"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+
+  build:
+    name: Build Matrix
+    needs: comment-start
+    uses: ./.github/workflows/release_build_test.yml
+
+  upload:
+    name: Upload Artifacts
+    needs: build
+    uses: ./.github/workflows/release_upload.yml
+    secrets:
+      TOD_CONTENTS_READ_WRITE: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+
+  publish:
+    name: Publish Release
+    needs: upload
+    uses: ./.github/workflows/release_publish.yml
+    secrets:
+      TOD_CONTENTS_READ_WRITE: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+
+  comment-complete:
+    name: Notify of release completion
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+
+      - name: Comment with release completion
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          PR_NUMBER=$(gh pr list --search "$TAG_NAME" --json number --jq '.[0].number' || echo "")
+
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr comment "$PR_NUMBER" --body "✅ Publication of release for \`$TAG_NAME\` completed successfully! [View workflow run]($RUN_URL)"
+          else
+            echo "No associated PR found for tag $TAG_NAME"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}

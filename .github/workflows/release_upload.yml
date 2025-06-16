@@ -1,0 +1,64 @@
+name: Upload Release Artifacts
+
+on:
+  workflow_call:
+    secrets:
+      TOD_CONTENTS_READ_WRITE:
+        required: true
+permissions:
+  contents: write
+
+jobs:
+  upload:
+    name: Collect, package, and upload release artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-artifacts
+          path: dist/linux
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-artifacts
+          path: dist/macos
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist/windows
+
+      - name: Compress binaries into release tarballs
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          mkdir -p final
+
+          tar -czvf "final/tod-${TAG}-linux-amd64.tar.gz" -C dist/linux x86_64-unknown-linux-gnu/release/tod
+          tar -czvf "final/tod-${TAG}-linux-arm64.tar.gz" -C dist/linux aarch64-unknown-linux-gnu/release/tod
+
+          tar -czvf "final/tod-${TAG}-darwin-amd64.tar.gz" -C dist/macos x86_64-apple-darwin/release/tod
+          tar -czvf "final/tod-${TAG}-darwin-arm64.tar.gz" -C dist/macos aarch64-apple-darwin/release/tod
+
+          zip -j "final/tod-${TAG}-windows-x86_64.zip" dist/windows/x86_64-pc-windows-msvc/release/tod.exe
+
+      - name: Generate SHA256 hashes
+        run: |
+          cd final
+          sha256sum * > hashes.txt
+          cat hashes.txt
+
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+
+      - name: Upload artifacts using gh CLI
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          for file in final/*; do
+            gh release upload "$TAG" "$file" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}

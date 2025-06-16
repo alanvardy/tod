@@ -1,0 +1,66 @@
+name: Release Build & Test
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  build-test:
+    name: Build and test for all platforms
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            target1: x86_64-unknown-linux-gnu
+            target2: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            platform: macos
+            target1: x86_64-apple-darwin
+            target2: aarch64-apple-darwin
+          - os: windows-latest
+            platform: windows
+            target1: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add cross targets
+        run: |
+          rustup target add ${{ matrix.target1 }}
+          if [ -n "${{ matrix.target2 }}" ]; then rustup target add ${{ matrix.target2 }}; fi
+        shell: bash
+
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: Run tests with nextest (Linux & macOS)
+        if: matrix.platform != 'windows'
+        run: cargo nextest run
+
+      - name: Run tests (fallback for Windows)
+        if: matrix.platform == 'windows'
+        run: cargo test
+
+      - name: Build binaries
+        run: |
+          cargo build --release --target ${{ matrix.target1 }}
+          if [ -n "${{ matrix.target2 }}" ]; then cargo build --release --target ${{ matrix.target2 }}; fi
+        shell: bash
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-artifacts
+          path: |
+            target/${{ matrix.target1 }}/release/tod*
+            ${{ matrix.target2 && format('target/{0}/release/tod*', matrix.target2) || '' }}

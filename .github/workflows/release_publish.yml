@@ -1,0 +1,37 @@
+name: Release to Registries
+
+on:
+  workflow_call:
+    secrets:
+      TOD_CONTENTS_READ_WRITE:
+        required: true
+permissions:
+  contents: write
+
+jobs:
+  publish-cargo:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        run: |
+          cargo publish --locked --no-verify --verbose
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  trigger-homebrew:
+    name: Dispatch to homebrew-tod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger homebrew-tod update
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          repository: stacksj/homebrew-tod
+          event-type: update-homebrew

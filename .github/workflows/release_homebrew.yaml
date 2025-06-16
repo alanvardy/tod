@@ -1,0 +1,26 @@
+name: Release Homebrew Formula
+
+on:
+  workflow_dispatch:  # Allows manual triggering
+
+  workflow_run:       # Automatically trigger when both jobs succeed
+    workflows: ["macOS Build & Release", "Linux Build & Release"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-homebrew-update:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    name: Dispatch to homebrew-tod
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger homebrew-tod update
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          repository: alanvardy/homebrew-tod
+          event-type: update-homebrew

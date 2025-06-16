@@ -1,5 +1,4 @@
 # ![Tod](tod-crop.jpeg)
-
 [![Build Status](https://github.com/alanvardy/tod/workflows/ci/badge.svg)](https://github.com/alanvardy/tod) [![codecov](https://codecov.io/gh/alanvardy/tod/graph/badge.svg)](https://codecov.io/gh/alanvardy/tod) [![Crates.io](https://img.shields.io/crates/v/tod.svg)](https://crates.io/crates/tod) [![Dependabot Updates](https://github.com/alanvardy/tod/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/alanvardy/tod/actions/workflows/dependabot/dependabot-updates)
 
 [![Linux Build & Release](https://github.com/alanvardy/tod/actions/workflows/release_linux.yml/badge.svg)](https://github.com/alanvardy/tod/actions/workflows/release_linux.yml)

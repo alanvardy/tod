@@ -5,6 +5,9 @@ on:
     secrets:
       TOD_CONTENTS_READ_WRITE:
         required: true
+      CARGO_REGISTRY_TOKEN:
+        required: true
+        
 permissions:
   contents: write
 

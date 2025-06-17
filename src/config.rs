@@ -1,6 +1,7 @@
 use crate::cargo::Version;
 use crate::errors::Error;
 use crate::id::Resource;
+use crate::input::page_size;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
 use crate::time::{SystemTimeProvider, TimeProviderEnum};
@@ -8,7 +9,7 @@ use crate::{VERSION, cargo, color, debug, input, oauth, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use terminal_size::{Height, terminal_size};
+use terminal_size::{Height, Width, terminal_size};
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc::UnboundedSender;
@@ -192,8 +193,10 @@ impl Config {
         match self.max_comment_length {
             Some(length) => length,
             None => {
-                if let Some((_, Height(height))) = terminal_size() {
-                    let estimated = height.saturating_sub(3) as u32 * 80;
+                if let Some((Width(width), Height(height))) = terminal_size() {
+                    let menu_height = page_size() as u16;
+                    let comment_rows = height.saturating_sub(menu_height);
+                    let estimated = comment_rows as u32 * width as u32;
                     estimated.min(MAX_COMMENT_LENGTH)
                 } else {
                     MAX_COMMENT_LENGTH
@@ -201,6 +204,7 @@ impl Config {
             }
         }
     }
+
     pub async fn reload_projects(self: &mut Config) -> Result<String, Error> {
         let all_projects = todoist::all_projects(self, None).await?;
         let current_projects = self.projects.clone().unwrap_or_default();

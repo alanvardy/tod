@@ -148,7 +148,7 @@ pub async fn render_comments(config: &Config, comments: Vec<Comment>) -> Result<
 
     if formatted_string.len() > max_comment_length {
         formatted_string.truncate(max_comment_length);
-        formatted_string.push_str("[TRUNCATED]");
+        formatted_string.push_str("...");
     };
 
     Ok(formatted_string)

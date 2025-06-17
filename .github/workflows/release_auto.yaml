@@ -28,7 +28,7 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
           release-type: rust
 
   tag-major-minor:

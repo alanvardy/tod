@@ -124,6 +124,8 @@ Holds a string date, i.e. `"2023-08-30"` representing the last time crates.io wa
 
 The maximum number of characters that will be printed in total when showing comments.
 
+If not set, this is dynamically calculated at runtime based on terminal window size (using the `term_size` crate).
+
 ### next_id
 
 ``` json

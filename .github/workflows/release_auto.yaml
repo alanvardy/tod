@@ -1,18 +1,22 @@
-name: Release Automation
+name: Auto Release & Publish
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: #Allows manual triggering of the workflow
 
-    
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
+  skip-dependabot:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Skipping release workflow for Dependabot PR"
+
   release-please:
-    name: Run release-please
+    name: Release-please
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]'
     outputs:
@@ -28,7 +32,7 @@ jobs:
           release-type: rust
 
   tag-major-minor:
-    name: Tag release
+    name: Tag Release
     runs-on: ubuntu-latest
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
@@ -38,7 +42,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Update Version Tags
+      - name: Create/update version tags
         run: |
           git fetch --tags
           git tag -f v${{ needs.release-please.outputs.major }}
@@ -47,39 +51,52 @@ jobs:
           git push origin -f v${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}
 
   build:
-    name: Build Release
+    name: Build Targets
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     uses: ./.github/workflows/release_build_test.yml
 
   upload:
-    name: Upload Release
+    name: Upload Build
     needs: build
     uses: ./.github/workflows/release_upload.yml
     secrets:
       TOD_CONTENTS_READ_WRITE: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
 
   publish:
-    name: Publish Release
+    name: Publish to registries
     needs: upload
     uses: ./.github/workflows/release_publish.yml
     secrets:
       TOD_CONTENTS_READ_WRITE: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  comment-complete:
-    name: Release Complete!
+  forward-release-outputs:
+    name: Forward release outputs
     runs-on: ubuntu-latest
-    needs: publish
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    outputs:
+      tag_name: ${{ needs.release-please.outputs.tag_name }}
     steps:
-       - run: |
-          sudo apt-get install gh -y
-          TAG="${{ needs.release-please.outputs.tag_name }}"
+      - run: echo "Forwarding tag_name ${{ needs.release-please.outputs.tag_name }}"
+
+  comment-complete:
+    name: Notify release complete
+    runs-on: ubuntu-latest
+    needs: [publish, forward-release-outputs]
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+
+      - name: Comment on original PR
+        run: |
+          TAG="${{ needs.forward-release-outputs.outputs.tag_name }}"
           PR_NUMBER=$(gh pr list --search "$TAG" --json number --jq '.[0].number' || echo "")
           if [ -n "$PR_NUMBER" ]; then
             gh pr comment "$PR_NUMBER" --body "✅ Release \`$TAG\` completed successfully! [View run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
           else
             echo "No associated PR found for tag $TAG"
           fi
-         env:
-           GH_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+        env:
+          GH_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}

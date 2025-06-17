@@ -200,7 +200,7 @@ pub fn multi_select<T: Display>(
 }
 
 /// Gets the desired number of visible options for select menu and adjusts size
-fn page_size() -> usize {
+pub fn page_size() -> usize {
     match terminal_size() {
         Some((Width(_), Height(height))) if height >= 6 => (height - 3).into(),
         // We don't want less than 3 options

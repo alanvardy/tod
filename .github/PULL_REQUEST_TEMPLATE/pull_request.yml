@@ -1,0 +1,49 @@
+name: 📦 Pull Request
+description: Submit a PR for review
+title: "[TYPE] <your PR title here>"
+
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 📄 Summary
+      description: Briefly describe what this PR does and why it’s needed.
+      placeholder: |
+        This PR introduces...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: change_type
+    attributes:
+      label: 🛠 Type of Change
+      description: Select the type of change this PR introduces.
+      options:
+        - ✨ Feature (new functionality)
+        - 🐛 Fix (bug fixes)
+        - 📝 Docs (documentation only)
+        - 🎨 Style (formatting, missing semi colons, etc.)
+        - ♻️ Refactor (non-breaking change, no new features)
+        - 🚨 Tests (adding or updating tests)
+        - 🔧 Chore (maintenance, tooling, or other misc items)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: requirements
+    attributes:
+      label: ✅ Requirements
+      description: Confirm all items below before requesting a review.
+      options:
+        - label: My commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format
+        - label: All CI checks pass
+        - label: Documentation was updated if necessary
+        - label: This PR is ready for **review**
+
+  - type: textarea
+    id: related_issues
+    attributes:
+      label: 🔗 Related Issues
+      description: Link any related issues (e.g., `Closes #123`, `Fixes #456`).
+      placeholder: |
+        Closes #...

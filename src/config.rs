@@ -7,6 +7,7 @@ use crate::tasks::Task;
 use crate::time::{SystemTimeProvider, TimeProviderEnum};
 use crate::{VERSION, cargo, color, debug, input, oauth, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use terminal_size::{Height, Width, terminal_size};
@@ -33,7 +34,7 @@ pub struct Completed {
 
 /// App configuration, serialized as json in $XDG_CONFIG_HOME/tod.cfg
 #[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(default, deny_unknown_fields)]
 pub struct Config {
     /// The Todoist Api token
     pub token: Option<String>,
@@ -62,6 +63,9 @@ pub struct Config {
     pub task_complete_command: Option<String>,
     /// A command to run on task comment creation
     pub task_comment_command: Option<String>,
+    /// Regex to exclude tasks
+    #[serde(with = "serde_regex")]
+    pub task_exclude_regex: Option<Regex>,
     /// The timezone to use for the config
     timezone: Option<String>,
     pub timeout: Option<u64>,
@@ -75,8 +79,12 @@ pub struct Config {
     #[serde(default)]
     pub disable_links: bool,
     pub completed: Option<Completed>,
-    // Maximum length for printing comments
+    /// Maximum length for printing comments
     pub max_comment_length: Option<u32>,
+    /// Regex to exclude specific comments
+    #[serde(with = "serde_regex")]
+    pub comment_exclude_regex: Option<Regex>,
+
     pub verbose: Option<bool>,
     /// Don't ask for sections
     pub no_sections: Option<bool>,
@@ -104,7 +112,6 @@ pub struct Args {
     pub verbose: bool,
     pub timeout: Option<u64>,
 }
-
 #[derive(Default, Clone, Debug)]
 pub struct Internal {
     pub tx: Option<UnboundedSender<Error>>,
@@ -370,6 +377,8 @@ impl Config {
             mock_string: None,
             mock_select: None,
             max_comment_length: None,
+            comment_exclude_regex: None,
+            task_exclude_regex: None,
             verbose: None,
             internal: Internal { tx },
             args: Args {
@@ -522,8 +531,8 @@ fn config_load_error(error: serde_json::Error, path: &str) -> Error {
         "\n{}",
         color::red_string(&format!(
             "Error loading config file '{}':\n{}\n\
-                    \nYour config may contain an invalid value (e.g., a number over 255 in a `u8` field like `sort_value`).\n\
-                    Please manually fix or delete the file.",
+                    \nYour config contains an invalid value \n\
+                    Please run manually fix or run 'tod config reset' to delete the file.",
             path, error
         ))
     );
@@ -545,6 +554,8 @@ impl Default for Config {
             task_create_command: None,
             task_complete_command: None,
             task_comment_command: None,
+            task_exclude_regex: None,
+            comment_exclude_regex: None,
             sort_value: Some(SortValue::default()),
             timezone: None,
             completed: None,
@@ -576,44 +587,34 @@ pub async fn get_or_create(
     timeout: Option<u64>,
     tx: &UnboundedSender<Error>,
 ) -> Result<Config, Error> {
-    match get(config_path.clone(), verbose, timeout, tx).await {
-        Ok(config) => config.maybe_set_token().await,
-        Err(_) => {
-            // File not found or unreadable — prompt for token
-            create_config(tx).await?.maybe_set_token().await
-        }
-    }
-}
-//Fn to set token
-pub async fn create_config(tx: &UnboundedSender<Error>) -> Result<Config, Error> {
-    Config::new(Some(tx.clone())).await?.create().await
-}
-
-pub async fn get(
-    config_path: Option<String>,
-    verbose: bool,
-    timeout: Option<u64>,
-    tx: &UnboundedSender<Error>,
-) -> Result<Config, Error> {
-    let path: String = match config_path {
+    let path = match config_path {
         None => generate_path().await?,
         Some(path) => maybe_expand_home_dir(path)?,
     };
 
     let config = match fs::File::open(&path).await {
         Ok(_) => Config::load(&path).await,
-        Err(_) => Err(Error {
-            message: format!("Configuration file does not exist at {path}"),
-            source: "config.rs".to_string(),
-        }),
-    }
-    .map(|config| Config {
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            let tmp_config = Config::default();
+            debug::maybe_print(
+                &tmp_config,
+                "Config file not found, creating new config".to_string(),
+            );
+            create_config(tx).await
+        }
+        Err(err) => Err(Error::new(
+            "config.rs",
+            &format!("Failed to open config file: {err}"),
+        )),
+    }?;
+
+    let config = Config {
         args: Args { timeout, verbose },
         internal: Internal {
             tx: Some(tx.clone()),
         },
         ..config
-    })?;
+    };
 
     let redacted_config = Config {
         token: Some("REDACTED".into()),
@@ -622,8 +623,24 @@ pub async fn get(
     debug::maybe_print(&config, format!("{:#?}", redacted_config));
     Ok(config)
 }
-/// Generates the path to the config file
-///
+//Fn to create the config file with settings
+pub async fn create_config(tx: &UnboundedSender<Error>) -> Result<Config, Error> {
+    // Create the default in-memory config
+    let mut config = Config::new(Some(tx.clone())).await?;
+    // Create the empty file
+    config = config.create().await?;
+
+    // Populate the required fields - prompt for token, or use existing token logic
+    config = config.maybe_set_token().await?;
+
+    // Populate the required timezone
+    config = config.maybe_set_timezone().await?;
+
+    // Now that config is fully populated, write it to disk
+    config.save().await?;
+
+    Ok(config)
+}
 pub async fn generate_path() -> Result<String, Error> {
     let config_directory = dirs::config_dir()
         .ok_or_else(|| Error::new("dirs", "Could not find config directory"))?
@@ -685,6 +702,8 @@ mod tests {
                 task_create_command: None,
                 task_complete_command: None,
                 task_comment_command: None,
+                task_exclude_regex: None,
+                comment_exclude_regex: None,
 
                 timezone: Some("UTC".to_string()),
                 timeout: None,
@@ -848,7 +867,7 @@ mod tests {
 
         // --- GET_OR_CREATE (get) ---
 
-        let fetched_config = get(Some(config_loaded.path), false, None, &tx()).await;
+        let fetched_config = get_or_create(Some(config_loaded.path), false, None, &tx()).await;
         assert_matches!(fetched_config, Ok(Config { .. }));
         delete_config(&fetched_config.unwrap().path).await;
     }

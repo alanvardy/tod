@@ -1469,7 +1469,7 @@ async fn find_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, E
     let verbose = verbose.to_owned();
     let timeout = timeout.to_owned();
 
-    config::get(config_path, verbose, timeout, tx).await
+    config::get_or_create(config_path, verbose, timeout, tx).await
 }
 
 fn fetch_string(

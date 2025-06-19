@@ -672,7 +672,6 @@ fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
         Ok(path)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -680,7 +679,6 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     impl Config {
-        //Method for default testing
         pub fn default_test() -> Self {
             Config {
                 token: Some("default-token".to_string()),
@@ -692,7 +690,6 @@ mod tests {
                 },
                 internal: Internal { tx: None },
                 sort_value: Some(SortValue::default()),
-
                 projects: Some(vec![]),
                 legacy_projects: Some(vec![]),
                 next_id: None,
@@ -704,7 +701,6 @@ mod tests {
                 task_comment_command: None,
                 task_exclude_regex: None,
                 comment_exclude_regex: None,
-
                 timezone: Some("UTC".to_string()),
                 timeout: None,
                 last_version_check: None,
@@ -720,15 +716,14 @@ mod tests {
                 natural_language_only: None,
             }
         }
-        /// add the url of the mockito server
+        // Mock the url used for fetching projects and tasks
         pub fn with_mock_url(self, url: String) -> Config {
             Config {
                 mock_url: Some(url),
                 ..self
             }
         }
-
-        /// Mock out the string response
+        // Mock the string returned by the mock url
         pub fn with_mock_string(self, string: &str) -> Config {
             Config {
                 mock_string: Some(string.to_string()),
@@ -736,14 +731,13 @@ mod tests {
             }
         }
 
-        /// Mock out the select response, setting the index of the response
         pub fn mock_select(self, index: usize) -> Config {
             Config {
                 mock_select: Some(index),
                 ..self
             }
         }
-        /// Set path on Config struct
+
         pub fn with_path(self: &Config, path: String) -> Config {
             Config {
                 path,
@@ -751,22 +745,81 @@ mod tests {
             }
         }
 
-        /// Set path on Config struct
         pub fn with_projects(self: &Config, projects: Vec<Project>) -> Config {
             Config {
                 projects: Some(projects),
                 ..self.clone()
             }
         }
-        pub fn with_time_provider(mut self, provider_type: TimeProviderEnum) -> Self {
-            self.time_provider = provider_type;
-            self
+        /// Set the TimeProvider for testing
+        pub fn with_time_provider(self: &Config, provider_type: TimeProviderEnum) -> Config {
+            let mut config = self.clone();
+            config.time_provider = provider_type;
+            config
         }
+    }
+
+    async fn config_with_mock(mock_url: impl Into<String>) -> Config {
+        test::fixtures::config()
+            .await
+            .with_mock_url(mock_url.into())
+    }
+
+    async fn config_with_mock_and_token(
+        mock_url: impl Into<String>,
+        token: impl Into<String>,
+    ) -> Config {
+        test::fixtures::config()
+            .await
+            .with_mock_url(mock_url.into())
+            .with_token(&token.into())
     }
 
     fn tx() -> UnboundedSender<Error> {
         let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
         tx
+    }
+
+    #[tokio::test]
+    async fn config_tests() {
+        let server = mockito::Server::new_async().await;
+        let mock_url = server.url();
+
+        let config_create = config_with_mock_and_token(&mock_url, "created").await;
+        let path_created = config_create.path.clone();
+        config_create.create().await.unwrap();
+
+        let loaded = Config::load(&path_created).await.unwrap();
+        assert_eq!(loaded.token, Some("created".into()));
+        delete_config(&path_created).await;
+
+        let config_create = config_with_mock(&mock_url).await;
+        let path_create = config_create.path.clone();
+        config_create.create().await.unwrap();
+
+        let created = get_or_create(Some(path_create.clone()), false, None, &tx())
+            .await
+            .expect("get_or_create (create) failed");
+        assert!(created.token.is_some());
+        delete_config(&created.path).await;
+
+        let config_load = config_with_mock_and_token(&mock_url, "loaded").await;
+        let path_load = config_load.path.clone();
+        config_load.create().await.unwrap();
+
+        let loaded = get_or_create(Some(path_load.clone()), false, None, &tx())
+            .await
+            .expect("get_or_create (load) failed");
+        assert_eq!(loaded.token, Some("loaded".into()));
+        assert!(loaded.internal.tx.is_some());
+
+        let fetched = get_or_create(Some(path_load.clone()), false, None, &tx()).await;
+        assert_matches!(fetched, Ok(Config { .. }));
+        delete_config(&path_load).await;
+    }
+
+    async fn delete_config(path: &str) {
+        assert_matches!(fs::remove_file(path).await, Ok(_));
     }
 
     #[tokio::test]
@@ -833,50 +886,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn config_tests() {
-        // These need to be run sequentially as they write to the filesystem.
-        let server = mockito::Server::new_async().await;
-
-        // --- CREATE ---
-        let new_config = test::fixtures::config().await.with_token("created");
-        let created_config = Config {
-            token: Some(String::from("created")),
-            ..new_config.clone()
-        };
-        created_config.create().await.unwrap();
-
-        // --- LOAD ---
-        let loaded_config = Config::load(&new_config.path).await.unwrap();
-        assert_eq!(loaded_config.token, Some("created".into()));
-
-        // --- GET_OR_CREATE (create) ---
-        let config_created = get_or_create(None, false, None, &tx())
-            .await
-            .expect("Could not get or create config (create)");
-        delete_config(&config_created.path).await;
-
-        // --- GET_OR_CREATE (load) ---
-        let test_config = test::fixtures::config().await.with_mock_url(server.url());
-        test_config.create().await.unwrap();
-
-        let config_loaded = get_or_create(None, false, None, &tx())
-            .await
-            .expect("Could not get or create config (load)");
-
-        assert!(config_loaded.internal.tx.is_some());
-
-        // --- GET_OR_CREATE (get) ---
-
-        let fetched_config = get_or_create(Some(config_loaded.path), false, None, &tx()).await;
-        assert_matches!(fetched_config, Ok(Config { .. }));
-        delete_config(&fetched_config.unwrap().path).await;
-    }
-
-    async fn delete_config(path: &str) {
-        assert_matches!(fs::remove_file(path).await, Ok(_));
-    }
-
-    #[tokio::test]
     async fn load_should_fail_on_invalid_u8_value() {
         use tokio::fs::write;
 
@@ -901,12 +910,12 @@ mod tests {
     async fn debug_impl_for_config_should_work() {
         let config = test::fixtures::config().await;
         let debug_output = format!("{:?}", config);
-
-        // You can assert that it contains expected fields just to be thorough
+        // Assert that the debug output contains the struct name and some fields
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("token"));
         assert!(debug_output.contains(&config.token.unwrap()));
     }
+
     #[test]
     fn debug_impls_for_config_components_should_work() {
         use tokio::sync::mpsc::unbounded_channel;
@@ -931,9 +940,9 @@ mod tests {
         assert!(sort_value_debug.contains("priority_none"));
         assert!(sort_value_debug.contains("deadline_value"));
     }
+
     #[test]
     fn trait_impls_for_config_components_should_work() {
-        // Clone
         let args = Args {
             verbose: true,
             timeout: Some(10),
@@ -949,7 +958,6 @@ mod tests {
         let sort_value_clone = sort_value.clone();
         assert_eq!(sort_value, sort_value_clone);
 
-        // PartialEq
         assert_eq!(
             args,
             Args {
@@ -965,7 +973,6 @@ mod tests {
             }
         );
 
-        // Default
         let default_args = Args::default();
         assert_eq!(default_args.verbose, false);
         assert_eq!(default_args.timeout, None);
@@ -977,6 +984,7 @@ mod tests {
         assert_eq!(default_sort.priority_none, 2);
         assert_eq!(default_sort.deadline_value, Some(DEFAULT_DEADLINE_VALUE));
     }
+
     #[tokio::test]
     async fn test_config_with_methods() {
         let base_config = Config::new(None)
@@ -1030,15 +1038,12 @@ mod tests {
     }
 
     #[test]
-    // Test function to check the debug output of Config
     fn test_config_debug_with_time_provider() {
         let config = Config::default_test()
             .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider))
             .with_path("/tmp/test.cfg".to_string());
 
         let debug_output = format!("{:?}", config);
-
-        // Check some expected fields are present in the debug output
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("/tmp/test.cfg"));
     }

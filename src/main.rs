@@ -49,7 +49,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
 const ABOUT: &str = "A tiny unofficial Todoist client";
 
-const NO_PROJECTS_ERR: &str = "No projects in config. Add projects with `tod project import`";
+const NO_PROJECTS_ERR: &str = "No projects in config. Add projects with `tod project import` or `tod project import --auto` to import all projects";
 
 #[derive(Parser, Clone)]
 #[command(name = NAME)]
@@ -1458,7 +1458,7 @@ async fn find_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, E
     let verbose = verbose.to_owned();
     let timeout = timeout.to_owned();
 
-    config::get(config_path, verbose, timeout, tx).await
+    config::get_or_create(config_path, verbose, timeout, tx).await
 }
 
 fn fetch_string(

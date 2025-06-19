@@ -14,21 +14,21 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde_json = "1"
-serde = { version = "1.0", features = ["derive"] }
-reqwest = { version = "0.12", features = ["json"] }
+serde_json = "1.0.140"
+serde = { version = "1.0.219", features = ["derive"] }
+reqwest = { version = "0.12.20", features = ["json"] }
 uuid = { version = "1.17", features = ["serde", "v4"] }
-dirs = "6"
+dirs = "6.0.0"
 matches = "0.1.10"
-regex = "1"
+regex = "1.11.1"
 chrono = "0.4.41"
 chrono-tz = "0.10.3"
-colored = "3"
+colored = "3.0.0"
 clap = { version = "4.5.40", features = ["derive"] }
 spinners = "4.1.1"
 inquire = { version = "0.7.5", features = ["date"] }
 serde_repr = "0.1.20"
-rand = "0.9"
+rand = "0.9.1"
 rayon = "1.10.0"
 pad = "0.1.6"
 urlencoding = "2.1.3"
@@ -40,9 +40,11 @@ terminal_size = "0.4.2"
 clap_complete = "4.5.54"
 walkdir = "2.5.0"
 once_cell = "1.21.3"
-strum = {version = "0.27.1", features = ["strum_macros"]}
+strum = { version = "0.27.1", features = ["strum_macros"] }
 strum_macros = "0.27.1"
 axum = "0.8.4"
+serde_regex = "1.1.0"
+serde_merge = "0.1.3"
 
 
 [dev-dependencies]

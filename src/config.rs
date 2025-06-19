@@ -1029,4 +1029,59 @@ mod tests {
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("/tmp/test.cfg"));
     }
+    #[tokio::test]
+    async fn test_create_config_saves_file() {
+        let mut config = Config::default_test(); // ✅ Uses mock_url, token, timezone, etc.
+        config = config.create().await.expect("Should create file");
+        config.save().await.expect("Should save file");
+
+        // Check that required fields are populated
+        assert!(config.token.is_some(), "Token should be set");
+        assert!(config.timezone.is_some(), "Timezone should be set");
+
+        // Check that the file exists
+        assert!(
+            tokio::fs::try_exists(&config.path).await.unwrap(),
+            "Config file should exist at {}",
+            config.path
+        );
+    }
+
+    #[tokio::test]
+    async fn test_generate_path_in_test_mode() {
+        // Ensure test mode returns a path in the "tests/" directory
+        let path = generate_path().await.expect("Should return a test path");
+        assert!(
+            path.starts_with("tests/") && path.ends_with(".testcfg"),
+            "Test path should be generated, got {}",
+            path
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_config_populates_token_and_timezone() {
+        // Manually set token and timezone and ensure they're saved
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        let mut config = Config::new(Some(tx.clone()))
+            .await
+            .expect("Init default config");
+
+        config.token = Some("test-token-123".into());
+        config.timezone = Some("UTC".into());
+        config = config.create().await.expect("Should create file");
+        config.save().await.expect("Should save config");
+
+        // Reload from disk and validate contents
+        let contents = tokio::fs::read_to_string(&config.path)
+            .await
+            .expect("File should exist");
+        assert!(
+            contents.contains("test-token-123"),
+            "Saved config should contain token"
+        );
+        assert!(
+            contents.contains("UTC"),
+            "Saved config should contain timezone"
+        );
+    }
 }

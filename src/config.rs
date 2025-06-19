@@ -162,12 +162,54 @@ impl Config {
             ..self.clone()
         }
     }
-
+    /// Set token on Config struct only
     pub fn with_token(self: &Config, token: &str) -> Config {
         Config {
             token: Some(token.into()),
             ..self.clone()
         }
+    }
+
+    /// Creates the blank config file by touching it and saving defaults
+    pub async fn create(self) -> Result<Config, Error> {
+        self.touch_file().await?;
+        let mut config = self;
+        // Save the config to disk
+        config.save().await?;
+        println!("Config successfully created in {}", &config.path);
+        Ok(config)
+    }
+    /// Ensures the parent directory exists and touches the config file.
+    pub async fn touch_file(&self) -> Result<(), Error> {
+        if let Some(parent) = std::path::Path::new(&self.path).parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        fs::File::create(&self.path).await?;
+        Ok(())
+    }
+
+    /// Writes the config's current contents to disk as JSON.
+    pub async fn save(&mut self) -> std::result::Result<String, Error> {
+        let config = match Config::load(&self.path).await {
+            Ok(Config { verbose, .. }) => Config {
+                verbose,
+                ..self.clone()
+            },
+            _ => self.clone(),
+        };
+
+        let json = json!(config);
+        let string = serde_json::to_string_pretty(&json)?;
+        fs::OpenOptions::new()
+            .write(true)
+            .read(true)
+            .truncate(true)
+            .open(&self.path)
+            .await?
+            .write_all(string.as_bytes())
+            .await?;
+
+        Ok(color::green_string("✓"))
     }
 
     /// Converts legacy projects to the new projects if necessary
@@ -327,15 +369,6 @@ impl Config {
         })
     }
 
-    pub async fn create(self) -> Result<Config, Error> {
-        let json = json!(self).to_string();
-        let mut file = fs::File::create(&self.path).await?;
-        // file.write_all(json.as_bytes())?;
-        fs::File::write_all(&mut file, json.as_bytes()).await?;
-        println!("Config successfully created in {}", &self.path);
-        Ok(self)
-    }
-
     pub async fn load(path: &str) -> Result<Config, Error> {
         let mut json = String::new();
         fs::File::open(path)
@@ -423,30 +456,6 @@ impl Config {
             .collect::<Vec<Project>>();
 
         self.projects = Some(projects);
-    }
-
-    pub async fn save(&mut self) -> std::result::Result<String, Error> {
-        // We don't want to overwrite verbose in the config
-        let config = match Config::load(&self.path).await {
-            Ok(Config { verbose, .. }) => Config {
-                verbose,
-                ..self.clone()
-            },
-            _ => self.clone(),
-        };
-
-        let json = json!(config);
-        let string = serde_json::to_string_pretty(&json)?;
-        fs::OpenOptions::new()
-            .write(true)
-            .read(true)
-            .truncate(true)
-            .open(&self.path)
-            .await?
-            .write_all(string.as_bytes())
-            .await?;
-
-        Ok(color::green_string("✓"))
     }
 
     pub fn set_next_task(&self, task: Task) -> Config {

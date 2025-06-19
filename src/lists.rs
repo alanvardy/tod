@@ -279,20 +279,27 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[tokio::test]
-    async fn test_import() {
+    // Test importing the import_tasks.txt file creates 14 tasks
+    /// This file is used to test the import functionality
+    async fn test_import_creates_14_tasks() {
         let mut server = mockito::Server::new_async().await;
+        // File to import and quantity specified here - expects 14 items
+        let import_file = "tests/inputs/import_tasks.txt";
+        let import_qty = 14;
+
+        // Expect 14 POSTs to /api/v1/tasks/quick
         let mock = server
             .mock("POST", "/api/v1/tasks/quick")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(ResponseFromFile::TodayTask.read().await)
+            .expect(import_qty)
             .create_async()
             .await;
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
-        config.clone().create().await.unwrap();
 
-        assert_eq!(import(&config, &config.path).await, Ok(String::from("✓")));
+        assert_eq!(import(&config, import_file).await, Ok(String::from("✓")));
 
         mock.assert();
     }

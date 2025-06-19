@@ -44,7 +44,6 @@ strum = { version = "0.27.1", features = ["strum_macros"] }
 strum_macros = "0.27.1"
 axum = "0.8.4"
 serde_regex = "1.1.0"
-serde_merge = "0.1.3"
 
 
 [dev-dependencies]

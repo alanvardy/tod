@@ -13,6 +13,7 @@ use errors::Error;
 use input::DateTimeInput;
 use lists::Flag;
 use shell::Shell;
+use std::env;
 use std::fmt::Display;
 use std::io::Write;
 use std::path::Path;
@@ -42,20 +43,31 @@ mod test_time;
 mod time;
 mod todoist;
 mod users;
-
-pub const NAME: &str = "Tod";
+// Values pulled from Cargo.toml
+const NAME: &str = env!("CARGO_PKG_NAME");
 const LOWERCASE_NAME: &str = "tod";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const AUTHOR: &str = "Alan Vardy <alan@vardy.cc>";
-const ABOUT: &str = "A tiny unofficial Todoist client";
-
+const LONG_VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("BUILD_TARGET"),
+    "-",
+    env!("BUILD_PROFILE"),
+    ")"
+);
+const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
+const ABOUT: &str = env!("CARGO_PKG_DESCRIPTION");
+// Verbose values set at build time
+const BUILD_TARGET: &str = env!("BUILD_TARGET");
+const BUILD_PROFILE: &str = env!("BUILD_PROFILE");
+const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");
 const NO_PROJECTS_ERR: &str = "No projects in config. Add projects with `tod project import`";
 
 #[derive(Parser, Clone)]
 #[command(name = NAME)]
-#[command(version = VERSION)]
+#[command(author = AUTHOR)]
+#[command(version = LONG_VERSION)]
 #[command(about = ABOUT, long_about = None)]
-#[command(author = AUTHOR, version)]
 #[command(arg_required_else_help(true))]
 struct Cli {
     #[arg(short, long, default_value_t = false)]
@@ -1557,6 +1569,13 @@ async fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<St
     } else {
         Ok(labels.to_vec())
     }
+}
+
+pub fn long_version() -> String {
+    format!(
+        "{} ({}, {}, {}, {})",
+        NAME, VERSION, BUILD_PROFILE, BUILD_TARGET, BUILD_TIMESTAMP
+    )
 }
 
 #[test]

@@ -13,7 +13,6 @@ use errors::Error;
 use input::DateTimeInput;
 use lists::Flag;
 use shell::Shell;
-use std::env;
 use std::fmt::Display;
 use std::io::Write;
 use std::path::Path;

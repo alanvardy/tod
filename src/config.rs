@@ -1023,7 +1023,6 @@ mod tests {
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("/tmp/test.cfg"));
     }
-<<<<<<< HEAD
     // Test function for max_comment_length
     #[test]
     fn max_comment_length_should_return_configured_value() {
@@ -1048,7 +1047,7 @@ mod tests {
         // so just ensure it's a positive, nonzero value
         assert!(result > 0);
         assert!(result <= MAX_COMMENT_LENGTH);
-=======
+    }
     #[test]
     fn test_unknown_field_rejected() {
         let json = r#"
@@ -1064,6 +1063,5 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("unknown field `Bobby`"));
->>>>>>> 86f3328 (fix: reject unknown fields)
     }
 }

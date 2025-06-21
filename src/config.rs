@@ -1,3 +1,5 @@
+use std::io::{self, Write};
+
 use crate::cargo::Version;
 use crate::errors::Error;
 use crate::id::Resource;
@@ -176,7 +178,10 @@ impl Config {
         let mut config = self;
         // Save the config to disk
         config.save().await?;
-        println!("Config successfully created in {}", &config.path);
+        println!(
+            "No config found. New config successfully created at {}",
+            &config.path
+        );
         Ok(config)
     }
     /// Ensures the parent directory exists and touches the config file.
@@ -681,6 +686,50 @@ fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
         Ok(path)
     }
 }
+
+/// Deletes the config file after resolving its path and confirming with the user.
+/// Accepts an optional CLI-supplied path as `Some(String)`, or generates one if `None`.
+pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Result<String, Error> {
+    // 1. Resolve config path
+    let path_str: String = match cli_config_path {
+        None => generate_path().await?,             // default config path
+        Some(path) => maybe_expand_home_dir(path)?, // expands ~ to full path
+    };
+
+    // 2. Check if it exists
+    if !std::path::Path::new(&path_str).exists() {
+        return Ok(format!("No config file found at {}.", path_str));
+    }
+
+    // 3. Confirm
+    if !force {
+        print!(
+            "Are you sure you want to delete the config at {}? [y/N]: ",
+            path_str
+        );
+        io::stdout().flush().expect("Failed to flush stdout");
+
+        let mut input = String::new();
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read input");
+        let input = input.trim().to_lowercase();
+
+        if input != "y" && input != "yes" {
+            return Ok("Aborted: Config not deleted.".to_string());
+        }
+    }
+
+    // 4. Delete it
+    match fs::remove_file(&path_str).await {
+        Ok(_) => Ok(format!("Config file at {} deleted successfully.", path_str)),
+        Err(e) => Err(Error::new(
+            "config_reset",
+            &format!("Could not delete config file at {}: {e}", path_str),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1151,5 +1200,24 @@ mod tests {
             contents.contains("UTC"),
             "Saved config should contain timezone"
         );
+    }
+
+    #[tokio::test]
+    async fn test_config_reset_force_deletes_temp_file() {
+        use std::env::temp_dir;
+        use std::fs::File;
+        use std::path::PathBuf;
+
+        let mut temp_path: PathBuf = temp_dir();
+        temp_path.push("temp_test_config.cfg");
+
+        File::create(&temp_path).expect("Failed to create temp config file");
+        assert!(temp_path.exists());
+
+        let result =
+            crate::config::config_reset(Some(temp_path.to_string_lossy().to_string()), true).await;
+
+        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+        assert!(!temp_path.exists(), "File should be deleted");
     }
 }

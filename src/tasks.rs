@@ -864,10 +864,12 @@ pub fn spawn_update_task_priority(
     })
 }
 
+/// Converts a JSON string to a single task (creates a single task from a JSON string)
 pub fn json_to_task(json: String) -> Result<Task, Error> {
     let task: Task = serde_json::from_str(&json)?;
     Ok(task)
 }
+/// Converts a JSON String to a list of multiple tasks (creates a TaskResponse from a JSON string)
 pub fn json_to_tasks_response(json: String) -> Result<TaskResponse, Error> {
     let response: TaskResponse = serde_json::from_str(&json)?;
     Ok(response)

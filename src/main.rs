@@ -521,7 +521,7 @@ enum ConfigCommands {
     CheckVersion(ConfigCheckVersion),
 
     #[clap(alias = "r")]
-    /// (r) Delete the configuration file
+    /// (r) Delete the configuration file. Does not use configuration struct.
     Reset(ConfigReset),
 
     #[clap(alias = "tz")]

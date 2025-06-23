@@ -6,6 +6,7 @@ mod request;
 
 use crate::comments::{Comment, CommentResponse};
 use crate::config::Config;
+use crate::debug::maybe_print;
 use crate::errors::Error;
 use crate::id::{self, Resource};
 use crate::labels::{self, Label, LabelResponse};
@@ -19,6 +20,7 @@ use crate::users;
 use crate::users::User;
 use crate::{color, projects, sections, tasks, time};
 use crate::{comments, oauth};
+use regex::Regex;
 
 // TODOIST URLS
 pub const TASKS_URL: &str = "/api/v1/tasks/";
@@ -236,10 +238,14 @@ pub async fn all_tasks_by_project(
     project: &Project,
     limit: Option<u8>,
 ) -> Result<Vec<Task>, Error> {
+    // ── 1. Prep -----------------------------------------------------------------
     let limit = limit.unwrap_or(QUERY_LIMIT);
     let project_id = project.id.clone();
-    let mut tasks: Vec<Task> = Vec::new();
+    let mut tasks = Vec::new();
     let mut url = format!("{TASKS_URL}?project_id={project_id}&limit={limit}");
+
+    // Compile regex **once** from Config (if present & valid)
+    let title_regex = config.task_exclude_regex.as_ref();
 
     loop {
         let json = request::get_todoist(config, url, true).await?;
@@ -247,13 +253,16 @@ pub async fn all_tasks_by_project(
             results,
             next_cursor,
         } = tasks::json_to_tasks_response(json)?;
+
+        let results = filter_tasks_by_title(results, title_regex, config);
         tasks.extend(results);
+
         match next_cursor {
             None => break,
-            Some(string) => {
-                url = format!("{TASKS_URL}?project_id={project_id}&limit={limit}&cursor={string}");
+            Some(cursor) => {
+                url = format!("{TASKS_URL}?project_id={project_id}&limit={limit}&cursor={cursor}");
             }
-        };
+        }
     }
     Ok(tasks)
 }
@@ -274,7 +283,7 @@ pub async fn all_tasks_by_filters(
 
     Ok(acc)
 }
-
+// Gets all tasks based on a filter
 pub async fn all_tasks_by_filter(
     config: &Config,
     filter: &str,
@@ -285,13 +294,20 @@ pub async fn all_tasks_by_filter(
     let mut tasks: Vec<Task> = Vec::new();
     let mut url = format!("{TASKS_URL}filter?query={encoded}&limit={limit}");
 
+    // Borrow regex from config
+    let title_regex = config.task_exclude_regex.as_ref();
+
     loop {
         let json = request::get_todoist(config, url, true).await?;
         let TaskResponse {
             results,
             next_cursor,
         } = tasks::json_to_tasks_response(json)?;
+
+        // Apply filter
+        let results = filter_tasks_by_title(results, title_regex, config);
         tasks.extend(results);
+
         match next_cursor {
             None => break,
             Some(string) => {
@@ -299,6 +315,7 @@ pub async fn all_tasks_by_filter(
             }
         };
     }
+
     Ok((filter.to_string(), tasks))
 }
 
@@ -627,6 +644,9 @@ pub async fn get_user_data(config: &Config) -> Result<User, Error> {
     users::json_to_user(json)
 }
 
+/// This funciton returns all of the comments for a task from the Todoist JSON API
+/// It will paginate through the results until all comments are retrieved.
+/// It will then filter out deleted and excluded comments based on the Regex Config.
 pub async fn all_comments(
     config: &Config,
     task: &Task,
@@ -637,6 +657,8 @@ pub async fn all_comments(
     let mut url = format!("{COMMENTS_URL}?task_id={task_id}&limit={limit}");
     let mut comments: Vec<Comment> = Vec::new();
 
+    let exclude_regex = config.comment_exclude_regex.as_ref();
+
     loop {
         let json = request::get_todoist(config, url, true).await?;
         let CommentResponse {
@@ -644,8 +666,13 @@ pub async fn all_comments(
             next_cursor,
         } = comments::json_to_comment_response(json)?;
 
-        // Filter out deleted comments before extending
-        comments.extend(results.into_iter().filter(|c| !c.is_deleted));
+        comments.extend(results.into_iter().filter(|c| {
+            !c.is_deleted
+                && match exclude_regex {
+                    Some(regex) => !regex.is_match(&c.content),
+                    None => true,
+                }
+        }));
 
         match next_cursor {
             None => break,
@@ -659,9 +686,31 @@ pub async fn all_comments(
     Ok(comments)
 }
 
+/// This function executes a command (used on task creation or completion) if it is set in the configuration.
 async fn maybe_run_command(command: Option<&str>) {
     if let Some(command) = command {
         execute_command(command);
+    }
+}
+
+/// This Function filters tasks based on the configured task_exclude_regex pattern in the Config.json
+pub fn filter_tasks_by_title(
+    tasks: Vec<Task>,
+    regex: Option<&Regex>,
+    config: &Config,
+) -> Vec<Task> {
+    match regex {
+        Some(re) => tasks
+            .into_iter()
+            .filter(|task| {
+                let exclude = re.is_match(&task.content);
+                if exclude {
+                    maybe_print(config, format!("Task '{}' excluded by regex", task.content));
+                }
+                !exclude // exclude matching tasks
+            })
+            .collect(),
+        None => tasks,
     }
 }
 
@@ -1054,5 +1103,33 @@ mod tests {
 
         assert_eq!(comments.len(), 7); // One comment in the JSON is_deleted = true
         assert!(comments.iter().all(|c| !c.is_deleted));
+    }
+    #[tokio::test]
+    async fn test_task_is_filtered_out_by_regex() {
+        let mut task = test::fixtures::today_task().await;
+        task.content = "Brush Teeth".to_string();
+
+        let mut config = test::fixtures::config().await;
+        config.task_exclude_regex = Some(regex::Regex::new(r"^Brush").unwrap());
+
+        let result = filter_tasks_by_title(vec![task], config.task_exclude_regex.as_ref(), &config);
+        assert!(result.is_empty(), "Expected task to be excluded by regex");
+    }
+
+    #[tokio::test]
+    async fn test_task_is_retained_if_not_matching_regex() {
+        let mut task = test::fixtures::today_task().await;
+        task.content = "Eat Breakfast".to_string();
+
+        let mut config = test::fixtures::config().await;
+        config.task_exclude_regex = Some(regex::Regex::new(r"^Brush").unwrap());
+
+        let result = filter_tasks_by_title(
+            vec![task.clone()],
+            config.task_exclude_regex.as_ref(),
+            &config,
+        );
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].content, task.content);
     }
 }

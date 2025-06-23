@@ -148,6 +148,7 @@ pub fn json_to_comment(json: String) -> Result<Comment, Error> {
     let comment: Comment = serde_json::from_str(&json)?;
     Ok(comment)
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -257,5 +258,66 @@ mod tests {
             .unwrap();
         let output = comment.fmt(&config).unwrap();
         assert!(output.contains("Just a plain comment"));
+    }
+
+    /// Test with inline JSON to simulate the behavior of excluding comments
+    /// This needs to be updated to work with the actual Regex and Mockito setup
+    #[tokio::test]
+    async fn test_exclude_comments_inline_json() {
+        // Simulated inline JSON response with 3 comments
+        let json = r#"
+        {
+            "results": [
+                {
+                    "id": "c1",
+                    "posted_uid": null,
+                    "content": "Via Habit Tracker: Wake up at 6am",
+                    "uids_to_notify": null,
+                    "is_deleted": false,
+                    "posted_at": "2024-01-01T08:00:00Z",
+                    "reactions": null,
+                    "item_id": "t1",
+                    "file_attachment": null
+                },
+                {
+                    "id": "c2",
+                    "posted_uid": null,
+                    "content": "This is a normal comment",
+                    "uids_to_notify": null,
+                    "is_deleted": false,
+                    "posted_at": "2024-01-01T09:00:00Z",
+                    "reactions": null,
+                    "item_id": "t1",
+                    "file_attachment": null
+                },
+                {
+                    "id": "c3",
+                    "posted_uid": null,
+                    "content": "IGNORE ME PLEASE",
+                    "uids_to_notify": null,
+                    "is_deleted": false,
+                    "posted_at": "2024-01-01T10:00:00Z",
+                    "reactions": null,
+                    "item_id": "t1",
+                    "file_attachment": null
+                }
+            ],
+            "next_cursor": null
+        }
+        "#;
+
+        let mut comments = json_to_comment_response(json.to_string()).unwrap().results;
+
+        // Simulate filtering using a regex from config
+        let re = regex::Regex::new(r"(?i)^via habit tracker|ignore me").unwrap();
+        comments.retain(|c| !re.is_match(&c.content));
+
+        let remaining_ids: Vec<_> = comments.iter().map(|c| &c.id).collect();
+
+        assert_eq!(
+            remaining_ids,
+            vec!["c2"],
+            "Only the normal comment should remain"
+        );
     }
 }

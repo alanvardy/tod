@@ -8,11 +8,10 @@
 
 ## [0.8.0](https://github.com/alanvardy/tod/compare/v0.7.7...v0.8.0) (2025-06-10)
 
-
 ### Features
 
-* add reminder to quick add ([21c7198](https://github.com/alanvardy/tod/commit/21c7198e72cdba116641941b36673a5fdf94124a))
-* prompt user to auth login when unauthorized ([f86742a](https://github.com/alanvardy/tod/commit/f86742a689d22412eb11d1e488136eeadd22617d))
+- add reminder to quick add ([21c7198](https://github.com/alanvardy/tod/commit/21c7198e72cdba116641941b36673a5fdf94124a))
+- prompt user to auth login when unauthorized ([f86742a](https://github.com/alanvardy/tod/commit/f86742a689d22412eb11d1e488136eeadd22617d))
 
 ## 2025-05-19 v0.7.7
 

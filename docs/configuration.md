@@ -305,6 +305,28 @@ possible values: A string that is executed within the shell (such as 'echo task 
 
 Defaults to `None`. The Shell command that spanwed for background execution upon a task being completed. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
 
+### task_exclude_regex
+
+``` json
+type: Regex
+default: None
+possible values: A Regex expression
+```
+
+Defaults to `None`. This field must be a valid JSON-escaped regex value. Any tasks for which their title matches this Regex will NOT be returned.
+
+For example, this might be used to exclude uncompletable tasks.
+
+### comment_exclude_regex
+
+``` json
+type: Regex
+default: None
+possible values: A Regex expression
+```
+
+Defaults to `None`. This field must be a valid JSON-escaped regex value. Any comments for which their title matches this Regex will NOT be returned.
+
 ### verbose
 
 ```json

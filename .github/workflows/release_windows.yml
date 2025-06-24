@@ -1,0 +1,129 @@
+# This workflow builds the Windows x86_64 binary and uploads it to a GitHub release.
+# It is triggered by a push with a version tag (e.g., v1.0.0), typically from a release-please release.
+# It also allows manual triggering for testing purposes.
+
+name: Windows Build & Release
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_PROFILE_RELEASE_LTO: true
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+
+jobs:
+  build-windows:
+    name: Build & Upload Windows x86_64
+    runs-on: windows-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
+      # Run Platform Tests
+      - name: Run tests using cargo-nextest
+        run: cargo nextest run --all-features  # Run all tests with nextest.
+        continue-on-error: false  # Fail the job if tests do not pass
+
+      - name: Install Rust target for Windows
+        run: rustup target add x86_64-pc-windows-msvc
+
+      # Get version and tag from Cargo.toml
+      - name: get VERSION and tag from Cargo.toml
+        id: cargo-get
+        uses: nicolaiunrein/cargo-get@master
+        with:
+          subcommand: package.version 
+      
+      - name: Set version and tag variable
+        id: version
+        shell: bash
+        run: |
+          echo "VERSION=$(cargo get package.version)" >> $GITHUB_ENV
+          echo "TAG=$(cargo get package.version --pretty)" >> $GITHUB_ENV
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Zip the Windows binary
+        run: |
+          Compress-Archive -Path target\x86_64-pc-windows-msvc\release\tod.exe `
+                          -DestinationPath target\release\tod-${env:VERSION}-windows-amd64.zip
+
+      - name: Hash the ZIP
+        run: |
+          Get-FileHash target\release\tod-${env:VERSION}-windows-amd64.zip -Algorithm SHA256
+
+      - name: Upload to GitHub Release
+        run: |
+          gh release upload "$env:TAG" `
+          "target/release/tod-${env:VERSION}-windows-amd64.zip" `
+          --repo "$env:GITHUB_REPOSITORY" `
+          --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          VERSION: ${{ env.VERSION }}
+          TAG: ${{ env.TAG }}
+  update-scoop-manifest:
+    name: Update Scoop Manifest
+    needs: build-windows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Set version and tag variables
+        id: set_version
+        run: |
+          VERSION=$(cargo get package.version)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compute SHA256 of release zip
+        run: |
+          ZIP_URL="https://github.com/alanvardy/tod/releases/download/v$VERSION/tod-$VERSION-windows-amd64.zip"
+          curl -L -o tod.zip "$ZIP_URL"
+          HASH=$(sha256sum tod.zip | awk '{print $1}')
+          echo "HASH=$HASH" >> $GITHUB_ENV
+
+      - name: Update bucket/tod.json
+        run: |
+          jq --arg version "$VERSION" \
+              --arg url "https://github.com/alanvardy/tod/releases/download/v$VERSION/tod-$VERSION-windows-amd64.zip" \
+              --arg hash "$HASH" \
+              '
+              .version = $version |
+              .architecture."64bit".url = $url |
+              .architecture."64bit".hash = $hash
+              ' bucket/tod.json > bucket/tod.json.tmp && mv bucket/tod.json.tmp bucket/tod.json
+
+      - name: Create Pull Request for Scoop Manifest Update
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          commit-message: "chore(scoop): update tod.json to ${{ steps.set_version.outputs.version }}"
+          branch: scoop-update-${{ steps.set_version.outputs.version }}
+          title: "chore(scoop): update scoop manifest for v${{ steps.set_version.outputs.version }}"
+          body: This PR updates the Scoop manifest with the new version, URL, and SHA256 hash.
+          add-paths: |
+            bucket/tod.json

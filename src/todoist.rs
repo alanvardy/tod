@@ -238,13 +238,10 @@ pub async fn all_tasks_by_project(
     project: &Project,
     limit: Option<u8>,
 ) -> Result<Vec<Task>, Error> {
-    // ── 1. Prep -----------------------------------------------------------------
     let limit = limit.unwrap_or(QUERY_LIMIT);
     let project_id = project.id.clone();
     let mut tasks = Vec::new();
     let mut url = format!("{TASKS_URL}?project_id={project_id}&limit={limit}");
-
-    // Compile regex **once** from Config (if present & valid)
     let title_regex = config.task_exclude_regex.as_ref();
 
     loop {
@@ -283,7 +280,6 @@ pub async fn all_tasks_by_filters(
 
     Ok(acc)
 }
-// Gets all tasks based on a filter
 pub async fn all_tasks_by_filter(
     config: &Config,
     filter: &str,
@@ -293,8 +289,6 @@ pub async fn all_tasks_by_filter(
     let encoded = encode(filter);
     let mut tasks: Vec<Task> = Vec::new();
     let mut url = format!("{TASKS_URL}filter?query={encoded}&limit={limit}");
-
-    // Borrow regex from config
     let title_regex = config.task_exclude_regex.as_ref();
 
     loop {
@@ -304,7 +298,6 @@ pub async fn all_tasks_by_filter(
             next_cursor,
         } = tasks::json_to_tasks_response(json)?;
 
-        // Apply filter
         let results = filter_tasks_by_title(results, title_regex, config);
         tasks.extend(results);
 
@@ -644,9 +637,9 @@ pub async fn get_user_data(config: &Config) -> Result<User, Error> {
     users::json_to_user(json)
 }
 
-/// This funciton returns all of the comments for a task from the Todoist JSON API
-/// It will paginate through the results until all comments are retrieved.
-/// It will then filter out deleted and excluded comments based on the Regex Config.
+/// Returns all of the comments for a task from the Todoist JSON API
+/// Paginates through the results until all comments are retrieved.
+/// Then will filter out deleted and excluded comments based on the Regex Config.
 pub async fn all_comments(
     config: &Config,
     task: &Task,
@@ -686,14 +679,14 @@ pub async fn all_comments(
     Ok(comments)
 }
 
-/// This function executes a command (used on task creation or completion) if it is set in the configuration.
+// Executes a CLI command (if set in the configuration).
 async fn maybe_run_command(command: Option<&str>) {
     if let Some(command) = command {
         execute_command(command);
     }
 }
 
-/// This Function filters tasks based on the configured task_exclude_regex pattern in the Config.json
+/// Filters (Excludes) tasks based on task title and configured task_exclude_regex
 pub fn filter_tasks_by_title(
     tasks: Vec<Task>,
     regex: Option<&Regex>,

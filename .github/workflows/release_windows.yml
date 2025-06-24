@@ -91,6 +91,13 @@ jobs:
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
+      
+      # Get version and tag from Cargo.toml
+      - name: get VERSION and tag from Cargo.toml
+        id: cargo-get
+        uses: nicolaiunrein/cargo-get@master
+        with:
+          subcommand: package.version 
 
       - name: Set version and tag variables
         id: set_version

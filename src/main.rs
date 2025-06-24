@@ -521,7 +521,7 @@ enum ConfigCommands {
     CheckVersion(ConfigCheckVersion),
 
     #[clap(alias = "r")]
-    /// (r) Delete the configuration file. Does not use configuration struct.
+    /// (r) Deletes the configuration file (if exists). Prompts for confirmation and errors if the file does not exist.
     Reset(ConfigReset),
 
     #[clap(alias = "tz")]
@@ -558,7 +558,7 @@ struct TestAll {}
 
 #[derive(Parser, Debug, Clone)]
 struct ConfigReset {
-    /// Skip confirmation prompt and force deletion
+    /// Skip confirmation and force deletion
     #[arg(long)]
     force: bool,
 }

@@ -278,54 +278,60 @@ Projects are stored locally in config to help save on API requests and speed up 
 ### task_comment_command
 
 ``` json
-type: String
-default: None
+type: sting
+default: null
 possible values: A string that is executed within the shell (such as 'echo task commented')
 ```
 
-Defaults to `None`. The Shell command that spanwed for background execution upon a task being commented. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
+Defaults to `null` (no command). The Shell command that spanwed for background execution upon a task being commented. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks.
+
+Note that only errors (stderr) are output to the CLI; successful responses (stdout) are supressed.
 
 ### task_create_command
 
 ``` json
-type: String
-default: None
+type: string
+default: null
 possible values: A string that is executed within the shell (such as 'echo task created')
 ```
 
-Defaults to `None`. The Shell command that spanwed for background execution upon a task being added/created. Only executes if set, for both regular and quick-add task creation. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
+Defaults to `null` (no command). The Shell command that spanwed for background execution upon a task being added/created. Only executes if set, for both regular and quick-add task creation. Allows for custom integration with other scripts, code, sounds, or webhooks.
+
+Note that only errors (stderr) are output to the CLI; successful responses (stdout) are supressed.
 
 ### task_complete_command
 
 ``` json
-type: String
-default: None
+type: string
+default: null
 possible values: A string that is executed within the shell (such as 'echo task completed')
 ```
 
-Defaults to `None`. The Shell command that spanwed for background execution upon a task being completed. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks. Note that only errors (Stderr) are output to the CLI; successful responses (stdout) are supressed.
+Defaults to `null` (no command is run). The Shell command that spanwed for background execution upon a task being completed. Only executes if set. Allows for custom integration with other scripts, code, sounds, or webhooks.
+
+Note that only errors (stderr) are output to the CLI; successful responses (stdout) are supressed.
 
 ### task_exclude_regex
 
 ``` json
-type: Regex
-default: None
+type: Regex in String form (JSON escaped)  
+default: null
 possible values: A Regex expression
 ```
 
-Defaults to `None`. This field must be a valid JSON-escaped regex value. Any tasks for which their title matches this Regex will NOT be returned.
+Defaults to `null` (no tasks excluded). This field must be a valid JSON-escaped regex string. Any tasks for which their title matches this Regex will NOT be returned.
 
-For example, this might be used to exclude uncompletable tasks.
+For example, this could be used to exclude uncompletable tasks ("^* ").
 
 ### comment_exclude_regex
 
 ``` json
-type: Regex
-default: None
+type: Regex in String form (JSON escaped)  
+default: null
 possible values: A Regex expression
 ```
 
-Defaults to `None`. This field must be a valid JSON-escaped regex value. Any comments for which their title matches this Regex will NOT be returned.
+Defaults to `null` (no comments excluded). This field must be a valid JSON-escaped regex value. Any comments for which their title matches this Regex will NOT be returned.
 
 ### verbose
 

@@ -80,3 +80,50 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
           VERSION: ${{ env.VERSION }}
           TAG: ${{ env.TAG }}
+  update-scoop-manifest:
+    name: Update Scoop Manifest
+    needs: build-windows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Set version and tag variables
+        id: set_version
+        run: |
+          VERSION=$(cargo get package.version)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compute SHA256 of release zip
+        run: |
+          ZIP_URL="https://github.com/alanvardy/tod/releases/download/v$VERSION/tod-$VERSION-windows-amd64.zip"
+          curl -L -o tod.zip "$ZIP_URL"
+          HASH=$(sha256sum tod.zip | awk '{print $1}')
+          echo "HASH=$HASH" >> $GITHUB_ENV
+
+      - name: Update bucket/tod.json
+        run: |
+          jq --arg version "$VERSION" \
+              --arg url "https://github.com/alanvardy/tod/releases/download/v$VERSION/tod-$VERSION-windows-amd64.zip" \
+              --arg hash "$HASH" \
+              '
+              .version = $version |
+              .architecture."64bit".url = $url |
+              .architecture."64bit".hash = $hash
+              ' bucket/tod.json > bucket/tod.json.tmp && mv bucket/tod.json.tmp bucket/tod.json
+
+      - name: Create Pull Request for Scoop Manifest Update
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
+          commit-message: "chore(scoop): update tod.json to ${{ steps.set_version.outputs.version }}"
+          branch: scoop-update-${{ steps.set_version.outputs.version }}
+          title: "chore(scoop): update scoop manifest for v${{ steps.set_version.outputs.version }}"
+          body: This PR updates the Scoop manifest with the new version, URL, and SHA256 hash.
+          add-paths: |
+            bucket/tod.json

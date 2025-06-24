@@ -15,7 +15,7 @@ Get started with [Cargo](https://crates.io/crates/tod) (All Platforms)
 cargo install tod
 ```
 
-or [Homebrew](https://brew.sh) (macOS or Linux)
+or [Homebrew](https://brew.sh) (macOS, Linux, WSL)
 
 ```bash
 brew tap alanvardy/tod

@@ -1,31 +1,29 @@
 # Publish Checklist
 
-## Setup `tod-bin`
+Publication of release is automatically handled by [release-please](https://github.com/googleapis/release-please) and Github Automations.
 
-Create `tod-bin` directory for pushing to AUR
+## Automatic release & publish Procedure
 
-```fish
-./scripts/setup_aur.sh
-```
+1. Open a Pull Request with the "autorelease: pending" tag (note: release-please will automatically do this for any new feat: commits)
+2. Review the PR and ensure all appropriate checklist items have completed (CI Tests, Documentation, etc)
+3. Merge the PR
 
-## Publish Procedure
+Upon merging of a release-please PR, release-please will automatically create a Github release with the appropriate version tags.
 
-1. Update `CHANGELOG.md` with version number
-2. Update the version number in this file
-3. Create PR with
+4. After release, Github CI will automatically begin build of the release binaries, and the following will run:
 
-    ```fish
-    VERSION=0.7.7 ./scripts/create_pr.sh
-    ```
+- release_linux.yml (Builds Linux binaries and uploads to release assets)
+- release_macos.yml (Builds Macos binaries and uploads to release assets)
+- release_windows.yml (Builds Windows binaries and uploads to assets)
 
-4. Wait for it to pass, then merge and pull in latest changes
+5. After release builds complete, the following will automatically run
 
-    ```fish
-    merge
-    ```
+- release_cargo.yml (Publishes the latest build to crates.io)
+- release_homebrew.yml (Sends an update event to the homebrew-tod repository which triggers an update of the Forumla.yml file with the latest version)
+- release_windows.yml (The scoop update step will run and open a PR to update the /bucket/tod.json file)
 
-5. Release it to all the places
+Ensure you manually merge/close the scoop PR to update the JSON file.
 
-    ```fish
-    VERSION=0.7.7 NAME=tod ./scripts/release.sh
-    ```
+## If there are any failures
+
+Failing steps can be manually and indivdiually re-run if needed by executing them from under the "Actions" Github tab.

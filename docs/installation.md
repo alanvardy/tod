@@ -2,18 +2,20 @@
 
 <!--toc:start-->
 - [Installation](#installation)
-  - [Crates.io (Linux, Mac, and Windows)](#cratesio-linux-mac-and-windows)
-  - [GitHub (Linux, Mac, and Windows)](#github-linux-mac-and-windows)
+  - [Homebrew](#homebrew-linux-mac-or-wsl)
+  - [Crates.io)](#cratesio--cargo-all-platforms)
+  - [Scoop](#scoop-windows)
+  - [GitHub](#manually-build-from-github-linux-mac-and-windows)
 <!--toc:end-->
 
-## Homebrew (Linux, Mac, and Windows)
+## [Homebrew](https://brew.sh) (Linux, Mac, or WSL)
 
 ```bash
 brew tap alanvardy/tod
 brew install tod
 ```
 
-## Crates.io (Linux, Mac, and Windows)
+## [Crates.io / Cargo](https://crates.io/crates/tod) (All Platforms)
 
 [Install Rust](https://www.rust-lang.org/tools/install)
 
@@ -22,13 +24,20 @@ brew install tod
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Install Tod
+Install [Tod](https://crates.io/crates/tod)
 
 ```bash
 cargo install tod
 ```
 
-## GitHub (Linux, Mac, and Windows)
+## [Scoop](https://scoop.sh/) (Windows)
+
+```powershell
+scoop bucket add tod https://github.com/alanvardy/tod
+scoop install tod
+```
+
+## Manually Build from GitHub (Linux, Mac, and Windows)
 
 [Install Rust](https://www.rust-lang.org/tools/install)
 
@@ -37,6 +46,11 @@ Clone the project
 ```bash
 git clone git@github.com:alanvardy/tod.git
 cd tod
+```
+
+Test and build the release
+
+```bash
 ./test.sh # run the tests
 cargo build --release
 ```

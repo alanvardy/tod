@@ -521,7 +521,7 @@ enum ConfigCommands {
     CheckVersion(ConfigCheckVersion),
 
     #[clap(alias = "r")]
-    /// (r) Deletes the configuration file (if exists). Prompts for confirmation and errors if the file does not exist.
+    /// (r) Deletes the configuration file (if present). Errors if the file does not exist.
     Reset(ConfigReset),
 
     #[clap(alias = "tz")]

@@ -6,6 +6,20 @@
 - Allow user to choose `OAuth` or `Developer Token` on first run
 - Prompt user to `auth login` when API returns unauthorized
 
+## [0.9.0](https://github.com/alanvardy/tod/compare/v0.8.0...v0.9.0) (2025-06-25)
+
+
+### Features
+
+* dynamic comment height ([79bb4f9](https://github.com/alanvardy/tod/commit/79bb4f9386a1ee486dd7c251bebd8f2e81849a67))
+* dynamic max comment length ([b1c9bde](https://github.com/alanvardy/tod/commit/b1c9bde42c32608b212aefade2133fa8c3d66228))
+* regex task and comment filtering ([68fe4e4](https://github.com/alanvardy/tod/commit/68fe4e407e8d24aa81097bcbc833c1a91b2786e3))
+
+
+### Bug Fixes
+
+* reject unknown fields ([af6cdb9](https://github.com/alanvardy/tod/commit/af6cdb953b366499de50d8026ecfea93b7486ee1))
+
 ## [0.8.0](https://github.com/alanvardy/tod/compare/v0.7.7...v0.8.0) (2025-06-10)
 
 ### Features

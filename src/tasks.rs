@@ -535,7 +535,7 @@ pub async fn label_task(
 ) -> Result<JoinHandle<()>, Error> {
     let comments = Vec::new();
     let text = task.fmt(comments, config, FormatType::Single, true).await?;
-    println!("{}", text);
+    println!("{text}");
     let mut options = labels.to_owned();
     options.push(input::SKIP.to_string());
     let label = input::select("Select label", options, config.mock_select)?;
@@ -697,7 +697,7 @@ pub async fn spawn_schedule_task(
     let text = task
         .fmt(comments, &config, FormatType::Single, true)
         .await?;
-    println!("{}", text);
+    println!("{text}");
     let datetime_input = input::datetime(
         config.mock_select,
         config.mock_string.clone(),
@@ -736,7 +736,7 @@ pub async fn spawn_deadline_task(
     let text = task
         .fmt(comments, &config, FormatType::Single, true)
         .await?;
-    println!("{}", text);
+    println!("{text}");
     let datetime_input = input::datetime(
         config.mock_select,
         config.mock_string.clone(),
@@ -980,7 +980,7 @@ pub async fn set_priority(
     let text = task
         .fmt(comments, config, FormatType::Single, with_project)
         .await?;
-    println!("{}", text);
+    println!("{text}");
 
     let options = vec![
         Priority::None,

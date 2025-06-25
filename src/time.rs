@@ -148,7 +148,7 @@ pub fn date_from_str(str: &str, timezone: Tz) -> Result<NaiveDate, Error> {
         _ => {
             return Err(Error::new(
                 "date_from_str",
-                &format!("Cannot parse NaiveDate, unknown length: {}", str),
+                &format!("Cannot parse NaiveDate, unknown length: {str}"),
             ));
         }
     };
@@ -333,9 +333,7 @@ mod tests {
         // Allow for edge-of-day differences
         assert!(
             result == expected || (result - expected).num_days().abs() <= 1,
-            "Got {}, expected ~{}",
-            result,
-            expected
+            "Got {result}, expected ~{expected}"
         );
     }
     #[tokio::test]

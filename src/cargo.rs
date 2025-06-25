@@ -42,7 +42,7 @@ pub async fn get_latest_version(mock_url: Option<String>) -> Result<String, Erro
 
     let response = Client::new()
         .get(request_url)
-        .header(USER_AGENT, format!("Tod/{}", VERSION))
+        .header(USER_AGENT, format!("Tod/{VERSION}"))
         .send()
         .await?;
 

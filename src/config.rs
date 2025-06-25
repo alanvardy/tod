@@ -544,10 +544,9 @@ fn config_load_error(error: serde_json::Error, path: &str) -> Error {
     let message = format!(
         "\n{}",
         color::red_string(&format!(
-            "Error loading configuration file '{}':\n{}\n\
+            "Error loading configuration file '{path}':\n{error}\n\
             \nThe file contains an invalid value.\n\
-            Update the value or run 'tod config reset' to delete (reset) the config.",
-            path, error
+            Update the value or run 'tod config reset' to delete (reset) the config."
         ))
     );
 
@@ -634,7 +633,7 @@ pub async fn get_or_create(
         token: Some("REDACTED".into()),
         ..config.clone()
     };
-    debug::maybe_print(&config, format!("{:#?}", redacted_config));
+    debug::maybe_print(&config, format!("{redacted_config:#?}"));
     Ok(config)
 }
 //create the config file with settings
@@ -695,14 +694,11 @@ pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Resul
         Some(path) => maybe_expand_home_dir(path)?, // expands ~ to full path
     };
     if !std::path::Path::new(&path_str).exists() {
-        return Ok(format!("No config file found at {}.", path_str));
+        return Ok(format!("No config file found at {path_str}."));
     }
     // Prompt for confirmation before deleting
     if !force {
-        print!(
-            "Are you sure you want to delete the config at {}? [y/N]: ",
-            path_str
-        );
+        print!("Are you sure you want to delete the config at {path_str}? [y/N]: ");
         io::stdout().flush().expect("Failed to flush stdout");
 
         let mut input = String::new();
@@ -716,10 +712,10 @@ pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Resul
         }
     }
     match fs::remove_file(&path_str).await {
-        Ok(_) => Ok(format!("Config file at {} deleted successfully.", path_str)),
+        Ok(_) => Ok(format!("Config file at {path_str} deleted successfully.")),
         Err(e) => Err(Error::new(
             "config_reset",
-            &format!("Could not delete config file at {}: {e}", path_str),
+            &format!("Could not delete config file at {path_str}: {e}"),
         )),
     }
 }
@@ -961,7 +957,7 @@ mod tests {
     #[tokio::test]
     async fn debug_impl_for_config_should_work() {
         let config = test::fixtures::config().await;
-        let debug_output = format!("{:?}", config);
+        let debug_output = format!("{config:?}");
         // Assert that the debug output contains the struct name and some fields
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("token"));
@@ -976,18 +972,18 @@ mod tests {
             verbose: true,
             timeout: Some(42),
         };
-        let args_debug = format!("{:?}", args);
+        let args_debug = format!("{args:?}");
         assert!(args_debug.contains("Args"));
         assert!(args_debug.contains("verbose"));
         assert!(args_debug.contains("timeout"));
 
         let (tx, _rx) = unbounded_channel::<Error>();
         let internal = Internal { tx: Some(tx) };
-        let internal_debug = format!("{:?}", internal);
+        let internal_debug = format!("{internal:?}");
         assert!(internal_debug.contains("Internal"));
 
         let sort_value = SortValue::default();
-        let sort_value_debug = format!("{:?}", sort_value);
+        let sort_value_debug = format!("{sort_value:?}");
         assert!(sort_value_debug.contains("SortValue"));
         assert!(sort_value_debug.contains("priority_none"));
         assert!(sort_value_debug.contains("deadline_value"));
@@ -1095,7 +1091,7 @@ mod tests {
             .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider))
             .with_path("/tmp/test.cfg".to_string());
 
-        let debug_output = format!("{:?}", config);
+        let debug_output = format!("{config:?}");
         assert!(debug_output.contains("Config"));
         assert!(debug_output.contains("/tmp/test.cfg"));
     }
@@ -1164,8 +1160,7 @@ mod tests {
         let path = generate_path().await.expect("Should return a test path");
         assert!(
             path.starts_with("tests/") && path.ends_with(".testcfg"),
-            "Test path should be generated, got {}",
-            path
+            "Test path should be generated, got {path}"
         );
     }
     #[tokio::test]
@@ -1197,14 +1192,12 @@ mod tests {
         let msg = err.to_string();
         assert!(
             msg.contains("Error loading configuration file"),
-            "Expected 'Error loading configuration file' in error message:\n{}",
-            msg
+            "Expected 'Error loading configuration file' in error message:\n{msg}"
         );
 
         assert!(
             msg.contains("regex parse error"),
-            "Expected 'regex parse error' in error message:\n{}",
-            msg
+            "Expected 'regex parse error' in error message:\n{msg}"
         );
     }
 
@@ -1250,7 +1243,7 @@ mod tests {
         let result =
             crate::config::config_reset(Some(temp_path.to_string_lossy().to_string()), true).await;
 
-        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+        assert!(result.is_ok(), "Expected Ok, got {result:?}");
         assert!(!temp_path.exists(), "File should be deleted");
     }
 }

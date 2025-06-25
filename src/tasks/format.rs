@@ -116,7 +116,7 @@ fn create_links(content: &str) -> String {
     let result = link_regex.replace_all(content, |caps: &regex::Captures| {
         let text = &caps[1];
         let url = &caps[2];
-        Cow::from(format!("\x1b]8;;{}\x07[{}]\x1b]8;;\x07", url, text))
+        Cow::from(format!("\x1b]8;;{url}\x07[{text}]\x1b]8;;\x07"))
     });
 
     result.into_owned()

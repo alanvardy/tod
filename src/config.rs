@@ -544,9 +544,9 @@ fn config_load_error(error: serde_json::Error, path: &str) -> Error {
     let message = format!(
         "\n{}",
         color::red_string(&format!(
-            "Error loading config file '{}':\n{}\n\
-                    \nYour config contains an invalid value \n\
-                    Please run manually fix or run 'tod config reset' to delete the file.",
+            "Error loading configuration file '{}':\n{}\n\
+            \nThe file contains an invalid value.\n\
+            Update the value or run 'tod config reset' to delete (reset) the config.",
             path, error
         ))
     );

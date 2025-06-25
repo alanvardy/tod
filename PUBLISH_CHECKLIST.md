@@ -8,13 +8,13 @@ Publication of release is automatically handled by [release-please](https://gith
 2. Review the PR and ensure all appropriate checklist items have completed (CI Tests, Documentation, etc)
 3. Merge the PR
 
-Upon merging of a release-please PR, release-please will automatically create a Github release with the appropriate version tags.
+    Upon merging of a release-please PR, release-please will automatically create a Github release with the appropriate version tags.
 
 4. After release, Github CI will automatically begin build of the release binaries, and the following will run:
 
-- release_linux.yml (Builds Linux binaries and uploads to release assets)
-- release_macos.yml (Builds Macos binaries and uploads to release assets)
-- release_windows.yml (Builds Windows binaries and uploads to assets)
+    - release_linux.yml (Builds Linux binaries and uploads to release assets)
+    - release_macos.yml (Builds Macos binaries and uploads to release assets)
+    - release_windows.yml (Builds Windows binaries and uploads to assets)
 
 5. After release builds complete, the following will automatically run
 
@@ -26,4 +26,4 @@ Ensure you manually merge/close the scoop PR to update the JSON file.
 
 ## If there are any failures
 
-Failing steps can be manually and indivdiually re-run if needed by executing them from under the "Actions" Github tab.
+Failing steps can be manually and individually re-run if needed by executing them from under the "Actions" Github tab.  

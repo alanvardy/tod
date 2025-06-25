@@ -637,20 +637,20 @@ pub async fn get_or_create(
     debug::maybe_print(&config, format!("{:#?}", redacted_config));
     Ok(config)
 }
-//Fn to create the config file with settings
+//create the config file with settings
 pub async fn create_config(tx: &UnboundedSender<Error>) -> Result<Config, Error> {
     // Create the default in-memory config
     let mut config = Config::new(Some(tx.clone())).await?;
     // Create the empty file
     config = config.create().await?;
 
-    // Populate the required fields - prompt for token, or use existing token logic
+    // Populate the required fields - prompt for token or use existing token logic
     config = config.maybe_set_token().await?;
 
     // Populate the required timezone
     config = config.maybe_set_timezone().await?;
 
-    // Now that config is fully populated, write it to disk
+    // write updated config to disk
     config.save().await?;
 
     Ok(config)
@@ -688,20 +688,16 @@ fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
 }
 
 /// Deletes the config file after resolving its path and confirming with the user.
-/// Accepts an optional CLI-supplied path as `Some(String)`, or generates one if `None`.
+/// Accepts an optional CLI-supplied path as `Some(String)`, or uses the default generated path if `None`.
 pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Result<String, Error> {
-    // 1. Resolve config path
     let path_str: String = match cli_config_path {
         None => generate_path().await?,             // default config path
         Some(path) => maybe_expand_home_dir(path)?, // expands ~ to full path
     };
-
-    // 2. Check if it exists
     if !std::path::Path::new(&path_str).exists() {
         return Ok(format!("No config file found at {}.", path_str));
     }
-
-    // 3. Confirm
+    // Prompt for confirmation before deleting
     if !force {
         print!(
             "Are you sure you want to delete the config at {}? [y/N]: ",
@@ -719,8 +715,6 @@ pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Resul
             return Ok("Aborted: Config not deleted.".to_string());
         }
     }
-
-    // 4. Delete it
     match fs::remove_file(&path_str).await {
         Ok(_) => Ok(format!("Config file at {} deleted successfully.", path_str)),
         Err(e) => Err(Error::new(
@@ -1172,6 +1166,45 @@ mod tests {
             path.starts_with("tests/") && path.ends_with(".testcfg"),
             "Test path should be generated, got {}",
             path
+        );
+    }
+    #[tokio::test]
+    async fn test_load_config_rejects_invalid_regex() {
+        // Use test fixture to get temp config path
+        let config = test::fixtures::config().await;
+        let path = &config.path;
+
+        // Write the invalid regex string "[a-z" to the config file which should cause serde_json to fail
+        let invalid_json = r#"
+    {
+        "token": "abc123",
+        "timezone": "UTC",
+        "task_exclude_regex": "[a-z"
+    }
+    "#;
+
+        tokio::fs::write(path, invalid_json)
+            .await
+            .expect("Failed to write invalid config");
+
+        let result = Config::load(path).await;
+
+        assert!(
+            result.is_err(),
+            "Expected load to fail due to invalid regex"
+        );
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Error loading config file"),
+            "Expected 'Error loading config file' in error message:\n{}",
+            msg
+        );
+
+        assert!(
+            msg.contains("regex parse error"),
+            "Expected 'regex parse error' in error message:\n{}",
+            msg
         );
     }
 

@@ -1196,8 +1196,8 @@ mod tests {
         let err = result.unwrap_err();
         let msg = err.to_string();
         assert!(
-            msg.contains("Error loading config file"),
-            "Expected 'Error loading config file' in error message:\n{}",
+            msg.contains("Error loading configuration file"),
+            "Expected 'Error loading configuration file' in error message:\n{}",
             msg
         );
 

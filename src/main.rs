@@ -1396,12 +1396,11 @@ async fn list_deadline(config: Config, args: &ListDeadline) -> Result<String, Er
 
 async fn config_check_version(_args: &ConfigCheckVersion) -> Result<String, Error> {
     match cargo::compare_versions(None).await {
-        Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {}", VERSION)),
+        Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {VERSION}")),
         Ok(Version::Dated(version)) => Err(Error::new(
             "cargo",
             &format!(
-                "Tod is out of date with version: {}, latest is:{}",
-                VERSION, version
+                "Tod is out of date with version: {VERSION}, latest is:{version}"
             ),
         )),
         Err(e) => Err(e),
@@ -1545,8 +1544,7 @@ async fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<St
 
 pub fn long_version() -> String {
     format!(
-        "{} ({}, {}, {}, {})",
-        NAME, VERSION, BUILD_PROFILE, BUILD_TARGET, BUILD_TIMESTAMP
+        "{NAME} ({VERSION}, {BUILD_PROFILE}, {BUILD_TARGET}, {BUILD_TIMESTAMP})"
     )
 }
 

@@ -264,6 +264,7 @@ pub async fn all_tasks_by_project(
     Ok(tasks)
 }
 
+/// Uses multiple filters (comma-separated) to fetch multiple lists of tasks in parallel. Returns each list of tasks with the filter query that was used to find it.
 pub async fn all_tasks_by_filters(
     config: &Config,
     filter: &str,
@@ -280,6 +281,8 @@ pub async fn all_tasks_by_filters(
 
     Ok(acc)
 }
+
+/// Fetches a list of tasks by a single filter query.
 pub async fn all_tasks_by_filter(
     config: &Config,
     filter: &str,

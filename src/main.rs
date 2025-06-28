@@ -1399,9 +1399,7 @@ async fn config_check_version(_args: &ConfigCheckVersion) -> Result<String, Erro
         Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {VERSION}")),
         Ok(Version::Dated(version)) => Err(Error::new(
             "cargo",
-            &format!(
-                "Tod is out of date with version: {VERSION}, latest is:{version}"
-            ),
+            &format!("Tod is out of date with version: {VERSION}, latest is:{version}"),
         )),
         Err(e) => Err(e),
     }
@@ -1543,9 +1541,7 @@ async fn maybe_fetch_labels(config: &Config, labels: &[String]) -> Result<Vec<St
 }
 
 pub fn long_version() -> String {
-    format!(
-        "{NAME} ({VERSION}, {BUILD_PROFILE}, {BUILD_TARGET}, {BUILD_TIMESTAMP})"
-    )
+    format!("{NAME} ({VERSION}, {BUILD_PROFILE}, {BUILD_TARGET}, {BUILD_TIMESTAMP})")
 }
 
 #[test]

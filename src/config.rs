@@ -698,13 +698,7 @@ pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Resul
     }
     // Prompt for confirmation before deleting
     if !force {
-<<<<<<< HEAD
         print!("Are you sure you want to delete the config at {path_str}? [y/N]: ");
-=======
-        print!(
-            "Are you sure you want to delete the config at {path_str}? [y/N]: "
-        );
->>>>>>> 44567b3 (fix: rust 1.88 cleanup)
         io::stdout().flush().expect("Failed to flush stdout");
 
         let mut input = String::new();

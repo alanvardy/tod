@@ -134,7 +134,7 @@ pub async fn list(config: &mut Config) -> Result<String, Error> {
 /// Formats a string with project name and the count that is a standard length
 async fn project_name_with_count(config: &Config, project: &Project) -> String {
     let count = match count_processable_tasks(config, project).await {
-        Ok(num) => format!("{}", num),
+        Ok(num) => format!("{num}"),
         Err(_) => String::new(),
     };
 
@@ -309,12 +309,12 @@ async fn maybe_add_project(
     auto: &bool,
 ) -> Result<String, Error> {
     if *auto {
-        println!("Adding {}", project);
+        println!("Adding {project}");
         return add(config, &project).await;
     }
 
     let options = vec!["add", "skip"];
-    println!("{}", project);
+    println!("{project}");
     match input::select("Select an option", options.clone(), config.mock_select) {
         Ok(string) => {
             if string == "add" {
@@ -482,7 +482,7 @@ pub async fn move_task_to_project(
     let text = task
         .fmt(comments, config, FormatType::Single, false)
         .await?;
-    println!("{}", text);
+    println!("{text}");
 
     let options = ["Pick project", "Complete", "Skip", "Delete"]
         .iter()

@@ -9,10 +9,10 @@ fn main() {
     let target = env::var("TARGET").unwrap_or_else(|_| "unknown".into());
     let profile = env::var("PROFILE").unwrap_or_else(|_| "unknown".into());
 
-    println!("cargo:rustc-env=BUILD_TARGET={}", target);
-    println!("cargo:rustc-env=BUILD_PROFILE={}", profile);
+    println!("cargo:rustc-env=BUILD_TARGET={target}");
+    println!("cargo:rustc-env=BUILD_PROFILE={profile}");
 
     // Add build timestamp
     let timestamp = chrono::Utc::now().to_rfc3339();
-    println!("cargo:rustc-env=BUILD_TIMESTAMP={}", timestamp);
+    println!("cargo:rustc-env=BUILD_TIMESTAMP={timestamp}");
 }

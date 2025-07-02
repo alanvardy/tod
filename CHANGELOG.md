@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.9.1](https://github.com/alanvardy/tod/compare/v0.9.0...v0.9.1) (2025-07-02)
+
+### Bug Fixes
+
+* rust 1.88 cleanup ([6c811d3](https://github.com/alanvardy/tod/commit/6c811d323aca97656b7a071f897013826249c8a0))
+
 ## [0.9.0](https://github.com/alanvardy/tod/compare/v0.8.0...v0.9.0) (2025-06-25)
 
 ### Features

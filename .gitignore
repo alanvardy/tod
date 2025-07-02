@@ -33,3 +33,4 @@ Temporary Items
 
 # End of https://www.toptal.com/developers/gitignore/api/rust,macos
 *.code-workspace
+.markdownlint.json

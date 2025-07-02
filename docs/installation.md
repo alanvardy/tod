@@ -57,4 +57,4 @@ cargo build --release
 
 You can then find the binary in `/target/release/`
 
-Will ask for your [Todoist API token](https://todoist.com/prefs/integrations) on the first run
+It will ask you to OAuth or provide your [Todoist API token](https://todoist.com/prefs/integrations) on the first run

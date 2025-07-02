@@ -125,7 +125,7 @@ jobs:
               ' bucket/tod.json > bucket/tod.json.tmp && mv bucket/tod.json.tmp bucket/tod.json
 
       - name: Create Pull Request for Scoop Manifest Update
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.TOD_CONTENTS_READ_WRITE }}
           commit-message: "chore(scoop): update tod.json to ${{ steps.set_version.outputs.version }}"

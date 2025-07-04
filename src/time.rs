@@ -260,6 +260,7 @@ fn parse_gmt_to_timezone(gmt: &str) -> Result<Tz, Error> {
 #[cfg(test)]
 mod tests {
     use crate::time;
+    use pretty_assertions::assert_eq;
 
     use super::*;
     use chrono_tz::Tz;

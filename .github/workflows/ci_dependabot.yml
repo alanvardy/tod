@@ -38,9 +38,7 @@ jobs:
         run: rustup toolchain install
 
       - name: Install cargo-nextest
-        uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
+        uses: taiki-e/install-action@nextest
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2

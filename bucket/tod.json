@@ -1,13 +1,13 @@
 {
-    "version": "0.8.0",
-    "description": "A Unofficial Todoist command-line client written in Rust",
-    "homepage": "https://github.com/alanvardy/tod",
-    "license": "MIT",
-    "architecture": {
-        "64bit": {
-            "url": "https://github.com/alanvardy/tod/releases/download/v0.8.0/tod-0.8.0-windows-amd64.zip",
-            "bin": "tod.exe",
-            "hash": "7034b03ccafef5edcfb1fa53afd5c141b23a81fc9fbd4a48c6e1553fb03d054b"
-        }
+  "version": "0.9.1",
+  "description": "A Unofficial Todoist command-line client written in Rust",
+  "homepage": "https://github.com/alanvardy/tod",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/alanvardy/tod/releases/download/v0.9.1/tod-0.9.1-windows-amd64.zip",
+      "bin": "tod.exe",
+      "hash": "6202989a45e0ccb9673b1ba2a7db3b106f957bd3ce08e81adeb24bcf4c41c8e4"
     }
+  }
 }

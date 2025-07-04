@@ -33,9 +33,6 @@ jobs:
           - name: Windows (AMD64)
             os: windows-latest
 
-          - name: Windows 11 Arm (ARM64)
-            os: windows-11-arm
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

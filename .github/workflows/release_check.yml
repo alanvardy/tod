@@ -14,10 +14,6 @@ jobs:
   check-release-pr:
     name: Check Version in CHANGELOG and Cargo.toml
     # This job checks if the version in CHANGELOG.md matches the version in Cargo.toml.
-    # Only runs on pull requests that are from release-please branches or have the 'autorelease: pending' label.
-    if: >
-      startsWith(github.head_ref, 'release-please--') ||
-      contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
     runs-on: ubuntu-latest
 
     steps:

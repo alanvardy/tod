@@ -1,0 +1,49 @@
+name: ci_dependabot
+
+on:
+    # This workflow is triggered for pull requests created or updated by Dependabot and runs full CI tests on all platforms.
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+    # also can run manually
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.name }}
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux (AMD64)
+            os: ubuntu-latest
+
+          - name: Linux (ARM64)
+            os: ubuntu-24.04-arm
+
+          - name: macOS (ARM64)
+            os: macos-latest
+
+          - name: Windows (AMD64)
+            os: windows-latest
+
+          - name: Windows 11 Arm (ARM64)
+            os: windows-11-arm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust with nextest
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: nextest
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run cargo nextest
+        run: cargo nextest run

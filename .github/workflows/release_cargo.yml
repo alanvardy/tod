@@ -7,6 +7,8 @@ on:
     tags:
       - 'v*.*.*'
 
+  workflow_dispatch: # Allows manual triggering of the workflow
+
 permissions:
   contents: write
   pull-requests: write
@@ -28,9 +30,7 @@ jobs:
         with:
           cache-all-crates: true # Cache all crates to speed up builds
 
-      - uses: taiki-e/install-action@v2 # Install nextest for running tests
-        with:
-          tool: nextest
+      - uses: taiki-e/install-action@nextest
 
       - name: Run platform tests # Run all tests with nextest.
         run: cargo nextest run --all-features

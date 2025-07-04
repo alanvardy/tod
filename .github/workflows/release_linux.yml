@@ -80,13 +80,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Install Rust Toolchain
+        run: rustup toolchain install
+
+      - uses: taiki-e/install-action@nextest
+
       - uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: true
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
 
       - name: Run platform tests
         run: cargo nextest run --all-features

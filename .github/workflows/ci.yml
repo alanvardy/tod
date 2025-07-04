@@ -2,7 +2,9 @@
 # It runs tests, checks code quality, and ensures no TODO/FIXME comments are left in the code.
 
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]  # Trigger on push, pull request, or manual dispatch
+
+#can also run manually via the GitHub Actions UI
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,13 +26,14 @@ jobs:
     name: Cargo CI Tests
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
+
+      - name: Install Rust Toolchain
+        uses: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: true
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
+
       - name: Cargo Test
         run: cargo nextest run --all-features
   check:
@@ -79,13 +82,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Install Rust Toolchain
+        run: rustup toolchain install
 
-      - name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@stable
       - name: Cache Rust Dependencies
         uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: true
+
       - name: Install Clippy
         run: rustup component add clippy
 

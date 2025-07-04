@@ -32,6 +32,10 @@ jobs:
 
       - uses: taiki-e/install-action@nextest
 
+    # Install the Rust toolchain
+      - name: Install Rust Toolchain
+        run: rustup toolchain install
+
       - name: Run platform tests # Run all tests with nextest.
         run: cargo nextest run --all-features
 

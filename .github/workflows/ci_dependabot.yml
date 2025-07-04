@@ -1,4 +1,4 @@
-name: ci_dependabot
+name: Dependabot Full CI
 
 permissions:
   contents: read

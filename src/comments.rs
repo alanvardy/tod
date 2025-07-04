@@ -155,6 +155,7 @@ mod tests {
     use crate::comments::json_to_comment_response;
     use crate::test::fixtures;
     use crate::test::responses::ResponseFromFile;
+    use pretty_assertions::assert_eq;
 
     async fn load_comments() -> Vec<Comment> {
         let json = ResponseFromFile::CommentsAllTypes.read().await;

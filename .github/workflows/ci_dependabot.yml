@@ -34,8 +34,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Rust from rust-toolchain.toml
-        uses: dtolnay/rust-toolchain@master
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 'Install rust-toolchain.toml'
+        run: rustup toolchain install
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@v2

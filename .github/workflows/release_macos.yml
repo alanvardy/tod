@@ -28,9 +28,13 @@ jobs:
     # Checkout the repository
     - name: Checkout repository
       uses: actions/checkout@v4
-
-
+    # Install nextest for running tests
     - uses: taiki-e/install-action@nextest
+
+    # Install the Rust toolchain
+    - name: Install Rust Toolchain
+      run: rustup toolchain install
+
 
     - uses: Swatinem/rust-cache@v2
       with:

@@ -29,12 +29,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+
+    - uses: taiki-e/install-action@nextest
+
     - uses: Swatinem/rust-cache@v2
       with:
         cache-all-crates: true
-    - uses: taiki-e/install-action@v2
-      with:
-        tool: nextest
 
     # Run Platform Tests
     - name: Run tests using cargo-nextest

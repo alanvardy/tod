@@ -1,5 +1,8 @@
 name: ci_dependabot
 
+permissions:
+  contents: read
+
 on:
   # Triggered for PRs created or updated by Dependabot or manually.
   pull_request:

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/alanvardy/tod/compare/v0.9.1...v0.10.0) (2025-07-04)
+
+
+### Features
+
+* use thread_rng ([4aba413](https://github.com/alanvardy/tod/commit/4aba4134fb11285e3154e09d4b2a77a332486426))
+
+
+### Bug Fixes
+
+* make config less likely to conflict on disk ([4aba413](https://github.com/alanvardy/tod/commit/4aba4134fb11285e3154e09d4b2a77a332486426))
+
 ## [0.9.1](https://github.com/alanvardy/tod/compare/v0.9.0...v0.9.1) (2025-07-02)
 
 ### Bug Fixes

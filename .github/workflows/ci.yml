@@ -29,7 +29,7 @@ jobs:
       - uses: taiki-e/install-action@nextest
 
       - name: Install Rust Toolchain
-        uses: rustup toolchain install
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: true

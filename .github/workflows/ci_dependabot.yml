@@ -11,7 +11,10 @@ on:
 jobs:
   test:
     name: Test on ${{ matrix.name }}
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]')
+    # Only run this job if the PR is created or updated by Dependabot or triggered manually.
     runs-on: ${{ matrix.os }}
 
     strategy:

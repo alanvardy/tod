@@ -47,6 +47,7 @@ serde_regex = "1.1.0"
 
 
 [dev-dependencies]
+cargo-nextest = "0.9.99"
 mockito = "1.7.0"
 pretty_assertions = "1.4.1"
 

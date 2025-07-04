@@ -661,8 +661,7 @@ pub async fn generate_path() -> Result<String, Error> {
         .ok_or_else(|| Error::new("dirs", "Could not convert config directory to string"))?
         .to_owned();
     if cfg!(test) {
-        _ = fs::create_dir(format!("{config_directory}/tod_test")).await;
-        let random_string = Alphanumeric.sample_string(&mut rand::rng(), 30);
+        let random_string = Alphanumeric.sample_string(&mut rand::rng(), 100);
         Ok(format!("tests/{random_string}.testcfg"))
     } else {
         Ok(format!("{config_directory}/tod.cfg"))

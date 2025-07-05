@@ -1293,4 +1293,19 @@ mod tests {
         // Cleanup explicitly
         fs::remove_file(&temp_path).await.ok();
     }
+    #[test]
+    fn test_maybe_expand_home_dir_expands_tilde() {
+        let input = PathBuf::from("~/myfolder/mysubfile.txt");
+        let expanded = maybe_expand_home_dir(input).unwrap();
+
+        let expected_prefix = homedir::my_home().unwrap().unwrap();
+        assert!(expanded.starts_with(&expected_prefix));
+        assert!(expanded.ends_with("myfolder/mysubfile.txt"));
+    }
+    #[test]
+    fn test_maybe_expand_home_dir_non_tilde_unchanged() {
+        let input = PathBuf::from("/usr/bin/env");
+        let result = maybe_expand_home_dir(input.clone()).unwrap();
+        assert_eq!(result, input);
+    }
 }

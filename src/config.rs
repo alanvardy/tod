@@ -10,7 +10,7 @@ use rand::distr::{Alphanumeric, SampleString};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::io::{self, Write};
+use std::io::{self, BufRead, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use terminal_size::{Height, Width, terminal_size};
@@ -688,29 +688,37 @@ fn maybe_expand_home_dir(path: PathBuf) -> Result<PathBuf, Error> {
 /// Deletes the config file after resolving its path and confirming with the user.
 /// Accepts an optional CLI-supplied path as `Some(String)`, or uses the default generated path if `None`.
 pub async fn config_reset(cli_config_path: Option<PathBuf>, force: bool) -> Result<String, Error> {
+    config_reset_with_input(cli_config_path, force, io::BufReader::new(io::stdin())).await
+}
+
+// Full config reset function, but accepts inputs for CI testing
+
+pub async fn config_reset_with_input<R: BufRead>(
+    cli_config_path: Option<PathBuf>,
+    force: bool,
+    mut input: R,
+) -> Result<String, Error> {
     let path: PathBuf = match cli_config_path {
-        None => generate_path().await?,             // default config path
-        Some(path) => maybe_expand_home_dir(path)?, // expands ~ to full path
+        None => generate_path().await?,
+        Some(path) => maybe_expand_home_dir(path)?,
     };
 
     if !path.exists() {
         return Ok(format!("No config file found at {}.", path.display()));
     }
-    // Prompt for confirmation unless --force is provided
+
     if !force {
         print!(
             "Are you sure you want to delete the config at {}? [y/N]: ",
             path.display()
         );
-        io::stdout().flush().expect("Failed to flush stdout");
+        io::stdout().flush().unwrap();
 
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read input");
-        let input = input.trim().to_lowercase();
+        let mut response = String::new();
+        input.read_line(&mut response).unwrap();
+        let response = response.trim().to_lowercase();
 
-        if input != "y" && input != "yes" {
+        if response != "y" && response != "yes" {
             return Ok("Aborted: Config not deleted.".to_string());
         }
     }
@@ -732,6 +740,11 @@ mod tests {
     use super::*;
     use crate::test;
     use pretty_assertions::assert_eq;
+    use std::env::temp_dir;
+    use std::fs::File;
+    use std::io::Cursor;
+    use std::path::Path;
+    use std::path::PathBuf;
 
     impl Config {
         pub fn default_test() -> Self {
@@ -1246,11 +1259,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_config_reset_force_deletes_temp_file() {
-        use std::env::temp_dir;
-        use std::fs::File;
-        use std::path::Path;
-        use std::path::PathBuf;
-
         let mut temp_path: PathBuf = temp_dir();
         temp_path.push("temp_test_config.cfg");
 
@@ -1261,5 +1269,28 @@ mod tests {
         assert!(result.is_ok(), "Expected Ok, got {result:?}");
 
         assert!(!Path::new(&temp_path).exists(), "File should be deleted");
+    }
+
+    #[tokio::test]
+    async fn test_config_reset_aborts_on_n_input() {
+        let mut temp_path: PathBuf = temp_dir();
+        temp_path.push("temp_test_config_prompt.cfg");
+
+        File::create(&temp_path).expect("Failed to create temp config file");
+        assert!(temp_path.exists(), "Temp config should exist before reset");
+
+        // Simulate user input "n"
+        let fake_input = Cursor::new("n\n");
+
+        let result =
+            crate::config::config_reset_with_input(Some(temp_path.clone()), false, fake_input)
+                .await;
+
+        assert!(result.is_ok(), "Expected Ok, got {result:?}");
+        assert_eq!(result.unwrap(), "Aborted: Config not deleted.");
+        assert!(Path::new(&temp_path).exists(), "File should not be deleted");
+
+        // Cleanup explicitly
+        fs::remove_file(&temp_path).await.ok();
     }
 }

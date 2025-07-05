@@ -77,6 +77,10 @@ pub(crate) fn generate_completions(shell: Shell) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_cmd::Command;
+    use predicates::prelude::*;
+    // Contains is used to make CMD test cases cross-platform compatible
+    use predicates::str::contains;
 
     #[tokio::test]
     async fn test_execute_command_success() {
@@ -101,5 +105,51 @@ mod tests {
         // Try to cat a binary file to produce non-UTF-8 output in stderr.
         // This test may not always trigger non-UTF-8, but it's a best effort.
         execute_command("cat /bin/ls 2>&1 1>/dev/null");
+    }
+    #[tokio::test]
+    async fn test_command_echo_output() {
+        let mut cmd = if cfg!(windows) {
+            let mut c = Command::new("cmd");
+            c.args(["/C", "echo Hello"]);
+            c
+        } else {
+            let mut c = Command::new("sh");
+            c.args(["-c", "echo Hello"]);
+            c
+        };
+
+        cmd.assert().success().stdout(contains("Hello"));
+    }
+
+    #[tokio::test]
+    async fn test_known_command_fails() {
+        let mut cmd = if cfg!(windows) {
+            let mut c = Command::new("cmd");
+            c.args(["/C", "exit 1"]);
+            c
+        } else {
+            let mut c = Command::new("sh");
+            c.args(["-c", "exit 1"]);
+            c
+        };
+
+        cmd.assert().failure();
+    }
+
+    #[tokio::test]
+    async fn test_command_stderr_output() {
+        let mut cmd = if cfg!(windows) {
+            let mut c = Command::new("cmd");
+            c.args(["/C", "dir C:\\nonexistent_dir"]);
+            c
+        } else {
+            let mut c = Command::new("sh");
+            c.args(["-c", "ls /nonexistent_directory"]);
+            c
+        };
+
+        cmd.assert()
+            .failure()
+            .stderr(contains("No such").or(contains("cannot find")));
     }
 }

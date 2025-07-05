@@ -556,11 +556,11 @@ mod tests {
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
-        let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
+        let config_dir = dirs::config_dir().expect("Could not find config directory");
 
         let config_with_timezone = config
             .with_timezone("US/Pacific")
-            .with_path(format!("{config_dir}/test3"))
+            .with_path(config_dir.join("test3"))
             .with_mock_url(server.url())
             .mock_select(0);
 

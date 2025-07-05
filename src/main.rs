@@ -15,7 +15,7 @@ use lists::Flag;
 use shell::Shell;
 use std::fmt::Display;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tasks::priority::Priority;
 use tasks::{SortOrder, TaskAttribute, priority};
 use tokio::sync::mpsc::UnboundedSender;
@@ -77,7 +77,7 @@ struct Cli {
 
     #[arg(short, long)]
     /// Absolute path of configuration. Defaults to $XDG_CONFIG_HOME/tod.cfg
-    config: Option<String>,
+    config: Option<PathBuf>,
 
     #[arg(short, long)]
     /// Time to wait for a response from API in seconds. Defaults to 30.

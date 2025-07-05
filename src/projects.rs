@@ -607,11 +607,11 @@ mod tests {
 
         let config = test::fixtures::config().await.with_mock_url(server.url());
 
-        let config_dir = dirs::config_dir().unwrap().to_str().unwrap().to_owned();
+        let config_dir = dirs::config_dir().expect("Could not find config directory");
 
         let config_with_timezone = config
             .with_timezone("America/Vancouver")
-            .with_path(format!("{config_dir}/test2"))
+            .with_path(config_dir.join("test3"))
             .with_mock_url(server.url());
         let binding = config_with_timezone.projects().await.unwrap();
         let project = binding.first().unwrap();

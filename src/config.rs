@@ -1,5 +1,3 @@
-use std::io::{self, Write};
-
 use crate::cargo::Version;
 use crate::errors::Error;
 use crate::id::Resource;
@@ -12,6 +10,9 @@ use rand::distr::{Alphanumeric, SampleString};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::io::{self, Write};
+use std::path::Path;
+use std::path::PathBuf;
 use terminal_size::{Height, Width, terminal_size};
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -47,7 +48,7 @@ pub struct Config {
     #[serde(rename = "vecprojects")]
     legacy_projects: Option<Vec<LegacyProject>>,
     /// Path to config file
-    pub path: String,
+    pub path: PathBuf,
     /// The ID of the next task (NO LONGER IN USE)
     next_id: Option<String>,
     /// The next task, for use with complete
@@ -180,7 +181,7 @@ impl Config {
         config.save().await?;
         println!(
             "No config found. New config successfully created at {}",
-            &config.path
+            config.path.display()
         );
         Ok(config)
     }
@@ -374,7 +375,7 @@ impl Config {
         })
     }
 
-    pub async fn load(path: &str) -> Result<Config, Error> {
+    pub async fn load(path: &PathBuf) -> Result<Config, Error> {
         let mut json = String::new();
         fs::File::open(path)
             .await?
@@ -539,14 +540,15 @@ impl Config {
     }
 }
 
-fn config_load_error(error: serde_json::Error, path: &str) -> Error {
+fn config_load_error(error: serde_json::Error, path: &Path) -> Error {
     let source = "serde_json";
     let message = format!(
         "\n{}",
         color::red_string(&format!(
-            "Error loading configuration file '{path}':\n{error}\n\
+            "Error loading configuration file '{}':\n{error}\n\
             \nThe file contains an invalid value.\n\
-            Update the value or run 'tod config reset' to delete (reset) the config."
+            Update the value or run 'tod config reset' to delete (reset) the config.",
+            path.display()
         ))
     );
 
@@ -557,7 +559,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             token: None,
-            path: String::new(),
+            path: PathBuf::new(),
             next_id: None,
             next_task: None,
             last_version_check: None,
@@ -595,7 +597,7 @@ impl Default for Config {
 /// Fetches config from from disk and creates it if it doesn't exist
 /// Prompts for Todoist API token
 pub async fn get_or_create(
-    config_path: Option<String>,
+    config_path: Option<PathBuf>,
     verbose: bool,
     timeout: Option<u64>,
     tx: &UnboundedSender<Error>,
@@ -654,50 +656,52 @@ pub async fn create_config(tx: &UnboundedSender<Error>) -> Result<Config, Error>
 
     Ok(config)
 }
-pub async fn generate_path() -> Result<String, Error> {
-    let config_directory = dirs::config_dir()
-        .ok_or_else(|| Error::new("dirs", "Could not find config directory"))?
-        .to_str()
-        .ok_or_else(|| Error::new("dirs", "Could not convert config directory to string"))?
-        .to_owned();
+pub async fn generate_path() -> Result<PathBuf, Error> {
     if cfg!(test) {
         let random_string = Alphanumeric.sample_string(&mut rand::rng(), 100);
-        Ok(format!("tests/{random_string}.testcfg"))
+        Ok(PathBuf::from(format!("tests/{random_string}.testcfg")))
     } else {
-        Ok(format!("{config_directory}/tod.cfg"))
+        let config_directory = dirs::config_dir().expect("Could not find config directory");
+        Ok(config_directory.join("tod.cfg"))
     }
 }
 
-fn maybe_expand_home_dir(path: String) -> Result<String, Error> {
-    if path.starts_with('~') {
-        let home =
-            homedir::my_home()?.ok_or_else(|| Error::new("homedir", "Could not get homedir"))?;
-        let mut path = path;
-        path.replace_range(
-            ..1,
-            home.to_str()
-                .ok_or_else(|| Error::new("homedir", "Could not get homedir"))?,
-        );
+fn maybe_expand_home_dir(path: PathBuf) -> Result<PathBuf, Error> {
+    // If the path starts with "~", expand it
+    if let Some(str_path) = path.to_str() {
+        if str_path.starts_with('~') {
+            let home = homedir::my_home()?
+                .ok_or_else(|| Error::new("homedir", "Could not get homedir"))?;
 
-        Ok(path)
-    } else {
-        Ok(path)
+            // Strip the "~" and construct the new path
+            let mut expanded = home;
+            let suffix = str_path.trim_start_matches('~').trim_start_matches('/');
+            expanded.push(suffix);
+
+            return Ok(expanded);
+        }
     }
+
+    Ok(path)
 }
 
 /// Deletes the config file after resolving its path and confirming with the user.
 /// Accepts an optional CLI-supplied path as `Some(String)`, or uses the default generated path if `None`.
-pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Result<String, Error> {
-    let path_str: String = match cli_config_path {
+pub async fn config_reset(cli_config_path: Option<PathBuf>, force: bool) -> Result<String, Error> {
+    let path: PathBuf = match cli_config_path {
         None => generate_path().await?,             // default config path
         Some(path) => maybe_expand_home_dir(path)?, // expands ~ to full path
     };
-    if !std::path::Path::new(&path_str).exists() {
-        return Ok(format!("No config file found at {path_str}."));
+
+    if !path.exists() {
+        return Ok(format!("No config file found at {}.", path.display()));
     }
-    // Prompt for confirmation before deleting
+    // Prompt for confirmation unless --force is provided
     if !force {
-        print!("Are you sure you want to delete the config at {path_str}? [y/N]: ");
+        print!(
+            "Are you sure you want to delete the config at {}? [y/N]: ",
+            path.display()
+        );
         io::stdout().flush().expect("Failed to flush stdout");
 
         let mut input = String::new();
@@ -710,11 +714,15 @@ pub async fn config_reset(cli_config_path: Option<String>, force: bool) -> Resul
             return Ok("Aborted: Config not deleted.".to_string());
         }
     }
-    match fs::remove_file(&path_str).await {
-        Ok(_) => Ok(format!("Config file at {path_str} deleted successfully.")),
+
+    match fs::remove_file(&path).await {
+        Ok(_) => Ok(format!(
+            "Config file at {} deleted successfully.",
+            path.display()
+        )),
         Err(e) => Err(Error::new(
             "config_reset",
-            &format!("Could not delete config file at {path_str}: {e}"),
+            &format!("Could not delete config file at {}: {}", path.display(), e),
         )),
     }
 }
@@ -729,7 +737,7 @@ mod tests {
         pub fn default_test() -> Self {
             Config {
                 token: Some("default-token".to_string()),
-                path: "/tmp/test.cfg".to_string(),
+                path: PathBuf::from("/tmp/test.cfg"),
                 time_provider: TimeProviderEnum::Fixed(FixedTimeProvider),
                 args: Args {
                     verbose: false,
@@ -785,7 +793,7 @@ mod tests {
             }
         }
 
-        pub fn with_path(self: &Config, path: String) -> Config {
+        pub fn with_path(self: &Config, path: PathBuf) -> Config {
             Config {
                 path,
                 ..self.clone()
@@ -865,7 +873,7 @@ mod tests {
         delete_config(&path_load).await;
     }
 
-    async fn delete_config(path: &str) {
+    async fn delete_config(path: &PathBuf) {
         assert_matches!(fs::remove_file(path).await, Ok(_));
     }
 
@@ -922,14 +930,11 @@ mod tests {
 
     #[test]
     fn test_maybe_expand_home_dir() {
-        let actual = maybe_expand_home_dir("/Users/tod.cfg".to_string());
+        // No tilde, so path should remain unchanged
+        let input = PathBuf::from("/Users/tod.cfg");
+        let result = maybe_expand_home_dir(input.clone()).unwrap();
 
-        let split = actual.unwrap();
-        let mut split = split.split('/');
-
-        assert_eq!(split.next(), Some(""));
-        split.next();
-        assert_eq!(split.next(), Some("tod.cfg"));
+        assert_eq!(result, input);
     }
 
     #[tokio::test]
@@ -947,7 +952,8 @@ mod tests {
 
         write(bad_config_path, contents).await.unwrap();
 
-        let result = Config::load(bad_config_path).await;
+        let bad_config_path_buf = std::path::PathBuf::from(bad_config_path);
+        let result = Config::load(&bad_config_path_buf).await;
         assert!(result.is_err(), "Expected error from invalid u8");
 
         fs::remove_file(bad_config_path).await.unwrap();
@@ -1054,8 +1060,8 @@ mod tests {
         let select_config = base_config.clone().mock_select(2);
         assert_eq!(select_config.mock_select, Some(2));
 
-        let path_config = base_config.with_path("some/test/path.cfg".to_string());
-        assert_eq!(path_config.path, "some/test/path.cfg".to_string());
+        let path_config = base_config.with_path(PathBuf::from("some/test/path.cfg"));
+        assert_eq!(path_config.path, PathBuf::from("some/test/path.cfg"));
 
         let projects = vec![Project {
             id: "test123".to_string(),
@@ -1088,7 +1094,7 @@ mod tests {
     fn test_config_debug_with_time_provider() {
         let config = Config::default_test()
             .with_time_provider(TimeProviderEnum::Fixed(FixedTimeProvider))
-            .with_path("/tmp/test.cfg".to_string());
+            .with_path(PathBuf::from("/tmp/test.cfg"));
 
         let debug_output = format!("{config:?}");
         assert!(debug_output.contains("Config"));
@@ -1149,17 +1155,28 @@ mod tests {
         assert!(
             tokio::fs::try_exists(&config.path).await.unwrap(),
             "Config file should exist at {}",
-            config.path
+            config.path.display()
         );
     }
 
     #[tokio::test]
     async fn test_generate_path_in_test_mode() {
-        // Ensure test mode returns a path in the "tests/" directory
         let path = generate_path().await.expect("Should return a test path");
+
+        // Check that the parent is "tests"
         assert!(
-            path.starts_with("tests/") && path.ends_with(".testcfg"),
-            "Test path should be generated, got {path}"
+            path.parent().map(|p| p.ends_with("tests")).unwrap_or(false),
+            "Expected path to be in the 'tests/' directory, got {}",
+            path.display()
+        );
+
+        // Check that the file extension is ".testcfg"
+        assert!(
+            path.extension()
+                .map(|ext| ext == "testcfg")
+                .unwrap_or(false),
+            "Expected file extension to be .testcfg, got {}",
+            path.display()
         );
     }
     #[tokio::test]
@@ -1231,18 +1248,18 @@ mod tests {
     async fn test_config_reset_force_deletes_temp_file() {
         use std::env::temp_dir;
         use std::fs::File;
+        use std::path::Path;
         use std::path::PathBuf;
 
         let mut temp_path: PathBuf = temp_dir();
         temp_path.push("temp_test_config.cfg");
 
         File::create(&temp_path).expect("Failed to create temp config file");
-        assert!(temp_path.exists());
+        assert!(temp_path.exists(), "Temp config should exist before reset");
 
-        let result =
-            crate::config::config_reset(Some(temp_path.to_string_lossy().to_string()), true).await;
-
+        let result = crate::config::config_reset(Some(temp_path.clone()), true).await;
         assert!(result.is_ok(), "Expected Ok, got {result:?}");
-        assert!(!temp_path.exists(), "File should be deleted");
+
+        assert!(!Path::new(&temp_path).exists(), "File should be deleted");
     }
 }

@@ -1,98 +1,17 @@
-# This file performs CI testing for Tod using GitHub Actions.
-# It runs tests, checks code quality, and ensures no TODO/FIXME comments are left in the code.
-
-
-on: [push, pull_request, workflow_dispatch]  # Trigger on push, pull request, or manual dispatch
-
-#can also run manually via the GitHub Actions UI
-
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: 0
-  CARGO_PROFILE_TEST_DEBUG: 0
-  CARGO_PROFILE_RELEASE_LTO: true
-  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+# Legacy CI workflow - now replaced by ci-push.yml and ci-pr.yml
+# This file is kept for backwards compatibility but should be deprecated
+# The new approach uses separate workflows for push and PR events to avoid duplication
 
 name: ci
 
-permissions:
-  contents: read  # This grants read access specifically to the 'contents' scope
+on:
+  workflow_dispatch:  # Only allow manual triggering
 
+permissions:
+  contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    # Run all tests using nextest
-    name: Cargo CI Tests
-    steps:
-      - uses: actions/checkout@v4
-      - uses: taiki-e/install-action@nextest
-
-      - name: Install Rust Toolchain
-        run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-all-crates: true
-
-      - name: Cargo Test
-        run: cargo nextest run --all-features
-  check:
-    runs-on: ubuntu-latest
-    name: Cargo Check
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-all-crates: true
-      - name: Check
-        run: cargo check --locked --all-features
-#Lint Check for any TODO or FIXME comments in the codebase.
-  todos:
-    name: TODO and FIXME 
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: ./scripts/lint_string.sh "TODO "
-      - run: ./scripts/lint_string.sh "TODO:"
-      - run: ./scripts/lint_string.sh "FIXME "
-      - run: ./scripts/lint_string.sh "FIXME:"
-      - run: ./scripts/lint_string.sh "todo "
-      - run: ./scripts/lint_string.sh "todo:"
-      - run: ./scripts/lint_string.sh "fixme "
-      - run: ./scripts/lint_string.sh "fixme:"
-      - run: ./scripts/lint_string.sh "dbg!"
-  #Ensure code is formatted correctly using Rust's formatting tool (rustfmt).
-  fmt:
-    name: Rust-fmt (Cargo Format)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-         cache-all-crates: true
-      - run: rustup component add rustfmt
-      - run: cargo fmt --all -- --check
-# Lint code using Clippy, a Rust linter that helps catch common mistakes and improve code quality.
-  clippy:
-    name: Clippy (Cargo Clippy Lint Check)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Install Rust Toolchain
-        run: rustup toolchain install
-
-      - name: Cache Rust Dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-all-crates: true
-
-      - name: Install Clippy
-        run: rustup component add clippy
-
-      - name: Run Clippy
-        run: cargo clippy -- -D warnings
+  ci:
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      rust-version: 'stable'

@@ -15,7 +15,7 @@
 ```bash
 > tod -h
 
-A tiny unofficial Todoist client
+An unofficial Todoist command line client
 
 Usage: tod [OPTIONS] <COMMAND>
 

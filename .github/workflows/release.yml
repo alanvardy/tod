@@ -1,5 +1,5 @@
 # Main release orchestrator for version bumps
-name: Release
+name: 📦 Build Linux Binaries
 
 on:
   push:

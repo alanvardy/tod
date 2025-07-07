@@ -148,7 +148,7 @@ tod list label --filter "no label" --label physical --label digital
 
 See [Sort_value](https://github.com/alanvardy/tod/blob/main/docs/configuration.md#sort_value)
 
-## Update Tod only if it is out of date
+## Update Tod only if it is out of date (using Cargo)
 
 ```bash
 tod config check-version || cargo install tod --force

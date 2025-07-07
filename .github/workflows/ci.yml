@@ -1,17 +1,32 @@
-# Legacy CI workflow - now replaced by ci-push.yml and ci-pr.yml
-# This file is kept for backwards compatibility but should be deprecated
-# The new approach uses separate workflows for push and PR events to avoid duplication
-
-name: ci
+# Main CI orchestrator for push events
+name: CI Push
 
 on:
-  workflow_dispatch:  # Only allow manual triggering
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
-  ci:
-    uses: ./.github/workflows/reusable-ci.yml
+  detect-changes:
+    uses: ./.github/workflows/reusable/detect-changes.yml
+
+  quick-ci:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code-changed == 'true'
+    uses: ./.github/workflows/reusable/quick-ci.yml
     with:
+      include-codecov: true
       rust-version: 'stable'
+
+  # Skip if only docs changed
+  skip-notice:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.docs-only == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip CI for docs-only changes
+        run: echo "Skipping CI - only documentation files changed"

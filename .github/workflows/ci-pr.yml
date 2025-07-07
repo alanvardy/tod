@@ -1,4 +1,4 @@
-# CI workflow for pull request events
+# Main CI orchestrator for pull request events
 name: CI Pull Request
 
 on:
@@ -7,9 +7,32 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
-  ci:
-    uses: ./.github/workflows/reusable-ci.yml
+  detect-changes:
+    uses: ./.github/workflows/reusable/detect-changes.yml
+
+  quick-ci:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code-changed == 'true'
+    uses: ./.github/workflows/reusable/quick-ci.yml
+    with:
+      include-codecov: false  # No codecov for PRs
+      rust-version: 'stable'
+
+  full-ci:
+    needs: [detect-changes, quick-ci]
+    if: needs.detect-changes.outputs.code-changed == 'true'
+    uses: ./.github/workflows/reusable/full-ci.yml
     with:
       rust-version: 'stable'
+
+  # Skip if only docs changed
+  skip-notice:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.docs-only == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip CI for docs-only changes
+        run: echo "Skipping CI - only documentation files changed"

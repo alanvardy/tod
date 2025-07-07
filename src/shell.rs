@@ -136,17 +136,20 @@ mod tests {
         cmd.assert().failure();
     }
 
+    #[cfg(windows)]
     #[tokio::test]
-    async fn test_command_stderr_output() {
-        let mut cmd = if cfg!(windows) {
-            let mut c = Command::new("cmd");
-            c.args(["/C", "dir C:\\nonexistent_dir"]);
-            c
-        } else {
-            let mut c = Command::new("sh");
-            c.args(["-c", "ls /nonexistent_directory"]);
-            c
-        };
+    async fn test_command_stderr_output_windows() {
+        let mut cmd = Command::new("cmd");
+        cmd.args(["/C", "dir C:\\nonexistent_dir"]);
+
+        cmd.assert().failure().stderr(contains("File Not Found"));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_command_stderr_output_unix() {
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "ls /nonexistent_directory"]);
 
         cmd.assert()
             .failure()

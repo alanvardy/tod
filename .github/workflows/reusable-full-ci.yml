@@ -5,9 +5,9 @@ on:
   workflow_call:
     inputs:
       rust-version:
-        description: 'Rust version to use'
+        description: "Rust version to use"
         required: false
-        default: 'stable'
+        default: "stable"
         type: string
 
 env:
@@ -32,7 +32,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
-            target: x86_64-apple-darwin
+            target: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +43,11 @@ jobs:
         with:
           toolchain: ${{ inputs.rust-version }}
           targets: ${{ matrix.target }}
+
+      - name: Add target (if needed)
+        run: |
+          # Ensure the target is installed, ignore errors if already installed
+          rustup target add ${{ matrix.target }} || true
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -69,7 +74,7 @@ jobs:
           cache-all-crates: true
 
       - name: Run integration tests
-        run: cargo test --test '*' --all-features
+        run: cargo test --all-features
 
   bench-tests:
     name: Benchmark Tests
@@ -97,9 +102,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: true
-
-      - name: Test documentation
-        run: cargo test --doc --all-features
 
       - name: Check documentation
         run: cargo doc --all-features --no-deps

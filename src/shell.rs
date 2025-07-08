@@ -150,6 +150,6 @@ mod tests {
 
         cmd.assert()
             .failure()
-            .stderr(contains("No such").or(contains("cannot find")));
+            .stderr(contains("No such").or(contains("cannot find")).or(contains("File Not Found")));
     }
 }

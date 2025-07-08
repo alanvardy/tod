@@ -1,5 +1,5 @@
 # Main release orchestrator for version bumps
-name: 📦 Build Linux Binaries
+name: Release
 
 on:
   push:
@@ -39,8 +39,8 @@ jobs:
             echo "No version bump detected"
           fi
 
-  # Run full CI first
-  full-ci:
+  # Run full CI first  
+  ci:
     needs: [detect-changes, check-version-bump]
     if: needs.check-version-bump.outputs.should-release == 'true'
     uses: ./.github/workflows/reusable-full-ci.yml
@@ -49,7 +49,7 @@ jobs:
 
   # Build binaries
   build:
-    needs: [check-version-bump, full-ci]
+    needs: [check-version-bump, ci]
     if: needs.check-version-bump.outputs.should-release == 'true'
     uses: ./.github/workflows/reusable-build.yml
     with:

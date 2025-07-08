@@ -643,11 +643,7 @@ pub async fn get_or_create(
     let config = match fs::File::open(&path).await {
         Ok(_) => Config::load(&path).await,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            let tmp_config = Config::default();
-            debug::maybe_print(
-                &tmp_config,
-                "Config file not found, creating new config".to_string(),
-            );
+            debug::print("Config file not found, creating new config".into());
             create_config(tx).await
         }
         Err(err) => Err(Error::new(

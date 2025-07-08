@@ -7,7 +7,7 @@
 [![Windows Build & Release](https://github.com/alanvardy/tod/actions/workflows/release_windows.yml/badge.svg)](https://github.com/alanvardy/tod/actions/workflows/release_windows.yml)
 [![Homebrew Release](https://github.com/alanvardy/homebrew-tod/actions/workflows/update_formula.yml/badge.svg)](https://github.com/alanvardy/homebrew-tod/actions/workflows/update_formula.yml)
 
-An unofficial Todoist CLI program. Takes simple input and dumps it in your inbox or another project. Takes advantage of natural language processing to assign due dates, tags, etc. Designed for single-tasking in a world filled with distraction.
+An unofficial Todoist command-line client. Takes simple input and dumps it in your inbox or another project. Takes advantage of natural language processing to assign due dates, tags, etc. Designed for single-tasking in a world filled with distraction.
 
 Get started with [Homebrew](https://brew.sh) (macOS, Linux, WSL)
 

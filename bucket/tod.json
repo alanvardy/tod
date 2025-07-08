@@ -1,6 +1,6 @@
 {
   "version": "0.9.1",
-  "description": "An Unofficial Todoist command-line client written in Rust",
+  "description": "An unofficial Todoist command-line client",
   "homepage": "https://github.com/alanvardy/tod",
   "license": "MIT",
   "architecture": {

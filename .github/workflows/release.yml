@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   detect-changes:
-    uses: ./.github/workflows/reusable/detect-changes.yml
+    uses: ./.github/workflows/reusable-detect-changes.yml
 
   # Only proceed if this is a version bump
   check-version-bump:
@@ -43,7 +43,7 @@ jobs:
   full-ci:
     needs: [detect-changes, check-version-bump]
     if: needs.check-version-bump.outputs.should-release == 'true'
-    uses: ./.github/workflows/reusable/full-ci.yml
+    uses: ./.github/workflows/reusable-full-ci.yml
     with:
       rust-version: 'stable'
 
@@ -51,7 +51,7 @@ jobs:
   build:
     needs: [check-version-bump, full-ci]
     if: needs.check-version-bump.outputs.should-release == 'true'
-    uses: ./.github/workflows/reusable/build.yml
+    uses: ./.github/workflows/reusable-build.yml
     with:
       version: ${{ needs.check-version-bump.outputs.version }}
       rust-version: 'stable'
@@ -60,7 +60,7 @@ jobs:
   upload:
     needs: [check-version-bump, build]
     if: needs.check-version-bump.outputs.should-release == 'true'
-    uses: ./.github/workflows/reusable/upload.yml
+    uses: ./.github/workflows/reusable-upload.yml
     with:
       version: ${{ needs.check-version-bump.outputs.version }}
       linux-artifact: ${{ needs.build.outputs.linux-artifact }}
@@ -71,7 +71,7 @@ jobs:
   publish:
     needs: [check-version-bump, upload]
     if: needs.check-version-bump.outputs.should-release == 'true'
-    uses: ./.github/workflows/reusable/publish.yml
+    uses: ./.github/workflows/reusable-publish.yml
     with:
       version: ${{ needs.check-version-bump.outputs.version }}
       release-url: ${{ needs.upload.outputs.release-url }}
@@ -81,6 +81,6 @@ jobs:
   validate:
     needs: [check-version-bump, publish]
     if: needs.check-version-bump.outputs.should-release == 'true'
-    uses: ./.github/workflows/reusable/validate.yml
+    uses: ./.github/workflows/reusable-validate.yml
     with:
       version: ${{ needs.check-version-bump.outputs.version }}

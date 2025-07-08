@@ -12,12 +12,12 @@ permissions:
 
 jobs:
   detect-changes:
-    uses: ./.github/workflows/reusable/detect-changes.yml
+    uses: ./.github/workflows/reusable-detect-changes.yml
 
   quick-ci:
     needs: detect-changes
     if: needs.detect-changes.outputs.code-changed == 'true'
-    uses: ./.github/workflows/reusable/quick-ci.yml
+    uses: ./.github/workflows/reusable-quick-ci.yml
     with:
       include-codecov: true
       rust-version: 'stable'

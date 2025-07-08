@@ -11,12 +11,12 @@ permissions:
 
 jobs:
   detect-changes:
-    uses: ./.github/workflows/reusable/detect-changes.yml
+    uses: ./.github/workflows/reusable-detect-changes.yml
 
   quick-ci:
     needs: detect-changes
     if: needs.detect-changes.outputs.code-changed == 'true'
-    uses: ./.github/workflows/reusable/quick-ci.yml
+    uses: ./.github/workflows/reusable-quick-ci.yml
     with:
       include-codecov: false  # No codecov for PRs
       rust-version: 'stable'
@@ -24,7 +24,7 @@ jobs:
   full-ci:
     needs: [detect-changes, quick-ci]
     if: needs.detect-changes.outputs.code-changed == 'true'
-    uses: ./.github/workflows/reusable/full-ci.yml
+    uses: ./.github/workflows/reusable-full-ci.yml
     with:
       rust-version: 'stable'
 

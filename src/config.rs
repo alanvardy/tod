@@ -4,6 +4,7 @@ use crate::id::Resource;
 use crate::input::page_size;
 use crate::projects::{LegacyProject, Project};
 use crate::tasks::Task;
+use crate::tasks::format::format_url;
 use crate::time::{SystemTimeProvider, TimeProviderEnum};
 use crate::{VERSION, cargo, color, debug, input, oauth, time, todoist};
 use rand::distr::{Alphanumeric, SampleString};
@@ -523,11 +524,12 @@ impl Config {
                     config
                 }
                 DEVELOPER => {
-                    let desc = "Please enter your Todoist API token from https://todoist.com/prefs/integrations ";
+                    let url = format_url("https://todoist.com/prefs/integrations", &self);
+                    let desc = format!("Please enter your Todoist API token from {url} ");
 
                     // We can't use mock_string from config here because it can't be set in test.
                     let fake_token = Some("faketoken".into());
-                    let token = input::string(desc, fake_token)?;
+                    let token = input::string(&desc, fake_token)?;
                     self.with_token(&token)
                 }
                 _ => unreachable!(),

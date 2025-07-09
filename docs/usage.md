@@ -6,7 +6,7 @@
   - [Usage Examples](#usage-examples)
   - [Shell script examples](#shell-script-examples)
     - [Sort, schedule, prioritize, and process tasks](#sort-schedule-prioritize-and-process-tasks)
-  - [Update Tod only if it is out of date](#update-tod-only-if-it-is-out-of-date)
+  - [Update Tod](#update-tod)
   - [How task priority is determined](#how-task-priority-is-determined)
 <!--toc:end-->
 
@@ -148,8 +148,16 @@ tod list label --filter "no label" --label physical --label digital
 
 See [Sort_value](https://github.com/alanvardy/tod/blob/main/docs/configuration.md#sort_value)
 
-## Update Tod only if it is out of date
+## Update Tod
 
 ```bash
-tod config check-version || cargo install tod --force
+tod config check-version
 ```
+
+## Update Tod (no prompt)
+
+```bash
+tod config check-version --force 
+```
+
+Tod will attempt to detect the installed method (homebrew, cargo, scoop, etc) and auto-update if possible.

@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 use config::Config;
 use errors::Error;
 use input::DateTimeInput;
+use inquire::Confirm;
 use lists::Flag;
 use shell::Shell;
 use std::fmt::Display;
@@ -22,7 +23,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use walkdir::WalkDir;
 
 use crate::config::config_reset;
-
+use crate::update::{get_install_method_string, get_upgrade_command};
 mod cargo;
 mod color;
 mod comments;
@@ -43,6 +44,7 @@ mod test;
 mod test_time;
 mod time;
 mod todoist;
+mod update;
 mod users;
 // Values pulled from Cargo.toml
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -519,9 +521,8 @@ enum ConfigCommands {
     #[clap(alias = "v")]
     /// (v) Check to see if tod is on the latest version, returns exit code 1 if out of date. Does not need a configuration file.
     CheckVersion(ConfigCheckVersion),
-
-    #[clap(alias = "r")]
     /// (r) Deletes the configuration file (if present). Errors if the file does not exist.
+    #[clap(alias = "r")]
     Reset(ConfigReset),
 
     #[clap(alias = "tz")]
@@ -551,7 +552,14 @@ enum TestCommands {
 }
 
 #[derive(Parser, Debug, Clone)]
-struct ConfigCheckVersion {}
+struct ConfigCheckVersion {
+    /// Automatically install the latest version if available
+    #[clap(short = 'f', long)]
+    pub force: bool,
+    /// Manually specify the method to use for installing updates
+    #[clap(long, hide = true)]
+    pub repo: Option<String>,
+}
 
 #[derive(Parser, Debug, Clone)]
 struct TestAll {}
@@ -1398,15 +1406,49 @@ async fn list_deadline(config: Config, args: &ListDeadline) -> Result<String, Er
 
 // // --- CONFIG ---
 
-async fn config_check_version(_args: &ConfigCheckVersion) -> Result<String, Error> {
+async fn config_check_version(args: &ConfigCheckVersion) -> Result<String, Error> {
+    let mut output = String::new();
+
     match cargo::compare_versions(None).await {
-        Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {VERSION}")),
-        Ok(Version::Dated(version)) => Err(Error::new(
-            "cargo",
-            &format!("Tod is out of date with version: {VERSION}, latest is:{version}"),
-        )),
-        Err(e) => Err(e),
+        Ok(Version::Latest) => {
+            output.push_str(&format!("Tod is up to date with version: {VERSION}"));
+        }
+        Ok(Version::Dated(latest)) => {
+            output.push_str(&format!(
+                "Installed version: {VERSION}, Latest version: {latest}\n"
+            ));
+            output.push_str(&format!(
+                "Detected installation method: {}\n",
+                get_install_method_string(&args.repo)
+            ));
+
+            let confirm = if args.force {
+                true
+            } else {
+                Confirm::new("Would you like to automatically update?")
+                    .with_default(true)
+                    .prompt()
+                    .unwrap_or(false)
+            };
+
+            if confirm {
+                output.push_str(&format!(
+                    "To update, run: '{}'",
+                    get_upgrade_command(&args.repo)
+                ));
+            } else {
+                output.push_str(&format!(
+                    "Update skipped. To update, run: '{}'",
+                    get_upgrade_command(&args.repo)
+                ));
+            }
+        }
+        Err(e) => {
+            output.push_str(&format!("Error checking version: {e}"));
+        }
     }
+
+    Ok(output)
 }
 
 async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, Error> {

@@ -1,4 +1,4 @@
-//File for shell functions used local to the system, such as command exeution, shell completions.
+//File for shell functions used local to the system, such as command execution, shell completions.
 use crate::{Cli, LOWERCASE_NAME};
 use clap::CommandFactory;
 use std::{io, process::Stdio};

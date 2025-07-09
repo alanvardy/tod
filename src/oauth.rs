@@ -154,8 +154,11 @@ mod tests {
     use super::*;
     use crate::test::{self, responses::ResponseFromFile};
     use pretty_assertions::assert_eq;
+    use serial_test::serial;
 
+    // Oauth tests must be run serially to avoid conflicts/failures with the mock server
     #[tokio::test]
+    #[serial]
     async fn login_test() {
         let mut server = mockito::Server::new_async().await;
 
@@ -195,7 +198,7 @@ mod tests {
         assert_eq!(result, String::from("✓"));
         mock.assert()
     }
-
+    #[serial]
     #[tokio::test]
     async fn receive_callback_with_error_param() {
         let (test_tx, test_rx) = oneshot::channel::<()>();

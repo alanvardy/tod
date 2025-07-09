@@ -103,11 +103,7 @@ pub fn due(task: &Task, config: &Config, buffer: &str) -> String {
     }
 }
 
-pub fn task_url(id: &str) -> String {
-    let link = color::purple_string("link");
-    format!("\x1B]8;;https://app.todoist.com/app/task/{id}\x1B\\[{link}]\x1B]8;;\x1B\\")
-}
-
+//Formats a string for all style/formatted links (including markdown) and formats them as a hyperlink
 fn create_links(content: &str) -> String {
     // Define the regex pattern for Markdown links
     let link_regex = Regex::new(r"\[([^\]]+)\]\(([^)]+)\)").unwrap();
@@ -122,6 +118,13 @@ fn create_links(content: &str) -> String {
     result.into_owned()
 }
 
+// Formats a single URL as a hyperlinked URL (with the URL as the Hyperlink), if hyperlinks are enabled in the config - If hyperlinks are disabled, it returns the same URL as a plain string.
+pub fn format_url(url: &str, config: &Config) -> String {
+    if hyperlinks_disabled(config) {
+        return url.to_string();
+    }
+    format!("\x1B]8;;{url}\x1B\\{url}\x1B]8;;\x1B\\")
+}
 pub fn number_comments(quantity: usize) -> String {
     let comment_icon = color::purple_string("★");
     if quantity == 1 {
@@ -129,6 +132,12 @@ pub fn number_comments(quantity: usize) -> String {
     }
 
     format!("\n{comment_icon} {quantity} comments")
+}
+
+/// Returns a hyperlink-formatted URL for a given task ID.
+pub fn task_url(task_id: &str) -> String {
+    let url = format!("https://app.todoist.com/app/task/{task_id}");
+    format!("\x1B]8;;{url}\x1B\\[link]\x1B]8;;\x1B\\")
 }
 
 pub async fn render_comments(config: &Config, comments: Vec<Comment>) -> Result<String, Error> {
@@ -203,5 +212,44 @@ mod tests {
             "\n\n★ Comments ★\n\nPosted 2016-09-22 00:00:00 PDT\nNeed one bottle of milk"
         );
         mock.expect(1);
+    }
+
+    #[test]
+    fn test_create_links_multiple_and_edge_cases() {
+        // Multiple links in one string
+        let input = "Links: [Rust](https://www.rust-lang.org/) and [GitHub](https://github.com/)";
+        let expected = "Links: \x1b]8;;https://www.rust-lang.org/\x07[Rust]\x1b]8;;\x07 and \x1b]8;;https://github.com/\x07[GitHub]\x1b]8;;\x07";
+        assert_eq!(create_links(input), expected);
+
+        // Single link
+        let input = "Check this out: [Example](https://example.com)";
+        let expected = "Check this out: \x1b]8;;https://example.com\x07[Example]\x1b]8;;\x07";
+        assert_eq!(create_links(input), expected);
+
+        // No links present
+        assert_eq!(create_links("No links here."), "No links here.");
+
+        // Malformed markdown (should not match)
+        assert_eq!(
+            create_links("[Broken link](not a url"),
+            "[Broken link](not a url"
+        );
+    }
+
+    #[test]
+    fn test_format_url_hyperlinks_enabled() {
+        let url = "https://www.rust-lang.org/";
+        let expected =
+            "\x1B]8;;https://www.rust-lang.org/\x1B\\[https://www.rust-lang.org/]\x1B]8;;\x1B\\";
+        let config = Config::default();
+        assert_eq!(format_url(url, &config), expected);
+    }
+    #[test]
+    fn test_format_url_hyperlinks_disabled() {
+        let url = "https://www.rust-lang.org/";
+        // Create a config with disable_links set to true
+        let mut config = Config::default();
+        config.disable_links = true;
+        assert_eq!(format_url(url, &config), url);
     }
 }

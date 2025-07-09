@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::color::green_string;
 use crate::errors::Error;
+use crate::tasks::format::format_url;
 use crate::todoist::OAUTH_URL;
 use crate::{config::Config, todoist};
 
@@ -41,17 +42,34 @@ pub async fn login(config: &mut Config, test_tx: Option<Sender<()>>) -> Result<S
         .code
         .ok_or_else(|| Error::new("params", "no code provided"))?;
     let access_token = todoist::get_access_token(config, &code).await?;
-    config.set_token(access_token).await
+    let result = config.set_token(access_token).await;
+
+    // Print authentication success message to the terminal
+    let check = green_string("Authentication Sucessful!");
+    println!("{check}");
+
+    result
 }
 
 fn print_oauth_url() -> String {
     let csrf_token = new_uuid();
 
-    let text = green_string("Please visit the following url to authenticate with Todoist:");
     let url = format!(
         "https://todoist.com{OAUTH_URL}?client_id={CLIENT_ID}&scope={SCOPE}&state={csrf_token}"
     );
-    println!("{text}\n{url}");
+    let formatted_url = format_url(&url, &Config::default());
+
+    match open::that(&url) {
+        Ok(_) => {
+            println!(
+                "Opening {formatted_url} in the default web browser to authenticate with Todoist."
+            );
+        }
+        Err(_) => {
+            println!("Please visit the following url to authenticate with Todoist:");
+            println!("{formatted_url}");
+        }
+    }
     csrf_token
 }
 
@@ -167,10 +185,57 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body = resp.text().await.unwrap();
-        assert!(body.contains("Success")); // or whatever message your handler returns
+        assert!(body.contains("Success"));
 
         let result = login_handle.await.unwrap();
         assert_eq!(result, String::from("✓"));
         mock.assert()
+    }
+
+    #[tokio::test]
+    async fn receive_callback_with_error_param() {
+        let (test_tx, test_rx) = oneshot::channel::<()>();
+        let csrf_token = new_uuid();
+        let csrf_token_clone = csrf_token.clone();
+
+        // Spawn the server
+        let server_handle =
+            tokio::spawn(async move { receive_callback(&csrf_token, Some(test_tx)).await });
+
+        test_rx.await.unwrap();
+
+        // Simulate callback with error
+        let params = [("error", "access_denied"), ("state", &csrf_token_clone)];
+        let client = reqwest::Client::new();
+        let resp = client
+            .get("http://127.0.0.1:8080/")
+            .query(&params)
+            .send()
+            .await
+            .expect("Failed to send callback");
+
+        assert!(resp.status().is_success());
+        let body = resp.text().await.unwrap();
+        assert!(body.contains("Error"));
+
+        let result = server_handle.await.unwrap();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("access_denied"));
+    }
+
+    #[test]
+    fn test_print_oauth_url_returns_csrf_token() {
+        // In test mode, new_uuid() returns FAKE_UUID
+        let csrf_token = print_oauth_url();
+        assert_eq!(csrf_token, FAKE_UUID);
+
+        // Optionally, check that the formatted URL contains the CSRF token
+        let expected_url_part = format!("state={FAKE_UUID}");
+        let url = format!(
+            "https://todoist.com{OAUTH_URL}?client_id={CLIENT_ID}&scope={SCOPE}&state={FAKE_UUID}"
+        );
+        let formatted_url = format_url(&url, &Config::default());
+        assert!(formatted_url.contains(&expected_url_part));
     }
 }

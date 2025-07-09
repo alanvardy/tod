@@ -1,4 +1,4 @@
-// Thils file contains the functions used for checking for updates and automatically updating the tod CLI tool.
+// This file contains the functions used for checking for updates and automatically updating the tod CLI tool.
 // Functions that attempt to detect the installation method of the current executable, used for autoupdate and debug
 use std::{env, process::Command};
 

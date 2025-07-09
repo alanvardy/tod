@@ -22,8 +22,9 @@ use tasks::{SortOrder, TaskAttribute, priority};
 use tokio::sync::mpsc::UnboundedSender;
 use walkdir::WalkDir;
 
+use crate::cargo::compare_versions;
 use crate::config::config_reset;
-use crate::update::{get_install_method_string, get_upgrade_command};
+use crate::update::get_install_method_string;
 mod cargo;
 mod color;
 mod comments;
@@ -891,7 +892,7 @@ async fn select_command(
 
         // Config
         Commands::Config(ConfigCommands::CheckVersion(args)) => {
-            (true, true, config_check_version(args).await)
+            (true, true, config_check_version(args, None).await)
         }
 
         // Command to delete the config file. Checks the default path, does not rely on the config struct.
@@ -1406,49 +1407,86 @@ async fn list_deadline(config: Config, args: &ListDeadline) -> Result<String, Er
 
 // // --- CONFIG ---
 
-async fn config_check_version(args: &ConfigCheckVersion) -> Result<String, Error> {
-    let mut output = String::new();
-
-    match cargo::compare_versions(None).await {
+async fn config_check_version(
+    args: &ConfigCheckVersion,
+    mock_url: Option<String>,
+) -> Result<String, Error> {
+    match compare_versions(mock_url).await {
         Ok(Version::Latest) => {
-            output.push_str(&format!("Tod is up to date with version: {VERSION}"));
+            let msg = format!("Tod is up to date with version: {VERSION}");
+            if args.force {
+                return Ok(msg);
+            }
+            println!("{msg}");
+            Ok(String::new())
         }
         Ok(Version::Dated(latest)) => {
-            output.push_str(&format!(
-                "Installed version: {VERSION}, Latest version: {latest}\n"
-            ));
-            output.push_str(&format!(
-                "Detected installation method: {}\n",
-                get_install_method_string(&args.repo)
-            ));
-
-            let confirm = if args.force {
-                true
+            let msg = format!(
+                "Tod is out of date. Installed version: {VERSION}, Latest version: {latest}"
+            );
+            let method = get_install_method_string(&args.repo);
+            let upgrade_cmd = update::get_upgrade_command(&args.repo);
+            let method_msg = format!("Detected installation method: {method}");
+            if args.force {
+                // For testability, return the message instead of printing
+                let mut result = format!("{msg}\n{method_msg}");
+                match update::perform_auto_update(&args.repo) {
+                    Ok(_) => {
+                        result.push_str("\nUpdate completed successfully.");
+                        Ok(result)
+                    }
+                    Err(e) => {
+                        result.push_str(&format!(
+                            "\nAuto-update failed: {e}. To update manually: '{upgrade_cmd}'"
+                        ));
+                        Ok(result)
+                    }
+                }
             } else {
-                Confirm::new("Would you like to automatically update?")
-                    .with_default(true)
+                println!("{msg}");
+                println!("{method_msg}");
+
+                let should_update = match Confirm::new("Do you want to update?")
+                    .with_default(false)
                     .prompt()
-                    .unwrap_or(false)
-            };
+                {
+                    Ok(true) => true,
+                    Ok(false) => false,
+                    Err(e) => {
+                        println!("Could not prompt for update: {e}. To update: '{upgrade_cmd}'");
+                        false
+                    }
+                };
 
-            if confirm {
-                output.push_str(&format!(
-                    "To update, run: '{}'",
-                    get_upgrade_command(&args.repo)
-                ));
-            } else {
-                output.push_str(&format!(
-                    "Update skipped. To update, run: '{}'",
-                    get_upgrade_command(&args.repo)
-                ));
+                if should_update {
+                    match update::perform_auto_update(&args.repo) {
+                        Ok(_) => {
+                            println!("Update completed successfully.");
+                            Ok(String::new())
+                        }
+                        Err(e) => {
+                            println!(
+                                "Auto-update failed: {e}. To update manually: '{upgrade_cmd}'"
+                            );
+                            Ok(String::new())
+                        }
+                    }
+                } else {
+                    println!("Update skipped. To update: '{upgrade_cmd}'");
+                    Ok(String::new())
+                }
             }
         }
         Err(e) => {
-            output.push_str(&format!("Error checking version: {e}"));
+            let msg = format!("Error checking version: {e}");
+            if args.force {
+                Ok(msg)
+            } else {
+                println!("{msg}");
+                Ok(String::new())
+            }
         }
     }
-
-    Ok(output)
 }
 
 async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, Error> {

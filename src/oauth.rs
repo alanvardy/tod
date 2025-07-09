@@ -58,16 +58,21 @@ fn print_oauth_url() -> String {
         "https://todoist.com{OAUTH_URL}?client_id={CLIENT_ID}&scope={SCOPE}&state={csrf_token}"
     );
     let formatted_url = format_url(&url, &Config::default());
-
-    match open::that(&url) {
-        Ok(_) => {
-            println!(
-                "Opening {formatted_url} in the default web browser to authenticate with Todoist."
-            );
-        }
-        Err(_) => {
-            println!("Please visit the following url to authenticate with Todoist:");
-            println!("{formatted_url}");
+    // Don't open the browser in test mode, just print the URL
+    if cfg!(test) {
+        println!("Please visit the following url to authenticate with Todoist:");
+        println!("{formatted_url}");
+    } else {
+        match open::that(&url) {
+            Ok(_) => {
+                println!(
+                    "Opening {formatted_url} in the default web browser to authenticate with Todoist."
+                );
+            }
+            Err(_) => {
+                println!("Please visit the following url to authenticate with Todoist:");
+                println!("{formatted_url}");
+            }
         }
     }
     csrf_token
@@ -150,8 +155,11 @@ mod tests {
     use super::*;
     use crate::test::{self, responses::ResponseFromFile};
     use pretty_assertions::assert_eq;
+    use serial_test::serial;
 
+    // Oauth tests must be run serially to avoid conflicts/failures with the mock server
     #[tokio::test]
+    #[serial]
     async fn login_test() {
         let mut server = mockito::Server::new_async().await;
 
@@ -191,7 +199,7 @@ mod tests {
         assert_eq!(result, String::from("✓"));
         mock.assert()
     }
-
+    #[serial]
     #[tokio::test]
     async fn receive_callback_with_error_param() {
         let (test_tx, test_rx) = oneshot::channel::<()>();

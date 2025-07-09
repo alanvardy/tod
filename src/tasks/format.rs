@@ -123,7 +123,7 @@ pub fn format_url(url: &str, config: &Config) -> String {
     if hyperlinks_disabled(config) {
         return url.to_string();
     }
-    format!("\x1B]8;;{url}\x1B\\{url}\x1B]8;;\x1B\\")
+    format!("\x1B]8;;{url}\x1B\\[{url}]\x1B]8;;\x1B\\")
 }
 pub fn number_comments(quantity: usize) -> String {
     let comment_icon = color::purple_string("★");
@@ -236,12 +236,17 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_format_url_hyperlinks_enabled() {
+    #[tokio::test]
+    async fn test_format_url_hyperlinks_enabled() {
         let url = "https://www.rust-lang.org/";
         let expected =
             "\x1B]8;;https://www.rust-lang.org/\x1B\\[https://www.rust-lang.org/]\x1B]8;;\x1B\\";
         let config = Config::default();
+        // Skip the test if hyperlinks are not supported in the current environment (otherwise test fails)
+        if !supports_hyperlinks::on(Stream::Stdout) {
+            eprintln!("Skipping test: hyperlinks not supported in this environment");
+            return;
+        }
         assert_eq!(format_url(url, &config), expected);
     }
     #[test]

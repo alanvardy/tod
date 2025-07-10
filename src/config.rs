@@ -1299,7 +1299,7 @@ mod tests {
         let mut temp_path: PathBuf = temp_dir();
         temp_path.push("temp_test_config_prompt_yes.cfg");
 
-        File::create(&temp_path).expect("Failed to create temp config file");
+        File::create(&temp_path).unwrap();
         assert!(temp_path.exists(), "Temp config should exist before reset");
 
         // Simulate user input "y"

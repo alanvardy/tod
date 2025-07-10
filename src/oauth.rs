@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::color::green_string;
 use crate::errors::Error;
-use crate::tasks::format::format_url;
+use crate::tasks::format::maybe_format_url;
 use crate::todoist::OAUTH_URL;
 use crate::{config::Config, todoist};
 
@@ -58,7 +58,7 @@ fn print_oauth_url() -> String {
     let url = format!(
         "https://todoist.com{OAUTH_URL}?client_id={CLIENT_ID}&scope={SCOPE}&state={csrf_token}"
     );
-    let formatted_url = format_url(&url, &Config::default());
+    let formatted_url = maybe_format_url(&url, &Config::default());
     // Don't open the browser in test mode, just print the URL
     if cfg!(test) {
         println!("Please visit the following url to authenticate with Todoist:");
@@ -193,6 +193,7 @@ mod tests {
         assert_eq!(result, String::from("✓"));
         mock.assert()
     }
+
     #[tokio::test]
     async fn receive_callback_with_error_param() {
         let (test_tx, test_rx) = oneshot::channel::<()>();
@@ -276,7 +277,7 @@ mod tests {
         let url = format!(
             "https://todoist.com{OAUTH_URL}?client_id={CLIENT_ID}&scope={SCOPE}&state={FAKE_UUID}"
         );
-        let formatted_url = format_url(&url, &Config::default());
+        let formatted_url = maybe_format_url(&url, &Config::default());
         assert!(formatted_url.contains(&expected_url_part));
     }
 }

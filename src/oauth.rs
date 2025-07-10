@@ -194,6 +194,7 @@ mod tests {
         assert_eq!(result, String::from("✓"));
         mock.assert()
     }
+
     #[tokio::test]
     async fn receive_callback_with_error_param() {
         let (test_tx, test_rx) = oneshot::channel::<()>();

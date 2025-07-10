@@ -594,6 +594,33 @@ impl Default for Config {
         }
     }
 }
+/// Fetches the config from disk; errors out if it doesn't exist
+pub async fn get_config(config_path: Option<PathBuf>) -> Result<Config, Error> {
+    let path = match config_path {
+        None => generate_path().await?,
+        Some(path) => maybe_expand_home_dir(path)?,
+    };
+
+    let path_for_error = path.clone();
+    if !check_config_exists(Some(path)).await? {
+        return Err(Error::new(
+            "get_config",
+            &format!("No config file found at {}.", path_for_error.display()),
+        ));
+    }
+
+    Config::load(&path_for_error).await
+}
+
+/// Checks if the config file exists at the given path OR  default path if None).
+pub async fn check_config_exists(config_path: Option<PathBuf>) -> Result<bool, Error> {
+    let path = match config_path {
+        None => generate_path().await?,
+        Some(path) => maybe_expand_home_dir(path)?,
+    };
+    Ok(path.exists())
+}
+
 /// Fetches config from from disk and creates it if it doesn't exist
 /// Prompts for Todoist API token
 pub async fn get_or_create(
@@ -1307,5 +1334,63 @@ mod tests {
         let input = PathBuf::from("/usr/bin/env");
         let result = maybe_expand_home_dir(input.clone()).unwrap();
         assert_eq!(result, input);
+    }
+
+    #[tokio::test]
+    async fn test_get_config_with_existing_path() {
+        // Create a temp config file
+        let dir = temp_dir();
+        let temp_path: PathBuf = dir.join("test_get_config_exists.cfg");
+        let mut config = Config {
+            path: temp_path.clone(),
+            token: Some("abc".to_string()),
+            timezone: Some("UTC".to_string()),
+            ..Config::default()
+        };
+        // Ensure parent directory exists and file is created
+        config = config.create().await.expect("Should create config file");
+        config.save().await.expect("Should save config");
+
+        // Should load successfully
+        let loaded = get_config(Some(temp_path.clone())).await;
+        assert!(loaded.is_ok(), "Expected Ok for existing config");
+        let loaded = loaded.unwrap();
+        assert_eq!(loaded.token, Some("abc".to_string()));
+
+        // Cleanup
+        tokio::fs::remove_file(&temp_path).await.ok();
+    }
+
+    #[tokio::test]
+    async fn test_get_config_with_nonexistent_path() {
+        let dir = temp_dir();
+        let temp_path: PathBuf = dir.join("test_get_config_nonexistent.cfg");
+        // Ensure file does not exist
+        tokio::fs::remove_file(&temp_path).await.ok();
+
+        let loaded = get_config(Some(temp_path.clone())).await;
+        assert!(loaded.is_err(), "Expected Err for nonexistent config");
+        let err = loaded.unwrap_err().to_string();
+        assert!(
+            err.contains("No config file found"),
+            "Expected missing config error, got: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_config_exists_true_and_false() {
+        let dir = temp_dir();
+        let temp_path: PathBuf = dir.join("test_check_config_exists.cfg");
+        // Should not exist yet
+        tokio::fs::remove_file(&temp_path).await.ok();
+
+        let exists = check_config_exists(Some(temp_path.clone())).await.unwrap();
+        assert!(!exists, "Should be false for nonexistent config");
+
+        tokio::fs::File::create(&temp_path).await.unwrap();
+        let exists = check_config_exists(Some(temp_path.clone())).await.unwrap();
+        assert!(exists, "Should be true for existing config");
+
+        tokio::fs::remove_file(&temp_path).await.ok();
     }
 }

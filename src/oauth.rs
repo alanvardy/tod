@@ -36,7 +36,8 @@ pub struct AccessToken {
 }
 
 pub async fn login(config: &mut Config, test_tx: Option<Sender<()>>) -> Result<String, Error> {
-    let csrf_token = print_oauth_url();
+    // Use the provided config, not a new default every time
+    let csrf_token = print_oauth_url(config);
     let listener = tokio::net::TcpListener::bind(PROD_LOCALHOST).await?;
     let code = receive_callback(&csrf_token, test_tx, listener)
         .await?
@@ -48,17 +49,18 @@ pub async fn login(config: &mut Config, test_tx: Option<Sender<()>>) -> Result<S
     // Print authentication success message to the terminal
     let check = green_string("Authentication Successful!");
     println!("{check}");
+    println!("You can now use the `tod` command to manage your Todoist tasks.");
 
     result
 }
 
-fn print_oauth_url() -> String {
+fn print_oauth_url(config: &Config) -> String {
     let csrf_token = new_uuid();
 
     let url = format!(
         "https://todoist.com{OAUTH_URL}?client_id={CLIENT_ID}&scope={SCOPE}&state={csrf_token}"
     );
-    let formatted_url = maybe_format_url(&url, &Config::default());
+    let formatted_url = maybe_format_url(&url, config);
     // Don't open the browser in test mode, just print the URL
     if cfg!(test) {
         println!("Please visit the following url to authenticate with Todoist:");
@@ -269,7 +271,7 @@ mod tests {
     #[test]
     fn test_print_oauth_url_returns_csrf_token() {
         // In test mode, new_uuid() returns FAKE_UUID
-        let csrf_token = print_oauth_url();
+        let csrf_token = print_oauth_url(&Config::default());
         assert_eq!(csrf_token, FAKE_UUID);
 
         // Optionally, check that the formatted URL contains the CSRF token

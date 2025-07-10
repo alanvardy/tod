@@ -103,7 +103,7 @@ pub fn due(task: &Task, config: &Config, buffer: &str) -> String {
     }
 }
 
-//Formats a string for all style/formatted links (including markdown) and formats them as a hyperlink
+/// Formats a string for all style/formatted links (including markdown) and formats them as a hyperlink
 fn create_links(content: &str) -> String {
     // Define the regex pattern for Markdown links
     let link_regex = Regex::new(r"\[([^\]]+)\]\(([^)]+)\)").unwrap();
@@ -118,7 +118,7 @@ fn create_links(content: &str) -> String {
     result.into_owned()
 }
 
-/// Formats a single URL as a hyperlinked URL (with the URL as the Hyperlink), if hyperlinks are enabled in the config - If hyperlinks are disabled, it returns the same URL as a plain string.
+// Formats a single URL as a hyperlinked URL (with the URL as the Hyperlink), if hyperlinks are enabled in the config - If hyperlinks are disabled, it returns the same URL as a plain string.
 pub fn maybe_format_url(url: &str, config: &Config) -> String {
     if hyperlinks_disabled(config) {
         return url.to_string();

@@ -211,12 +211,8 @@ impl Task {
         } else {
             String::new()
         };
-
-        let url = if format::hyperlinks_disabled(config) {
-            String::new()
-        } else {
-            format::task_url(&self.id)
-        };
+        // Format_task_id returns the same format if urls are disabled
+        let url = format::maybe_format_task_id(&self.id, config);
 
         let due = format::due(self, config, &buffer);
         let prefix = match format {

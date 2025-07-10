@@ -119,7 +119,7 @@ fn create_links(content: &str) -> String {
 }
 
 /// Formats a single URL as a hyperlinked URL (with the URL as the Hyperlink), if hyperlinks are enabled in the config - If hyperlinks are disabled, it returns the same URL as a plain string.
-pub fn format_url(url: &str, config: &Config) -> String {
+pub fn maybe_format_url(url: &str, config: &Config) -> String {
     if hyperlinks_disabled(config) {
         return url.to_string();
     }
@@ -133,11 +133,14 @@ pub fn number_comments(quantity: usize) -> String {
 
     format!("\n{comment_icon} {quantity} comments")
 }
-
-/// Returns a hyperlink-formatted URL for a given task ID.
-pub fn task_url(task_id: &str) -> String {
+/// Returns a hyperlink-formatted URL formatted as "[link]" for a given task ID if hyperlinks are enabled in the config.
+pub fn maybe_format_task_id(task_id: &str, config: &Config) -> String {
     let url = format!("https://app.todoist.com/app/task/{task_id}");
-    format!("\x1B]8;;{url}\x1B\\[link]\x1B]8;;\x1B\\")
+    if hyperlinks_disabled(config) {
+        url
+    } else {
+        format!("\x1B]8;;{url}\x1B\\[link]\x1B]8;;\x1B\\")
+    }
 }
 
 pub async fn render_comments(config: &Config, comments: Vec<Comment>) -> Result<String, Error> {
@@ -181,11 +184,27 @@ mod tests {
     }
 
     #[test]
-    fn test_task_url() {
+    fn test_task_url_enabled() {
+        let config = Config::default();
+        // Skip the test if hyperlinks are not supported in this environment (otherwise test fails)
+        if !supports_hyperlinks::on(Stream::Stdout) {
+            eprintln!("Skipping test: hyperlinks not supported in this environment");
+            return;
+        }
         assert_eq!(
-            task_url("1"),
+            maybe_format_task_id("1", &config),
             String::from("\x1B]8;;https://app.todoist.com/app/task/1\x1B\\[link]\x1B]8;;\x1B\\")
-        )
+        );
+    }
+
+    #[test]
+    fn test_task_url_disabled() {
+        let mut config = Config::default();
+        config.disable_links = true;
+        assert_eq!(
+            maybe_format_task_id("1", &config),
+            String::from("https://app.todoist.com/app/task/1")
+        );
     }
 
     #[tokio::test]
@@ -247,7 +266,7 @@ mod tests {
             eprintln!("Skipping test: hyperlinks not supported in this environment");
             return;
         }
-        assert_eq!(format_url(url, &config), expected);
+        assert_eq!(maybe_format_url(url, &config), expected);
     }
     #[test]
     fn test_format_url_hyperlinks_disabled() {
@@ -255,6 +274,6 @@ mod tests {
         // Create a config with disable_links set to true
         let mut config = Config::default();
         config.disable_links = true;
-        assert_eq!(format_url(url, &config), url);
+        assert_eq!(maybe_format_url(url, &config), url);
     }
 }

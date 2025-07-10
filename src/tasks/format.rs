@@ -123,7 +123,7 @@ pub fn maybe_format_url(url: &str, config: &Config) -> String {
     if hyperlinks_disabled(config) {
         return url.to_string();
     }
-    format!("\x1B]8;;{url}\x1B\\[{url}]\x1B]8;;\x1B\\")
+    format!("\x1B]8;;{url}\x07[{url}]\x1B]8;;\x07")
 }
 pub fn number_comments(quantity: usize) -> String {
     let comment_icon = color::purple_string("★");

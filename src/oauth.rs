@@ -36,7 +36,8 @@ pub struct AccessToken {
 }
 
 pub async fn login(config: &mut Config, test_tx: Option<Sender<()>>) -> Result<String, Error> {
-    let csrf_token = print_oauth_url();
+    // Use the provided config, not a new default every time
+    let csrf_token = print_oauth_url(config);
     let listener = tokio::net::TcpListener::bind(PROD_LOCALHOST).await?;
     let code = receive_callback(&csrf_token, test_tx, listener)
         .await?

@@ -1290,9 +1290,37 @@ mod tests {
         assert_eq!(result.unwrap(), "Aborted: Config not deleted.");
         assert!(Path::new(&temp_path).exists(), "File should not be deleted");
 
-        // Cleanup explicitly
+        // Cleanup file
         fs::remove_file(&temp_path).await.ok();
     }
+
+    #[tokio::test]
+    async fn test_config_reset_success_y_input() {
+        let mut temp_path: PathBuf = temp_dir();
+        temp_path.push("temp_test_config_prompt_yes.cfg");
+
+        File::create(&temp_path).expect("Failed to create temp config file");
+        assert!(temp_path.exists(), "Temp config should exist before reset");
+
+        // Simulate user input "y"
+        let fake_input = Cursor::new("y\n");
+
+        let result =
+            crate::config::config_reset_with_input(Some(temp_path.clone()), false, fake_input)
+                .await;
+
+        assert!(result.is_ok(), "Expected Ok, got {result:?}");
+        let msg = result.unwrap();
+        assert!(
+            msg.contains("deleted successfully"),
+            "Expected deletion message, got: {msg}"
+        );
+        assert!(
+            !Path::new(&temp_path).exists(),
+            "File should be deleted after reset"
+        );
+    }
+
     #[test]
     fn test_maybe_expand_home_dir_expands_tilde() {
         let input = PathBuf::from("~/myfolder/mysubfile.txt");

@@ -594,6 +594,18 @@ impl Default for Config {
         }
     }
 }
+/// Function that attempts to load the config from disk, and returns an error if it does not exist.
+pub async fn get(config_path: Option<PathBuf>) -> Result<Config, Error> {
+    let path = match config_path {
+        None => generate_path().await?,
+        Some(path) => maybe_expand_home_dir(path)?,
+    };
+
+    match Config::load(&path).await {
+        Ok(config) => Ok(config),
+        Err(_) => Err(Error::new("config", "no config found")),
+    }
+}
 /// Fetches config from from disk and creates it if it doesn't exist
 /// Prompts for Todoist API token
 pub async fn get_or_create(
@@ -732,6 +744,67 @@ pub async fn config_reset_with_input<R: BufRead>(
             "config_reset",
             &format!("Could not delete config file at {}: {}", path.display(), e),
         )),
+    }
+}
+
+pub async fn config_open(
+    config_path: Option<PathBuf>,
+    tx: &UnboundedSender<Error>,
+) -> Result<Config, Error> {
+    use edit::edit_file;
+    use inquire::Confirm;
+
+    // Determine the config path
+    let path = match config_path {
+        None => generate_path().await?,
+        Some(path) => maybe_expand_home_dir(path)?,
+    };
+
+    // If config file doesn't exist, prompt to create
+    if !path.exists() {
+        let prompt = format!(
+            "No config file found at {}. Would you like to create one?",
+            path.display()
+        );
+        let create = Confirm::new(&prompt)
+            .with_default(false)
+            .prompt()
+            .map_err(|e| Error::new("edit_config", &format!("Prompt failed: {e}")))?;
+
+        if create {
+            let mut config = create_config(tx).await?;
+            config.save().await?;
+        } else {
+            return Err(Error::new("edit_config", "Aborted: Config not created."));
+        }
+    }
+
+    // Open the config file in the user's editor
+    edit_file(&path)
+        .map_err(|e| Error::new("edit_config", &format!("Failed to open editor: {e}")))?;
+
+    // Attempt to load and validate the config after editing
+    match Config::load(&path).await {
+        Ok(config) => {
+            println!(
+                "{}",
+                crate::color::green_string(&format!(
+                    "Config at {} successfully validated.",
+                    path.display()
+                ))
+            );
+            Ok(config)
+        }
+        Err(e) => {
+            eprintln!(
+                "{}",
+                crate::color::red_string(&format!(
+                    "Error validating config at {}: {e}",
+                    path.display()
+                ))
+            );
+            Err(e)
+        }
     }
 }
 

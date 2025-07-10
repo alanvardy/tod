@@ -21,7 +21,7 @@ use tasks::{SortOrder, TaskAttribute, priority};
 use tokio::sync::mpsc::UnboundedSender;
 use walkdir::WalkDir;
 
-use crate::config::config_reset;
+use crate::config::{config_open, config_reset};
 
 mod cargo;
 mod color;
@@ -527,7 +527,14 @@ enum ConfigCommands {
     #[clap(alias = "tz")]
     /// (tz) Change the timezone in the configuration file
     SetTimezone(ConfigSetTimezone),
+
+    #[clap(alias = "o")]
+    /// (o) Open the configuration file in your editor
+    Open(ConfigOpen),
 }
+
+#[derive(Parser, Debug, Clone)]
+struct ConfigOpen {}
 
 #[derive(Subcommand, Debug, Clone)]
 enum AuthCommands {
@@ -904,17 +911,49 @@ async fn select_command(
                 tz_reset(config, args).await,
             )
         }
-
-        Commands::Auth(AuthCommands::Login(args)) => {
-            let config = match fetch_config(&cli, &tx).await {
-                Ok(config) => config,
-                Err(e) => return (true, true, Err(e)),
-            };
+        // Command to open the config file in the editor
+        Commands::Config(ConfigCommands::Open(_args)) => {
+            let config_path = cli.config.clone();
             (
-                config.bell_on_success,
-                config.bell_on_failure,
-                auth_login(config, args).await,
+                false,
+                false,
+                match config_open(config_path, &tx).await {
+                    Ok(_) => Ok(color::green_string("Config file opened successfully")),
+                    Err(e) => Err(e),
+                },
             )
+        }
+        // Auth Command to login
+        Commands::Auth(AuthCommands::Login(args)) => {
+            // Try to get config without creating
+            match config::get(cli.config.clone()).await {
+                Ok(config) => (
+                    config.bell_on_success,
+                    config.bell_on_failure,
+                    auth_login(config, args).await,
+                ),
+                Err(_) => {
+                    // If config doesn't exist, call get_or_create to create it (not auth_login, that will be called already)
+                    let config = match config::get_or_create(
+                        cli.config.clone(),
+                        cli.verbose,
+                        cli.timeout,
+                        &tx,
+                    )
+                    .await
+                    {
+                        Ok(config) => config,
+                        Err(e) => return (true, true, Err(e)),
+                    };
+                    (
+                        config.bell_on_success,
+                        config.bell_on_failure,
+                        Ok(color::yellow_string(
+                            "Config created. Run `tod auth login` again to authenticate.",
+                        )),
+                    )
+                }
+            }
         }
 
         // Shell
@@ -1551,3 +1590,4 @@ fn verify_cmd() {
     Cli::try_parse().err();
     Cli::command().debug_assert();
 }
+

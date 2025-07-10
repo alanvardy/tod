@@ -94,4 +94,25 @@ mod tests {
 
         assert_eq!(response, Ok(Version::Latest));
     }
+    // Manually specify the current version is 999.99.99 to test outdated version detection
+    #[tokio::test]
+    async fn test_compare_versions_outdated() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/v1/crates/tod/versions")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                ResponseFromFile::Versions
+                    .read_with_version("999.99.999")
+                    .await,
+            )
+            .create_async()
+            .await;
+
+        let response = compare_versions(Some(server.url())).await;
+        mock.assert();
+
+        assert_eq!(response, Ok(Version::Dated("999.99.999".into())));
+    }
 }

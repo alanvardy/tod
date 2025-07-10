@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 use config::Config;
 use errors::Error;
 use input::DateTimeInput;
+use inquire::Confirm;
 use lists::Flag;
 use shell::Shell;
 use std::fmt::Display;
@@ -21,8 +22,9 @@ use tasks::{SortOrder, TaskAttribute, priority};
 use tokio::sync::mpsc::UnboundedSender;
 use walkdir::WalkDir;
 
+use crate::cargo::compare_versions;
 use crate::config::config_reset;
-
+use crate::update::get_install_method_string;
 mod cargo;
 mod color;
 mod comments;
@@ -43,6 +45,7 @@ mod test;
 mod test_time;
 mod time;
 mod todoist;
+mod update;
 mod users;
 // Values pulled from Cargo.toml
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -519,9 +522,8 @@ enum ConfigCommands {
     #[clap(alias = "v")]
     /// (v) Check to see if tod is on the latest version, returns exit code 1 if out of date. Does not need a configuration file.
     CheckVersion(ConfigCheckVersion),
-
-    #[clap(alias = "r")]
     /// (r) Deletes the configuration file (if present). Errors if the file does not exist.
+    #[clap(alias = "r")]
     Reset(ConfigReset),
 
     #[clap(alias = "tz")]
@@ -551,7 +553,14 @@ enum TestCommands {
 }
 
 #[derive(Parser, Debug, Clone)]
-struct ConfigCheckVersion {}
+struct ConfigCheckVersion {
+    /// Automatically install the latest version if available
+    #[clap(short = 'f', long)]
+    pub force: bool,
+    /// Manually specify the method to use for installing updates
+    #[clap(long, hide = true)]
+    pub repo: Option<String>,
+}
 
 #[derive(Parser, Debug, Clone)]
 struct TestAll {}
@@ -883,7 +892,7 @@ async fn select_command(
 
         // Config
         Commands::Config(ConfigCommands::CheckVersion(args)) => {
-            (true, true, config_check_version(args).await)
+            (true, true, config_check_version(args, None).await)
         }
 
         // Command to delete the config file. Checks the default path, does not rely on the config struct.
@@ -1394,14 +1403,85 @@ async fn list_deadline(config: Config, args: &ListDeadline) -> Result<String, Er
 
 // // --- CONFIG ---
 
-async fn config_check_version(_args: &ConfigCheckVersion) -> Result<String, Error> {
-    match cargo::compare_versions(None).await {
-        Ok(Version::Latest) => Ok(format!("Tod is up to date with version: {VERSION}")),
-        Ok(Version::Dated(version)) => Err(Error::new(
-            "cargo",
-            &format!("Tod is out of date with version: {VERSION}, latest is:{version}"),
-        )),
-        Err(e) => Err(e),
+async fn config_check_version(
+    args: &ConfigCheckVersion,
+    mock_url: Option<String>,
+) -> Result<String, Error> {
+    match compare_versions(mock_url).await {
+        Ok(Version::Latest) => {
+            let msg = format!("Tod is up to date with version: {VERSION}");
+            if args.force {
+                return Ok(msg);
+            }
+            println!("{msg}");
+            Ok(String::new())
+        }
+        Ok(Version::Dated(latest)) => {
+            let msg = format!(
+                "Tod is out of date. Installed version: {VERSION}, Latest version: {latest}"
+            );
+            let method = get_install_method_string(&args.repo);
+            let upgrade_cmd = update::get_upgrade_command(&args.repo);
+            let method_msg = format!("Detected installation method: {method}");
+            if args.force {
+                // For testability, return the message instead of printing
+                let mut result = format!("{msg}\n{method_msg}");
+                match update::perform_auto_update(&args.repo) {
+                    Ok(_) => {
+                        result.push_str("\nUpdate completed successfully.");
+                        Ok(result)
+                    }
+                    Err(e) => {
+                        result.push_str(&format!(
+                            "\nAuto-update failed: {e}. To update manually: '{upgrade_cmd}'"
+                        ));
+                        Ok(result)
+                    }
+                }
+            } else {
+                println!("{msg}");
+                println!("{method_msg}");
+
+                let should_update = match Confirm::new("Do you want to update?")
+                    .with_default(false)
+                    .prompt()
+                {
+                    Ok(true) => true,
+                    Ok(false) => false,
+                    Err(e) => {
+                        println!("Could not prompt for update: {e}. To update: '{upgrade_cmd}'");
+                        false
+                    }
+                };
+
+                if should_update {
+                    match update::perform_auto_update(&args.repo) {
+                        Ok(_) => {
+                            println!("Update completed successfully.");
+                            Ok(String::new())
+                        }
+                        Err(e) => {
+                            println!(
+                                "Auto-update failed: {e}. To update manually: '{upgrade_cmd}'"
+                            );
+                            Ok(String::new())
+                        }
+                    }
+                } else {
+                    println!("Update skipped. To update: '{upgrade_cmd}'");
+                    Ok(String::new())
+                }
+            }
+        }
+        Err(e) => {
+            let msg = format!("Error checking version: {e}");
+            if args.force {
+                Ok(msg)
+            } else {
+                println!("{msg}");
+                Ok(String::new())
+            }
+        }
     }
 }
 

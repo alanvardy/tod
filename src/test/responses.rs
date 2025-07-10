@@ -45,8 +45,20 @@ impl ResponseFromFile {
         self.replace_values(json).await
     }
 
-    /// Allows us to replace static values in JSON with dynamic data i.e. today's date. Specify a vector with the from and to values.
-    /// Use an empty vector to make no changes
+    /// Loads JSON and replaces INSERTVERSION with a custom version string
+    pub async fn read_with_version(&self, version: &str) -> String {
+        let path = format!("tests/responses/{self}.json");
+
+        let json = std::fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("Could not find json file at {path}"));
+
+        match self {
+            Self::Versions => json.replace("INSERTVERSION", version),
+            _ => self.replace_values(json).await,
+        }
+    }
+
+    /// Allows us to replace static values in JSON with dynamic data
     async fn replace_values(&self, json_string: String) -> String {
         let replace_with: Vec<(&str, String)> = match self {
             Self::AccessToken => Vec::new(),

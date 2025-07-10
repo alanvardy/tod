@@ -906,7 +906,7 @@ async fn select_command(
         }
 
         Commands::Auth(AuthCommands::Login(args)) => {
-            let config = match check_existing_config_exists(cli.config.clone()).await {
+            let config = match get_existing_config_exists(cli.config.clone()).await {
                 Ok(config) => config,
                 Err(_) => match fetch_config(&cli, &tx).await {
                     Ok(config) => config,
@@ -1425,7 +1425,7 @@ async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, E
 // --- VALUE HELPERS ---
 
 /// Only fetches the config if it exists, otherwise errors.
-async fn check_existing_config_exists(config_path: Option<PathBuf>) -> Result<Config, Error> {
+async fn get_existing_config_exists(config_path: Option<PathBuf>) -> Result<Config, Error> {
     match config::get_config(config_path).await {
         Ok(config) => Ok(config),
         Err(e) => Err(e),

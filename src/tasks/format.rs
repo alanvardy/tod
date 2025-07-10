@@ -103,11 +103,7 @@ pub fn due(task: &Task, config: &Config, buffer: &str) -> String {
     }
 }
 
-pub fn task_url(id: &str) -> String {
-    let link = color::purple_string("link");
-    format!("\x1B]8;;https://app.todoist.com/app/task/{id}\x1B\\[{link}]\x1B]8;;\x1B\\")
-}
-
+/// Formats a string for all style/formatted links (including markdown) and formats them as a hyperlink
 fn create_links(content: &str) -> String {
     // Define the regex pattern for Markdown links
     let link_regex = Regex::new(r"\[([^\]]+)\]\(([^)]+)\)").unwrap();
@@ -122,6 +118,13 @@ fn create_links(content: &str) -> String {
     result.into_owned()
 }
 
+/// Formats a single URL as a hyperlinked URL (with the URL as the Hyperlink), if hyperlinks are enabled in the config - If hyperlinks are disabled, it returns the same URL as a plain string.
+pub fn maybe_format_url(url: &str, config: &Config) -> String {
+    if hyperlinks_disabled(config) {
+        return url.to_string();
+    }
+    format!("\x1B]8;;{url}\x07[{url}]\x1B]8;;\x07")
+}
 pub fn number_comments(quantity: usize) -> String {
     let comment_icon = color::purple_string("★");
     if quantity == 1 {
@@ -129,6 +132,15 @@ pub fn number_comments(quantity: usize) -> String {
     }
 
     format!("\n{comment_icon} {quantity} comments")
+}
+/// Returns a hyperlink-formatted URL formatted as "[link]" for a given task ID if hyperlinks are enabled in the config.
+pub fn maybe_format_task_id(task_id: &str, config: &Config) -> String {
+    let url = format!("https://app.todoist.com/app/task/{task_id}");
+    if hyperlinks_disabled(config) {
+        url
+    } else {
+        format!("\x1B]8;;{url}\x1B\\[link]\x1B]8;;\x1B\\")
+    }
 }
 
 pub async fn render_comments(config: &Config, comments: Vec<Comment>) -> Result<String, Error> {
@@ -172,11 +184,27 @@ mod tests {
     }
 
     #[test]
-    fn test_task_url() {
+    fn test_task_url_enabled() {
+        let config = Config::default();
+        // Skip the test if hyperlinks are not supported in this environment (otherwise test fails)
+        if !supports_hyperlinks::on(Stream::Stdout) {
+            eprintln!("Skipping test: hyperlinks not supported in this environment");
+            return;
+        }
         assert_eq!(
-            task_url("1"),
+            maybe_format_task_id("1", &config),
             String::from("\x1B]8;;https://app.todoist.com/app/task/1\x1B\\[link]\x1B]8;;\x1B\\")
-        )
+        );
+    }
+
+    #[test]
+    fn test_task_url_disabled() {
+        let mut config = Config::default();
+        config.disable_links = true;
+        assert_eq!(
+            maybe_format_task_id("1", &config),
+            String::from("https://app.todoist.com/app/task/1")
+        );
     }
 
     #[tokio::test]
@@ -203,5 +231,49 @@ mod tests {
             "\n\n★ Comments ★\n\nPosted 2016-09-22 00:00:00 PDT\nNeed one bottle of milk"
         );
         mock.expect(1);
+    }
+
+    #[test]
+    fn test_create_links_multiple_and_edge_cases() {
+        // Multiple links in one string
+        let input = "Links: [Rust](https://www.rust-lang.org/) and [GitHub](https://github.com/)";
+        let expected = "Links: \x1b]8;;https://www.rust-lang.org/\x07[Rust]\x1b]8;;\x07 and \x1b]8;;https://github.com/\x07[GitHub]\x1b]8;;\x07";
+        assert_eq!(create_links(input), expected);
+
+        // Single link
+        let input = "Check this out: [Example](https://example.com)";
+        let expected = "Check this out: \x1b]8;;https://example.com\x07[Example]\x1b]8;;\x07";
+        assert_eq!(create_links(input), expected);
+
+        // No links present
+        assert_eq!(create_links("No links here."), "No links here.");
+
+        // Malformed markdown (should not match)
+        assert_eq!(
+            create_links("[Broken link](not a url"),
+            "[Broken link](not a url"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_format_url_hyperlinks_enabled() {
+        let url = "https://www.rust-lang.org/";
+        let expected =
+            "\x1B]8;;https://www.rust-lang.org/\x1B\\[https://www.rust-lang.org/]\x1B]8;;\x1B\\";
+        let config = Config::default();
+        // Skip the test if hyperlinks are not supported in the current environment (otherwise test fails)
+        if !supports_hyperlinks::on(Stream::Stdout) {
+            eprintln!("Skipping test: hyperlinks not supported in this environment");
+            return;
+        }
+        assert_eq!(maybe_format_url(url, &config), expected);
+    }
+    #[test]
+    fn test_format_url_hyperlinks_disabled() {
+        let url = "https://www.rust-lang.org/";
+        // Create a config with disable_links set to true
+        let mut config = Config::default();
+        config.disable_links = true;
+        assert_eq!(maybe_format_url(url, &config), url);
     }
 }

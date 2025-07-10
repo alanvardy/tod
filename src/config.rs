@@ -1307,6 +1307,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_config_reset_delete_y_input() {
+        // Setup temp config file
+        let dir = temp_dir();
+        let temp_path: PathBuf = dir.join("temp_test_config_prompt_yes.cfg");
+
+        File::create(&temp_path).expect("Failed to create temp config file");
+        assert!(temp_path.exists(), "Temp config should exist before reset");
+
+        // Simulate user saying "yes" to prompt
+        let result = config_reset_with_prompt(Some(temp_path.clone()), false, || true).await;
+
+        assert!(result.is_ok(), "Expected Ok, got {result:?}");
+        assert!(
+            result.unwrap().contains("deleted successfully"),
+            "Expected deletion message"
+        );
+        assert!(
+            !Path::new(&temp_path).exists(),
+            "File should be deleted after reset"
+        );
+    }
+
+    #[tokio::test]
     async fn test_config_reset_aborts_on_n_input() {
         // Setup temp config file
         let dir = temp_dir();

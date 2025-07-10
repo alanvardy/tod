@@ -906,9 +906,12 @@ async fn select_command(
         }
 
         Commands::Auth(AuthCommands::Login(args)) => {
-            let config = match fetch_config(&cli, &tx).await {
+            let config = match check_existing_config_exists(cli.config.clone()).await {
                 Ok(config) => config,
-                Err(e) => return (true, true, Err(e)),
+                Err(_) => match fetch_config(&cli, &tx).await {
+                    Ok(config) => config,
+                    Err(e) => return (true, true, Err(e)),
+                },
             };
             (
                 config.bell_on_success,
@@ -941,6 +944,7 @@ async fn auth_login(config: Config, _args: &AuthLogin) -> Result<String, Error> 
     let mut config = config;
     oauth::login(&mut config, None).await
 }
+
 async fn shell_completions(args: &ShellCompletions) -> Result<String, Error> {
     shell::generate_completions(args.shell);
 
@@ -1420,6 +1424,13 @@ async fn tz_reset(config: Config, _args: &ConfigSetTimezone) -> Result<String, E
 
 // --- VALUE HELPERS ---
 
+/// Only fetches the config if it exists, otherwise errors.
+async fn check_existing_config_exists(config_path: Option<PathBuf>) -> Result<Config, Error> {
+    match config::get_config(config_path).await {
+        Ok(config) => Ok(config),
+        Err(e) => Err(e),
+    }
+}
 /// Get or create config
 async fn fetch_config(cli: &Cli, tx: &UnboundedSender<Error>) -> Result<Config, Error> {
     let Cli {

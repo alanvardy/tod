@@ -614,13 +614,17 @@ pub async fn get_config(config_path: Option<PathBuf>) -> Result<Config, Error> {
 
 /// Checks if the config file exists at the given path OR  default path if None).
 pub async fn check_config_exists(config_path: Option<PathBuf>) -> Result<bool, Error> {
-    let path = match config_path {
-        None => generate_path().await?,
-        Some(path) => maybe_expand_home_dir(path)?,
-    };
+    let path = resolve_config_path(config_path).await?;
     Ok(path.exists())
 }
 
+/// Resolves the config path, either using the provided path or generating a default one.
+async fn resolve_config_path(config_path: Option<PathBuf>) -> Result<PathBuf, Error> {
+    match config_path {
+        None => generate_path().await,
+        Some(path) => maybe_expand_home_dir(path),
+    }
+}
 /// Fetches config from from disk and creates it if it doesn't exist
 /// Prompts for Todoist API token
 pub async fn get_or_create(

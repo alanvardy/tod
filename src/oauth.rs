@@ -16,7 +16,7 @@ pub const CLIENT_ID: &str = "2696d64dc4f745679e21181c56b489fe";
 pub const CLIENT_SECRET: &str = "bfde0d10e3d740beb47f95879881634e";
 const FAKE_UUID: &str = "42963283-2bab-4b1f-bad2-278ef2b6ba2c";
 const TRANSMIT_ERROR: &str = "Could not transmit";
-// Host to bind the OAuth server to in production.
+/// Host to bind the OAuth server to in production.
 const PROD_LOCALHOST: &str = "127.0.0.1:8080";
 const SCOPE: &str = "data:read_write,data:delete,project:delete";
 

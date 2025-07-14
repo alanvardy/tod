@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.10.0](https://github.com/alanvardy/tod/compare/v0.9.1...v0.10.0) (2025-07-14)
+
+
+### Features
+
+* add auto-update ([5ebefc5](https://github.com/alanvardy/tod/commit/5ebefc54b9375d98566e02ad355484418ea6a69c))
+* add installation method detection ([1423e9c](https://github.com/alanvardy/tod/commit/1423e9cee91489765897f665fbed6905220f0078))
+* automatically open default web browser when performing oauth ([6872f88](https://github.com/alanvardy/tod/commit/6872f88f298802624359c392f84ad5ef1ba024f7))
+* automatically open default web browser when performing oauth ([780c5ba](https://github.com/alanvardy/tod/commit/780c5ba94819d1131f0e12257cc724a65b103872))
+* autoopen login for oauth ([6872f88](https://github.com/alanvardy/tod/commit/6872f88f298802624359c392f84ad5ef1ba024f7))
+* autoopen login for oauth ([780c5ba](https://github.com/alanvardy/tod/commit/780c5ba94819d1131f0e12257cc724a65b103872))
+* use thread_rng ([4aba413](https://github.com/alanvardy/tod/commit/4aba4134fb11285e3154e09d4b2a77a332486426))
+
+
+### Bug Fixes
+
+* make config less likely to conflict on disk ([4aba413](https://github.com/alanvardy/tod/commit/4aba4134fb11285e3154e09d4b2a77a332486426))
+* oauth login duplicate prompt ([e6ae55f](https://github.com/alanvardy/tod/commit/e6ae55f75f1c390cf3a6341bf0f6c7e07dfeab33))
+* update description ([f23f0f8](https://github.com/alanvardy/tod/commit/f23f0f8eebd35315db439b96d263ece21158c731))
+
 ## [0.9.1](https://github.com/alanvardy/tod/compare/v0.9.0...v0.9.1) (2025-07-02)
 
 ### Bug Fixes

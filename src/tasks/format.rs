@@ -139,7 +139,7 @@ pub fn maybe_format_task_id(task_id: &str, config: &Config) -> String {
     if hyperlinks_disabled(config) {
         url
     } else {
-        format!("\x1B]8;;{url}\x1B\\[link]\x1B]8;;\x1B\\")
+        format!("\x1B]8;;{url}\x07[link]\x1B]8;;\x07")
     }
 }
 

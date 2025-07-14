@@ -103,7 +103,7 @@ pub fn due(task: &Task, config: &Config, buffer: &str) -> String {
     }
 }
 
-/// Formats a string for all style/formatted links (including markdown) and formats them as a hyperlink
+// Formats a string for all style/formatted links (including markdown) and formats them as a hyperlink
 fn create_links(content: &str) -> String {
     // Define the regex pattern for Markdown links
     let link_regex = Regex::new(r"\[([^\]]+)\]\(([^)]+)\)").unwrap();

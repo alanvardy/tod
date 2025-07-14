@@ -11,7 +11,7 @@ pub enum InstallMethod {
     Unknown,
 }
 
-// Public API: returns the detected or overridden install method if manually specified
+// Returns the detected install method (or overridden if manually specified)
 pub fn get_install_method(override_arg: &Option<String>) -> InstallMethod {
     if let Some(value) = override_arg {
         match value.trim().to_lowercase().as_str() {
@@ -23,6 +23,63 @@ pub fn get_install_method(override_arg: &Option<String>) -> InstallMethod {
         }
     } else {
         detect_install_method()
+    }
+}
+// Returns the string name of how software is installed
+pub fn get_install_method_string(override_arg: &Option<String>) -> &'static str {
+    match get_install_method(override_arg) {
+        InstallMethod::Homebrew => "homebrew",
+        InstallMethod::Scoop => "scoop",
+        InstallMethod::Cargo => "cargo",
+        InstallMethod::FromSource => "from source",
+        InstallMethod::Unknown => "unknown",
+    }
+}
+// Returns the upgrade instruction (based on installation method)
+pub fn get_update_command_args(
+    override_arg: &Option<String>,
+) -> Result<(&'static str, Vec<&'static str>), String> {
+    match get_install_method(override_arg) {
+        InstallMethod::Homebrew => Ok(("brew", vec!["upgrade", "tod"])),
+        InstallMethod::Scoop => Ok(("scoop", vec!["update", "tod"])),
+        InstallMethod::Cargo => Ok(("cargo", vec!["install", "tod", "--force"])),
+        InstallMethod::FromSource | InstallMethod::Unknown => {
+            let url = "https://github.com/alanvardy/tod#installation";
+            Err(format!(
+                "Automatic update is not supported for this installation method.\nPlease visit: {url}"
+            ))
+        }
+    }
+}
+pub fn perform_auto_update(override_arg: &Option<String>) -> Result<String, String> {
+    let cmd = get_update_command_args(override_arg)?;
+    let command_str = format!("{} {}", cmd.0, cmd.1.join(" "));
+    println!("Executing command.... {command_str}");
+
+    let status = Command::new(cmd.0)
+        .args(&cmd.1)
+        .status()
+        .map_err(|e| format!("Failed to execute '{}': {}", cmd.0, e))?;
+
+    if status.success() {
+        Ok("Upgraded successfully!".into())
+    } else {
+        let upgrade_cmd = get_upgrade_command(override_arg);
+        Err(format!(
+            "Automatic update failed. Please run '{upgrade_cmd}' manually."
+        ))
+    }
+}
+
+// Returns the upgrade command as a string for manual use
+pub fn get_upgrade_command(override_arg: &Option<String>) -> String {
+    match get_install_method(override_arg) {
+        InstallMethod::Homebrew => "brew upgrade tod".to_string(),
+        InstallMethod::Scoop => "scoop update tod".to_string(),
+        InstallMethod::Cargo => "cargo install tod --force".to_string(),
+        InstallMethod::FromSource | InstallMethod::Unknown => {
+            "https://github.com/alanvardy/tod#installation".to_string()
+        }
     }
 }
 
@@ -47,65 +104,6 @@ fn detect_install_method() -> InstallMethod {
         InstallMethod::Homebrew
     } else {
         InstallMethod::Unknown
-    }
-}
-
-// Public API: returns the string name of how it was installed
-pub fn get_install_method_string(override_arg: &Option<String>) -> &'static str {
-    match get_install_method(override_arg) {
-        InstallMethod::Homebrew => "homebrew",
-        InstallMethod::Scoop => "scoop",
-        InstallMethod::Cargo => "cargo",
-        InstallMethod::FromSource => "from source",
-        InstallMethod::Unknown => "unknown",
-    }
-}
-// Public API: returns the upgrade instruction
-pub fn get_update_command_args(
-    override_arg: &Option<String>,
-) -> Result<(&'static str, Vec<&'static str>), String> {
-    match get_install_method(override_arg) {
-        InstallMethod::Homebrew => Ok(("brew", vec!["upgrade", "tod"])),
-        InstallMethod::Scoop => Ok(("scoop", vec!["update", "tod"])),
-        InstallMethod::Cargo => Ok(("cargo", vec!["install", "tod", "--force"])),
-        InstallMethod::FromSource | InstallMethod::Unknown => {
-            let url = "https://github.com/alanvardy/tod#installation";
-            Err(format!(
-                "Automatic update is not supported for this installation method.\nPlease visit: {url}"
-            ))
-        }
-    }
-}
-pub fn perform_auto_update(override_arg: &Option<String>) -> Result<(), String> {
-    let cmd = get_update_command_args(override_arg)?;
-    let command_str = format!("{} {}", cmd.0, cmd.1.join(" "));
-    println!("Executing command.... {command_str}");
-
-    let status = Command::new(cmd.0)
-        .args(&cmd.1)
-        .status()
-        .map_err(|e| format!("Failed to execute '{}': {}", cmd.0, e))?;
-
-    if status.success() {
-        println!("Upgraded successfully!");
-        Ok(())
-    } else {
-        let upgrade_cmd = get_upgrade_command(override_arg);
-        Err(format!(
-            "Automatic update failed. Please run '{upgrade_cmd}' manually."
-        ))
-    }
-}
-
-// Returns the upgrade command as a string for manual use
-pub fn get_upgrade_command(override_arg: &Option<String>) -> String {
-    match get_install_method(override_arg) {
-        InstallMethod::Homebrew => "brew upgrade tod".to_string(),
-        InstallMethod::Scoop => "scoop update tod".to_string(),
-        InstallMethod::Cargo => "cargo install tod --force".to_string(),
-        InstallMethod::FromSource | InstallMethod::Unknown => {
-            "https://github.com/alanvardy/tod#installation".to_string()
-        }
     }
 }
 

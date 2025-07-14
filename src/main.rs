@@ -1411,26 +1411,24 @@ async fn config_check_version(
     args: &ConfigCheckVersion,
     mock_url: Option<String>,
 ) -> Result<String, Error> {
+    let ConfigCheckVersion { force, repo } = args;
+
     match compare_versions(mock_url).await {
         Ok(Version::Latest) => {
             let msg = format!("Tod is up to date with version: {VERSION}");
-            if args.force {
-                return Ok(msg);
-            }
-            println!("{msg}");
-            Ok(String::new())
+            Ok(msg)
         }
         Ok(Version::Dated(latest)) => {
             let msg = format!(
                 "Tod is out of date. Installed version: {VERSION}, Latest version: {latest}"
             );
-            let method = get_install_method_string(&args.repo);
-            let upgrade_cmd = update::get_upgrade_command(&args.repo);
+            let method = get_install_method_string(repo);
+            let upgrade_cmd = update::get_upgrade_command(repo);
             let method_msg = format!("Detected installation method: {method}");
-            if args.force {
+            if *force {
                 // For testability, return the message instead of printing
                 let mut result = format!("{msg}\n{method_msg}");
-                match update::perform_auto_update(&args.repo) {
+                match update::perform_auto_update(repo) {
                     Ok(_) => {
                         result.push_str("\nUpdate completed successfully.");
                         Ok(result)
@@ -1459,32 +1457,20 @@ async fn config_check_version(
                 };
 
                 if should_update {
-                    match update::perform_auto_update(&args.repo) {
-                        Ok(_) => {
-                            println!("Update completed successfully.");
-                            Ok(String::new())
-                        }
-                        Err(e) => {
-                            println!(
-                                "Auto-update failed: {e}. To update manually: '{upgrade_cmd}'"
-                            );
-                            Ok(String::new())
-                        }
+                    match update::perform_auto_update(repo) {
+                        Ok(msg) => Ok(msg),
+                        Err(e) => Ok(format!(
+                            "Auto-update failed: {e}. To update manually: '{upgrade_cmd}'"
+                        )),
                     }
                 } else {
-                    println!("Update skipped. To update: '{upgrade_cmd}'");
-                    Ok(String::new())
+                    Ok(format!("Update skipped. To update: '{upgrade_cmd}'"))
                 }
             }
         }
         Err(e) => {
             let msg = format!("Error checking version: {e}");
-            if args.force {
-                Ok(msg)
-            } else {
-                println!("{msg}");
-                Ok(String::new())
-            }
+            Err(Error::new("config_check_version", &msg))
         }
     }
 }
